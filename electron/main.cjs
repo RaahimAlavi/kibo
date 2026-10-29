@@ -537,11 +537,7 @@ function createSystemTray() {
       tray.popUpContextMenu();
     }
   });
-  tray.on('right-click', () => {
-    if (tray) {
-      tray.popUpContextMenu();
-    }
-  });
+  
 }
 
 function createWindow() {
@@ -576,6 +572,15 @@ function createWindow() {
       sandbox: false,
       backgroundThrottling: false,
     },
+  });
+
+  mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    if (level >= 2 || String(message).includes('Error') || String(message).includes('Uncaught')) {
+      console.log('[Renderer Log]', message, sourceId ? '(' + sourceId + ':' + line + ')' : '');
+    }
+  });
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    console.error('[Renderer Fail Load]', errorCode, errorDescription, validatedURL);
   });
 
   // Use 'pop-up-menu' level instead of 'screen-saver' so Windows DWM keeps hardware video overlays alive
