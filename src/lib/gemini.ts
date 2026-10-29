@@ -291,7 +291,7 @@ export async function callGeminiWithFallback(
         res.status === 400
       ) {
         console.warn(
-          `[Hito] ${model} unavailable (${res.status}), cascading to next model...`
+          `[Kibo] ${model} unavailable (${res.status}), cascading to next model...`
         );
         continue;
       }
@@ -308,14 +308,14 @@ export async function callGeminiWithFallback(
 
       // If the model produced neither text nor a function call, cascade to the next model!
       if (!text && !hasFunctionCall) {
-        console.warn(`[Hito] ${model} returned empty response, cascading to next model...`);
+        console.warn(`[Kibo] ${model} returned empty response, cascading to next model...`);
         continue;
       }
 
       return { modelUsed: model, data, text };
     } catch (err: any) {
       lastError = err;
-      console.warn(`[Hito] Model ${model} failed, trying fallback:`, err?.message || err);
+      console.warn(`[Kibo] Model ${model} failed, trying fallback:`, err?.message || err);
     }
   }
 
@@ -444,7 +444,7 @@ export async function cleanDictation(rawText: string, apiKey: string): Promise<s
     cleaned = cleaned.replace(/^["']|["']$/g, '').trim();
     return cleaned || rawText.trim();
   } catch (err) {
-    console.warn('[Hito] cleanDictation fallback exhausted, returning raw transcript:', err);
+    console.warn('[Kibo] cleanDictation fallback exhausted, returning raw transcript:', err);
     return rawText.trim();
   }
 }

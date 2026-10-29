@@ -37,7 +37,7 @@
   height: 0 !important;
 }
 
-.kibo-companion-root, .hitodama-companion-root {
+.kibo-companion-root, .kibo-companion-root {
   position: relative;
   width: 100vw !important;
   height: 100vh !important;
@@ -98,7 +98,7 @@
    TOP HARDWARE NOTCH SHELL & VECTOR SVG TOP-BEZEL ARCHES
    ========================================================================== */
 
-.kibo-bezel-shell, .hitodama-bezel-shell {
+.kibo-bezel-shell, .kibo-bezel-shell {
   position: relative;
   background: var(--notch-black);
   border: none;
@@ -110,7 +110,7 @@
   z-index: 10;
 }
 
-.kibo-svg-arch, .hitodama-svg-arch {
+.kibo-svg-arch, .kibo-svg-arch {
   position: absolute;
   top: 0;
   pointer-events: none;
@@ -124,7 +124,7 @@
   will-change: width, height, left, right;
 }
 
-.kibo-bezel-inner, .hitodama-bezel-inner {
+.kibo-bezel-inner, .kibo-bezel-inner {
   position: relative;
   width: 100%;
   height: 100%;
@@ -137,7 +137,7 @@
    NOTCH STATES: AWAKE SOUL, COMPACT ASK BAR, TIMER COUNTDOWN & ALARM
    ========================================================================== */
 
-.kibo-notch-soul, .hitodama-notch-soul {
+.kibo-notch-soul, .kibo-notch-soul {
   position: relative;
   width: 100%;
   height: 100%;
@@ -147,7 +147,7 @@
   cursor: pointer;
 }
 
-.kibo-soul-underglow, .hitodama-soul-underglow {
+.kibo-soul-underglow, .kibo-soul-underglow {
   position: absolute;
   bottom: -6px;
   left: 50%;
@@ -159,7 +159,7 @@
   pointer-events: none;
 }
 
-.kibo-idle-soul-wrap, .hitodama-idle-soul-wrap {
+.kibo-idle-soul-wrap, .kibo-idle-soul-wrap {
   position: relative;
   z-index: 2;
   width: 84px;
@@ -178,12 +178,12 @@
   100% { transform: scale(1); }
 }
 
-.kibo-notch-soul, .hitodama-notch-soul.is-hit .kibo-idle-soul-wrap, .hitodama-idle-soul-wrap {
+.kibo-notch-soul.is-hit .kibo-idle-soul-wrap, .kibo-notch-soul.is-hit .kibo-idle-soul-wrap {
   animation: kiboPokeBounce 0.34s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* Compact Ask Bar (Soul on Left + Waveform/Dots on Right) */
-.kibo-notch-ask-compact, .hitodama-notch-ask-compact {
+.kibo-notch-ask-compact, .kibo-notch-ask-compact {
   width: 100%;
   height: 100%;
   display: flex;
@@ -235,7 +235,7 @@
 }
 
 /* Live Focus Timer Countdown & Ringing Alarm Celebration in Notch */
-.kibo-notch-timer-bar, .hitodama-notch-timer-bar {
+.kibo-notch-timer-bar, .kibo-notch-timer-bar {
   width: 100%;
   height: 100%;
   display: flex;
@@ -245,7 +245,7 @@
   cursor: pointer;
 }
 
-.kibo-notch-timer-bar, .hitodama-notch-timer-bar.is-ringing {
+.kibo-notch-timer-bar.is-ringing, .kibo-notch-timer-bar.is-ringing {
   background: radial-gradient(circle at 30% 50%, rgba(238, 155, 39, 0.24) 0%, transparent 75%);
   padding: 0 18px 0 12px;
 }
@@ -293,7 +293,7 @@
 }
 
 /* Compact Media Player Notch */
-.kibo-notch-media-v2, .hitodama-notch-media-v2 {
+.kibo-notch-media-v2, .kibo-notch-media-v2 {
   width: 100%;
   height: 100%;
   display: flex;
@@ -327,7 +327,7 @@
    EXPANDED ISLAND LAYOUT & CENTERED ADAPTIVE NAVIGATION BAR
    ========================================================================== */
 
-.kibo-expanded-inner, .hitodama-expanded-inner {
+.kibo-expanded-inner, .kibo-expanded-inner {
   position: relative;
   width: 100%;
   height: 100%;
@@ -1394,8 +1394,8 @@
    FIRST-TIME INSTALL ONBOARDING TUTORIAL CARD (With API Key Setup & Gamified Quest)
    ========================================================================== */
 
-.kibo-onboarding-card, .hitodama-onboarding-card,
-.kibo-onboarding-experience, .hitodama-onboarding-experience {
+.kibo-onboarding-card, .kibo-onboarding-card,
+.kibo-onboarding-experience, .kibo-onboarding-experience {
   margin-top: 14px;
   width: 480px;
   max-width: 92vw;
@@ -1807,7 +1807,7 @@
    DRAGGABLE KIBO APP, ORBITING LASSO LOADOUT & COLLECTIBLE CARD DECK
    ========================================================================== */
 
-.kibo-config-app-window, .hitodama-config-app-window {
+.kibo-config-app-window, .kibo-config-app-window {
   width: 880px;
   height: 550px;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -1821,11 +1821,11 @@
   background: #0D111A;
 }
 
-.kibo-config-app-window, .hitodama-config-app-window.loadout-theme {
+.kibo-config-app-window.loadout-theme, .kibo-config-app-window.loadout-theme {
   background: radial-gradient(circle at 50% 30%, #182232 0%, #0B0E14 85%) !important;
 }
 
-.kibo-config-app-window, .hitodama-config-app-window.settings-theme {
+.kibo-config-app-window.settings-theme, .kibo-config-app-window.settings-theme {
   background: radial-gradient(ellipse at 65% 20%, #151D2A 0%, #090B10 85%) !important;
 }
 
@@ -2589,7 +2589,7 @@
    `Win + Alt` ASK STAGE, CONTEXT DROP CARD, DICTATION & LASSO OVERLAYS
    ========================================================================== */
 
-.kibo-ask-stage-hud, .hitodama-ask-stage-hud {
+.kibo-ask-stage-hud, .kibo-ask-stage-hud {
   position: absolute;
   bottom: 115px;
   left: 50%;
@@ -2606,7 +2606,7 @@
   justify-content: flex-start;
 }
 
-.kibo-context-drop-card, .hitodama-context-drop-card {
+.kibo-context-drop-card, .kibo-context-drop-card {
   margin-top: 10px;
   min-width: 234px;
   max-width: 276px;
@@ -2627,10 +2627,10 @@
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.kibo-context-header, .hitodama-context-header { font-size: 10px; color: #8A8F9E; font-weight: 500; }
-.kibo-context-main, .hitodama-context-main { display: flex; align-items: center; gap: 10px; }
+.kibo-context-header, .kibo-context-header { font-size: 10px; color: #8A8F9E; font-weight: 500; }
+.kibo-context-main, .kibo-context-main { display: flex; align-items: center; gap: 10px; }
 
-.kibo-badge-icon, .hitodama-badge-icon {
+.kibo-badge-icon, .kibo-badge-icon {
   width: 26px;
   height: 26px;
   border-radius: 7px;
@@ -2642,8 +2642,8 @@
   flex-shrink: 0;
 }
 
-.kibo-badge-icon, .hitodama-badge-icon.youtube { background: #ffffff; color: #EF4444; }
-.kibo-badge-icon, .hitodama-badge-icon.youtube span {
+.kibo-badge-icon.youtube, .kibo-badge-icon.youtube { background: #ffffff; color: #EF4444; }
+.kibo-badge-icon.youtube span, .kibo-badge-icon.youtube span {
   background: #EF4444;
   color: #ffffff;
   width: 18px;
@@ -2655,15 +2655,15 @@
   font-size: 8px;
 }
 
-.kibo-badge-icon, .hitodama-badge-icon.gmail { background: #ffffff; color: #EA4335; font-size: 14px; }
-.kibo-badge-icon, .hitodama-badge-icon.google { background: #ffffff; color: #4285F4; font-size: 14px; }
-.kibo-badge-icon, .hitodama-badge-icon.amazon { background: #ffffff; color: #18181B; font-size: 14px; }
-.kibo-badge-icon, .hitodama-badge-icon.app { background: rgba(92, 184, 255, 0.15); color: #5CB8FF; }
+.kibo-badge-icon.gmail, .kibo-badge-icon.gmail { background: #ffffff; color: #EA4335; font-size: 14px; }
+.kibo-badge-icon.google, .kibo-badge-icon.google { background: #ffffff; color: #4285F4; font-size: 14px; }
+.kibo-badge-icon.amazon, .kibo-badge-icon.amazon { background: #ffffff; color: #18181B; font-size: 14px; }
+.kibo-badge-icon.app, .kibo-badge-icon.app { background: rgba(92, 184, 255, 0.15); color: #5CB8FF; }
 
-.kibo-context-title, .hitodama-context-title { font-size: 12.5px; font-weight: 700; color: #ffffff; line-height: 1.25; }
-.kibo-context-sub, .hitodama-context-sub { font-size: 10px; color: #71717A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kibo-context-title, .kibo-context-title { font-size: 12.5px; font-weight: 700; color: #ffffff; line-height: 1.25; }
+.kibo-context-sub, .kibo-context-sub { font-size: 10px; color: #71717A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.kibo-floating-hud-stack, .hitodama-floating-hud-stack {
+.kibo-floating-hud-stack, .kibo-floating-hud-stack {
   position: absolute;
   bottom: 110px;
   left: 50%;
@@ -2676,7 +2676,7 @@
   pointer-events: none;
 }
 
-.kibo-voice-pill, .hitodama-voice-pill {
+.kibo-voice-pill, .kibo-voice-pill {
   border-radius: 999px;
   padding: 11px 22px;
   display: inline-flex;
@@ -2691,27 +2691,27 @@
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.kibo-voice-pill, .hitodama-voice-pill.user-white {
+.kibo-voice-pill.user-white, .kibo-voice-pill.user-white {
   background: #ffffff;
   color: #18181B;
   border: 1px solid rgba(0, 0, 0, 0.08);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
 }
 
-.kibo-voice-pill, .hitodama-voice-pill.user-white .pill-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: #A1A1AA; }
-.kibo-voice-pill, .hitodama-voice-pill.user-white .pill-text { font-weight: 600; color: #18181B; }
+.kibo-voice-pill.user-white .pill-tag, .kibo-voice-pill.user-white .pill-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: #A1A1AA; }
+.kibo-voice-pill.user-white .pill-text, .kibo-voice-pill.user-white .pill-text { font-weight: 600; color: #18181B; }
 
-.kibo-voice-pill, .hitodama-voice-pill.kibo-dark, .hitodama-dark {
+.kibo-voice-pill.kibo-dark, .kibo-voice-pill.kibo-dark {
   background: #0A0B0E;
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.kibo-voice-pill, .hitodama-voice-pill.kibo-dark, .hitodama-dark .pill-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: #71717A; }
-.kibo-voice-pill, .hitodama-voice-pill.kibo-dark, .hitodama-dark .pill-text strong { color: #ffffff; font-weight: 700; }
-.kibo-voice-pill, .hitodama-voice-pill.kibo-dark, .hitodama-dark .pill-text .muted { color: #71717A; font-weight: 600; }
+.kibo-voice-pill.kibo-dark .pill-tag, .kibo-voice-pill.kibo-dark .pill-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: #71717A; }
+.kibo-voice-pill.kibo-dark .pill-text strong, .kibo-voice-pill.kibo-dark .pill-text strong { color: #ffffff; font-weight: 700; }
+.kibo-voice-pill.kibo-dark .pill-text .muted, .kibo-voice-pill.kibo-dark .pill-text .muted { color: #71717A; font-weight: 600; }
 
-.kibo-dictation-stage, .hitodama-dictation-stage {
+.kibo-dictation-stage, .kibo-dictation-stage {
   position: absolute;
   bottom: 85px;
   left: 50%;
@@ -2723,9 +2723,9 @@
   z-index: 25;
 }
 
-.kibo-keycap-row, .hitodama-keycap-row { display: flex; align-items: center; gap: 8px; }
+.kibo-keycap-row, .kibo-keycap-row { display: flex; align-items: center; gap: 8px; }
 
-.kibo-keycap, .hitodama-keycap {
+.kibo-keycap, .kibo-keycap {
   background: #141519;
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -2736,9 +2736,9 @@
   font-weight: 700;
 }
 
-.kibo-keycap-plus, .hitodama-keycap-plus { font-size: 12px; color: #71717A; font-weight: 700; }
+.kibo-keycap-plus, .kibo-keycap-plus { font-size: 12px; color: #71717A; font-weight: 700; }
 
-.kibo-dictation-card, .hitodama-dictation-card {
+.kibo-dictation-card, .kibo-dictation-card {
   width: 580px;
   min-height: 76px;
   background: #ffffff;
@@ -2750,10 +2750,10 @@
   border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-.kibo-dictation-card, .hitodama-dictation-card .pill-tag { font-size: 10px; font-weight: 700; color: #A1A1AA; margin-top: 3px; letter-spacing: 0.05em; }
+.kibo-dictation-card .pill-tag, .kibo-dictation-card .pill-tag { font-size: 10px; font-weight: 700; color: #A1A1AA; margin-top: 3px; letter-spacing: 0.05em; }
 .dictation-live-copy { font-size: 14px; font-weight: 500; color: #18181B; line-height: 1.45; }
 
-.kibo-dictation-status-pill, .hitodama-dictation-status-pill {
+.kibo-dictation-status-pill, .kibo-dictation-status-pill {
   width: 72px;
   height: 36px;
   border-radius: 999px;
@@ -2765,13 +2765,13 @@
   cursor: pointer;
 }
 
-.kibo-blue-bars, .hitodama-blue-bars { display: flex; align-items: center; gap: 3.5px; height: 16px; }
-.kibo-dictation-check, .hitodama-dictation-check { color: #5CB8FF; font-size: 15px; font-weight: 800; }
+.kibo-blue-bars, .kibo-blue-bars { display: flex; align-items: center; gap: 3.5px; height: 16px; }
+.kibo-dictation-check, .kibo-dictation-check { color: #5CB8FF; font-size: 15px; font-weight: 800; }
 
-.kibo-lasso-overlay, .hitodama-lasso-overlay { position: fixed; inset: 0; z-index: 30; cursor: crosshair; }
-.kibo-lasso-svg, .hitodama-lasso-svg { position: absolute; inset: 0; pointer-events: none; }
+.kibo-lasso-overlay, .kibo-lasso-overlay { position: fixed; inset: 0; z-index: 30; cursor: crosshair; }
+.kibo-lasso-svg, .kibo-lasso-svg { position: absolute; inset: 0; pointer-events: none; }
 
-.kibo-lasso-hud, .hitodama-lasso-hud {
+.kibo-lasso-hud, .kibo-lasso-hud {
   position: absolute;
   bottom: 130px;
   left: 50%;
@@ -2782,7 +2782,7 @@
   gap: 12px;
 }
 
-.kibo-lasso-input, .hitodama-lasso-input {
+.kibo-lasso-input, .kibo-lasso-input {
   border: none;
   outline: none;
   background: transparent;
@@ -2875,7 +2875,7 @@
    APPLE DYNAMIC ISLAND MINI MEDIA NOTCH & IN-NOTCH API ALERT
    ========================================================================== */
 
-.kibo-notch-mini-media, .hitodama-notch-mini-media {
+.kibo-notch-mini-media, .kibo-notch-mini-media {
   width: 100%;
   height: 100%;
   display: flex;
@@ -2910,7 +2910,7 @@
   animation: companion-wave-pulse 0.65s infinite ease-in-out alternate;
 }
 
-.kibo-notch-api-alert, .hitodama-notch-api-alert {
+.kibo-notch-api-alert, .kibo-notch-api-alert {
   width: 100%;
   height: 100%;
   display: flex;
@@ -3073,7 +3073,7 @@ button:focus-visible,
 /* ==========================================================================
    GLOWING BLUE DESKTOP PERIMETER AURA (Screenshot 2026-10-15 221354.jpg)
    ========================================================================== */
-.kibo-screen-edge-glow, .hitodama-screen-edge-glow {
+.kibo-screen-edge-glow, .kibo-screen-edge-glow {
   display: none !important;
   opacity: 0 !important;
   box-shadow: none !important;
@@ -3081,7 +3081,7 @@ button:focus-visible,
   pointer-events: none !important;
 }
 
-.kibo-screen-edge-glow, .hitodama-screen-edge-glow.is-active {
+.kibo-screen-edge-glow, .kibo-screen-edge-glow.is-active {
   display: none !important;
   opacity: 0 !important;
   box-shadow: none !important;
@@ -3251,7 +3251,7 @@ button:focus-visible,
   transform: scale(1.1);
 }
 
-.kibo-tasks-indicator, .hitodama-tasks-indicator {
+.kibo-tasks-indicator, .kibo-tasks-indicator {
   position: absolute;
   right: 12px;
   top: 50%;
@@ -3271,7 +3271,7 @@ button:focus-visible,
   z-index: 5;
 }
 
-.kibo-tasks-indicator, .hitodama-tasks-indicator:hover {
+.kibo-tasks-indicator:hover, .kibo-tasks-indicator:hover {
   background: rgba(92, 184, 255, 0.25);
   border-color: rgba(92, 184, 255, 0.55);
   color: #FFFFFF;
@@ -3282,7 +3282,7 @@ button:focus-visible,
    PROACTIVE SOUL-LINK NOTCH & INFINITE MARQUEE TICKER
    ========================================================================== */
 
-.kibo-context-btn, .hitodama-context-btn {
+.kibo-context-btn, .kibo-context-btn {
   border-radius: 999px;
   padding: 5px 12px;
   font-family: var(--companion-font-body);
@@ -3296,30 +3296,30 @@ button:focus-visible,
   outline: none;
 }
 
-.kibo-context-btn, .hitodama-context-btn.muted {
+.kibo-context-btn.muted, .kibo-context-btn.muted {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #D4D4D8;
 }
 
-.kibo-context-btn, .hitodama-context-btn.muted:hover {
+.kibo-context-btn.muted:hover, .kibo-context-btn.muted:hover {
   background: rgba(255, 255, 255, 0.12);
   color: #FFFFFF;
   transform: translateY(-1px);
 }
 
-.kibo-context-btn, .hitodama-context-btn.primary {
+.kibo-context-btn.primary, .kibo-context-btn.primary {
   border: 1px solid rgba(255, 255, 255, 0.28);
   color: #FFFFFF;
   font-weight: 700;
 }
 
-.kibo-context-btn, .hitodama-context-btn.primary:hover {
+.kibo-context-btn.primary:hover, .kibo-context-btn.primary:hover {
   transform: translateY(-1px) scale(1.03);
   filter: brightness(1.1);
 }
 
-.kibo-marquee-viewport, .hitodama-marquee-viewport {
+.kibo-marquee-viewport, .kibo-marquee-viewport {
   position: relative;
   z-index: 2;
   width: 100%;
@@ -3329,7 +3329,7 @@ button:focus-visible,
   -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
 }
 
-.kibo-marquee-track, .hitodama-marquee-track {
+.kibo-marquee-track, .kibo-marquee-track {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -3339,7 +3339,7 @@ button:focus-visible,
 }
 
 /* Pause marquee smoothly when user hovers to click a prompt */
-.kibo-marquee-viewport, .hitodama-marquee-viewport:hover .kibo-marquee-track, .hitodama-marquee-track {
+.kibo-marquee-viewport:hover .kibo-marquee-track, .kibo-marquee-viewport:hover .kibo-marquee-track {
   animation-play-state: paused;
 }
 
@@ -3352,7 +3352,7 @@ button:focus-visible,
   }
 }
 
-.kibo-marquee-pill, .hitodama-marquee-pill {
+.kibo-marquee-pill, .kibo-marquee-pill {
   background: rgba(18, 20, 26, 0.78);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: #F4F4F5;
@@ -3371,7 +3371,7 @@ button:focus-visible,
   flex-shrink: 0;
 }
 
-.kibo-marquee-pill, .hitodama-marquee-pill:hover {
+.kibo-marquee-pill:hover, .kibo-marquee-pill:hover {
   background: rgba(255, 255, 255, 0.14);
   color: #FFFFFF;
   transform: translateY(-1px);
@@ -3479,7 +3479,7 @@ button:focus-visible,
   }
 }
 
-.kibo-notch-agent-working, .hitodama-notch-agent-working {
+.kibo-notch-agent-working, .kibo-notch-agent-working {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3535,7 +3535,7 @@ button:focus-visible,
    FULL-SCREEN SPATIAL ONBOARDING EXPERIENCE (NO MODAL BOX, ZERO CLIPPING)
    ========================================================================== */
 
-.kibo-spatial-onboarding-overlay, .hitodama-spatial-onboarding-overlay {
+.kibo-spatial-onboarding-overlay, .kibo-spatial-onboarding-overlay {
   position: fixed;
   inset: 0;
   width: 100vw;
@@ -4051,14 +4051,14 @@ button:focus-visible,
    KIBO TACTICAL HARDWARE CONSOLE REDESIGN
    ========================================================================== */
 
-.hitodama-bezel-shell {
+.kibo-bezel-shell {
   background: linear-gradient(180deg, #090B10 0%, #0E121B 100%) !important;
   box-shadow:
     0 18px 50px rgba(0, 0, 0, 0.85),
     inset 0 -1px 0 rgba(56, 189, 248, 0.22) !important;
 }
 
-.hitodama-svg-arch path {
+.kibo-svg-arch path {
   fill: #090B10 !important;
 }
 

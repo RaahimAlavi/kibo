@@ -201,7 +201,7 @@ export async function executeDirectComputerAction(
   onStatusUpdate?: (status: string) => void,
   onHighlightTarget?: (rect: { x: number; y: number; width: number; height: number; label: string }) => void
 ): Promise<{ success: boolean; summary: string }> {
-  const api = ((window as any).kiboAPI || (window as any).hitodamaAPI);
+  const api = ((window as any).kiboAPI || (window as any).kiboAPI);
   if (!api) return { success: false, summary: 'Desktop bridge unavailable.' };
 
   const targetDesc = (params.target || '').trim();
@@ -310,7 +310,7 @@ export async function runFastComputerUseLoop(
   maxSteps = 5,
   onHighlightTarget?: (rect: { x: number; y: number; width: number; height: number; label: string }) => void
 ): Promise<{ success: boolean; summary: string }> {
-  const api = ((window as any).kiboAPI || (window as any).hitodamaAPI);
+  const api = ((window as any).kiboAPI || (window as any).kiboAPI);
   if (!api?.executeUIAction) {
     return { success: false, summary: 'Native UI worker not connected.' };
   }

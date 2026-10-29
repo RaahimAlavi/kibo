@@ -1,7 +1,7 @@
 // src/lib/voiceEngine.ts
 
 export type KiboVoiceName = 'Charon' | 'Aoede' | 'Fenrir' | 'Puck';
-export type HitodamaVoiceName = KiboVoiceName;
+
 
 export interface SpeakOptions {
   apiKey?: string;
@@ -355,7 +355,7 @@ class KiboVoiceEngine {
     this.speakViaNativeOS(text, options);
   }
 
-  // Main Public Method 2: Ask Hito a question and have it answer in voice directly
+  // Main Public Method 2: Ask Kibo a question and have it answer in voice directly
   public async askAndSpeak(userPrompt: string, options: SpeakOptions = {}) {
     if (!userPrompt.trim()) return;
     this.stop();

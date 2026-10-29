@@ -1,5 +1,5 @@
 // src/components/AgentTopRightDock.tsx
-// Floating Top-Right Hito Agent Squircle & Choice Popover
+// Floating Top-Right Kibo Agent Squircle & Choice Popover
 // 100% SVG Vector Graphics · Zero Emojis · Matches Kibo Notch Hierarchy
 
 import React, { useState } from 'react';
@@ -66,8 +66,8 @@ export const AgentTopRightDock: React.FC<AgentTopRightDockProps> = ({
   const handleOpenInBrowser = async (e: React.MouseEvent) => {
     e.stopPropagation();
     soundFX.playSuccessChime();
-    if (activeTask.generatedHtml && typeof window !== 'undefined' && ((window as any).kiboAPI || (window as any).hitodamaAPI)?.openGeneratedPage) {
-      await ((window as any).kiboAPI || (window as any).hitodamaAPI).openGeneratedPage(activeTask.generatedHtml);
+    if (activeTask.generatedHtml && typeof window !== 'undefined' && ((window as any).kiboAPI || (window as any).kiboAPI)?.openGeneratedPage) {
+      await ((window as any).kiboAPI || (window as any).kiboAPI).openGeneratedPage(activeTask.generatedHtml);
     }
   };
 
@@ -96,7 +96,7 @@ export const AgentTopRightDock: React.FC<AgentTopRightDockProps> = ({
         cursor: 'pointer',
         userSelect: 'none',
         transition: 'all 0.28s cubic-bezier(0.16, 1, 0.3, 1)',
-        animation: !isHovered ? 'hitodamaSlowFloat 3.2s ease-in-out infinite' : 'none',
+        animation: !isHovered ? 'kiboSlowFloat 3.2s ease-in-out infinite' : 'none',
       }}
     >
       {!isHovered ? (
@@ -196,7 +196,7 @@ export const AgentTopRightDock: React.FC<AgentTopRightDockProps> = ({
                   letterSpacing: '0.01em',
                 }}
               >
-                Hito Agent
+                Kibo Agent
               </span>
             </div>
 

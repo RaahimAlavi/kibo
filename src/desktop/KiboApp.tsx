@@ -24,7 +24,7 @@ import './desktop-companion.css';
 
 declare global {
   interface Window {
-    hitodamaAPI?: {
+    kiboAPI?: {
       setWindowMode: (mode: 'tucked' | 'collapsed' | 'listening' | 'media' | 'expanded', height?: number) => void;
       setWindowBounds: (width: number, height: number) => void;
       setAppWindowRect?: (rect: { x: number; y: number; width: number; height: number } | null) => void;
@@ -126,7 +126,7 @@ declare global {
 }
 
 type NavTab = 'Controls' | 'Today' | 'Stats' | 'Clipboard' | 'Apps' | 'Agents' | 'Wallpaper' | 'Power';
-type CompanionSection = 'Hito' | 'Shortcuts' | 'Behavior' | 'System' | 'API keys' | 'Your data' | 'Privacy';
+type CompanionSection = 'Kibo' | 'Shortcuts' | 'Behavior' | 'System' | 'API keys' | 'Your data' | 'Privacy';
 type LoadoutSlotType = 'Soul' | 'Voice' | 'Personality' | 'Abilities';
 type ControlDropdownType = 'wifi' | 'bluetooth' | 'audio' | 'nightlight' | null;
 
@@ -707,7 +707,7 @@ const DEFAULT_WALLPAPERS: WallpaperTheme[] = [
 
 const LOADOUT_CARDS: LoadoutCardItem[] = [
   {
-    id: 'soul_hitodama',
+    id: 'soul_kibo_mk1',
     slot: 'Soul',
     name: 'MK-I Cobalt',
     rarity: 'STANDARD',
@@ -927,7 +927,7 @@ if (typeof localStorage !== 'undefined') {
 }
 
 export const KiboApp: React.FC = () => {
-  const isElectron = typeof window !== 'undefined' && Boolean(window.hitodamaAPI);
+  const isElectron = typeof window !== 'undefined' && Boolean(window.kiboAPI);
 
   const [apiKey, setApiKey] = useState<string>(() => {
     const saved = localStorage.getItem('kibo_gemini_key');
@@ -992,14 +992,14 @@ export const KiboApp: React.FC = () => {
 
   const [unlockedCardIds, setUnlockedCardIds] = useState<string[]>(() => {
     const saved = localStorage.getItem('kibo_unlocked_cards');
-    return saved ? JSON.parse(saved) : ['soul_hitodama', 'voice_charon', 'pers_true_chad'];
+    return saved ? JSON.parse(saved) : ['soul_kibo_mk1', 'voice_charon', 'pers_true_chad'];
   });
   const [equippedCards, setEquippedCards] = useState<Record<LoadoutSlotType, string>>(() => {
     const saved = localStorage.getItem('kibo_equipped_cards');
     return saved
       ? JSON.parse(saved)
       : {
-          Soul: 'soul_hitodama',
+          Soul: 'soul_kibo_mk1',
           Voice: 'voice_charon',
           Personality: 'pers_true_chad',
           Abilities: 'none',
@@ -1021,7 +1021,7 @@ export const KiboApp: React.FC = () => {
     setEmbers((prev) => {
       const next = prev + amount;
       localStorage.setItem('kibo_watts', String(next));
-      const api = (window as any).hitodamaAPI;
+      const api = (window as any).kiboAPI;
       api?.syncEmbersState?.({ count: next, isWaiting: false });
       api?.setEmbersCount?.(next);
       return next;
@@ -1075,7 +1075,7 @@ export const KiboApp: React.FC = () => {
   const dragOffsetRef = useRef<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
 
   const [selectedSkinKey, setSelectedSkinKey] = useState<string>(
-    () => localStorage.getItem('kibo_chassis') || (SOUL_SKINS[0]?.key ?? 'flame_hitodama')
+    () => localStorage.getItem('kibo_chassis') || (SOUL_SKINS[0]?.key ?? 'kibo_mk1_cobalt')
   );
 
   const [isTucked, setIsTucked] = useState<boolean>(false);
@@ -1180,7 +1180,7 @@ export const KiboApp: React.FC = () => {
 
   const [contextCard, setContextCard] = useState<ContextNotificationCard | null>(null);
   const [userBubbleText, setUserBubbleText] = useState<string | null>(null);
-  const [hitodamaReply, setKiboReply] = useState<{ bold?: string; rest?: string } | null>(null);
+  const [kiboReply, setKiboReply] = useState<{ bold?: string; rest?: string } | null>(null);
 
   const [dictationState, setDictationState] = useState<'idle' | 'recording' | 'done'>('idle');
   const [dictationText, setDictationText] = useState('');
@@ -1232,7 +1232,7 @@ export const KiboApp: React.FC = () => {
 
   // Listen for automatic OS app detection (GitHub, Notion, VS Code, Figma, Gmail)
   useEffect(() => {
-    const api = (window as any).hitodamaAPI;
+    const api = (window as any).kiboAPI;
     if (!api?.onContextAppDetected) return;
 
     return api.onContextAppDetected((appId: DetectedAppConfig['id'] | null) => {
@@ -1280,8 +1280,8 @@ export const KiboApp: React.FC = () => {
 
       try {
         let shotImg: string | undefined = undefined;
-        if (window.hitodamaAPI?.captureScreen) {
-          const shot = await window.hitodamaAPI.captureScreen();
+        if (window.kiboAPI?.captureScreen) {
+          const shot = await window.kiboAPI.captureScreen();
           if (shot?.success && shot.image) {
             shotImg = shot.image;
           }
@@ -1371,7 +1371,7 @@ export const KiboApp: React.FC = () => {
       const targetSec = Math.round(pct * totalMediaDuration);
       setMediaProgress(targetSec);
       if (commitSeek) {
-        window.hitodamaAPI?.seekMedia?.(targetSec);
+        window.kiboAPI?.seekMedia?.(targetSec);
       }
     },
     [totalMediaDuration]
@@ -1563,8 +1563,8 @@ export const KiboApp: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (window.hitodamaAPI?.getControlsState) {
-      window.hitodamaAPI.getControlsState().then((st) => {
+    if (window.kiboAPI?.getControlsState) {
+      window.kiboAPI.getControlsState().then((st) => {
         if (!st) return;
         setWifiEnabled(Boolean(st.wifiConnected));
         setWifiSsid(st.wifiSsid || (st.wifiConnected ? 'Connected' : 'Off'));
@@ -1582,10 +1582,10 @@ export const KiboApp: React.FC = () => {
 
   // Poll Real PC Now Playing Media Session every 1.5s
   useEffect(() => {
-    if (!window.hitodamaAPI?.getNowPlaying) return;
+    if (!window.kiboAPI?.getNowPlaying) return;
     const checkMedia = async () => {
       try {
-        const info: any = await window.hitodamaAPI?.getNowPlaying?.();
+        const info: any = await window.kiboAPI?.getNowPlaying?.();
         if (info) {
           setOsMedia({
             hasSession: Boolean(info.hasSession ?? info.playing),
@@ -1634,17 +1634,17 @@ export const KiboApp: React.FC = () => {
     if (audioRef.current) {
       audioRef.current.volume = clamped / 100;
     }
-    window.hitodamaAPI?.setVolume?.(clamped);
+    window.kiboAPI?.setVolume?.(clamped);
   }, []);
 
   const toggleMediaPlayback = useCallback(async () => {
-    if (window.hitodamaAPI?.mediaControl) {
-      await window.hitodamaAPI.mediaControl('playpause');
+    if (window.kiboAPI?.mediaControl) {
+      await window.kiboAPI.mediaControl('playpause');
       if (osMedia.hasSession) {
         setOsMedia((prev) => ({ ...prev, playing: !prev.playing }));
         return;
       }
-      const check: any = await window.hitodamaAPI.getNowPlaying?.();
+      const check: any = await window.kiboAPI.getNowPlaying?.();
       if (check && check.hasSession) {
         setOsMedia({
           hasSession: true,
@@ -1672,15 +1672,15 @@ export const KiboApp: React.FC = () => {
   }, [osMedia.hasSession]);
 
   const handleMediaPrev = useCallback(async () => {
-    if (window.hitodamaAPI?.mediaControl) {
-      await window.hitodamaAPI.mediaControl('prev');
+    if (window.kiboAPI?.mediaControl) {
+      await window.kiboAPI.mediaControl('prev');
     }
     setMediaProgress(0);
   }, []);
 
   const handleMediaNext = useCallback(async () => {
-    if (window.hitodamaAPI?.mediaControl) {
-      await window.hitodamaAPI.mediaControl('next');
+    if (window.kiboAPI?.mediaControl) {
+      await window.kiboAPI.mediaControl('next');
     }
     setMediaProgress(0);
   }, []);
@@ -1690,11 +1690,11 @@ export const KiboApp: React.FC = () => {
       e.stopPropagation();
       const next = activeControlDropdown === menu ? null : menu;
       setActiveControlDropdown(next);
-      if (next === 'wifi' && window.hitodamaAPI?.getWifiNetworks) {
-        const nets = await window.hitodamaAPI.getWifiNetworks();
+      if (next === 'wifi' && window.kiboAPI?.getWifiNetworks) {
+        const nets = await window.kiboAPI.getWifiNetworks();
         if (Array.isArray(nets)) setWifiNetworksList(nets);
-      } else if (next === 'bluetooth' && window.hitodamaAPI?.getBluetoothDevices) {
-        const devs = await window.hitodamaAPI.getBluetoothDevices();
+      } else if (next === 'bluetooth' && window.kiboAPI?.getBluetoothDevices) {
+        const devs = await window.kiboAPI.getBluetoothDevices();
         if (Array.isArray(devs)) setBluetoothDevicesList(devs);
       }
     },
@@ -1717,7 +1717,7 @@ export const KiboApp: React.FC = () => {
 
   const [todos, setTodos] = useState<Array<{ id: number; text: string; completed: boolean }>>(() => {
     const saved = localStorage.getItem('kibo_todos');
-    return saved ? JSON.parse(saved) : [{ id: 1, text: 'Buy Hito!', completed: true }];
+    return saved ? JSON.parse(saved) : [{ id: 1, text: 'Calibrate Kibo core', completed: true }];
   });
   const [sparkleBurstId, setSparkleBurstId] = useState<number | null>(null);
   const [sparkleAnimKey, setSparkleAnimKey] = useState<number>(0);
@@ -1763,7 +1763,7 @@ export const KiboApp: React.FC = () => {
 
   // Sync embers state to Electron Windows System Tray
   useEffect(() => {
-    const api = (window as any).hitodamaAPI;
+    const api = (window as any).kiboAPI;
     if (api?.syncEmbersState) {
       api.syncEmbersState({ count: embers, isWaiting: isEmberWaiting });
     }
@@ -1771,7 +1771,7 @@ export const KiboApp: React.FC = () => {
 
   // Listen for Tray actions (Claim daily ember / Creator testing stoke)
   useEffect(() => {
-    const api = (window as any).hitodamaAPI;
+    const api = (window as any).kiboAPI;
     if (!api) return;
 
     const unClaim = api.onClaimDailyEmber?.(() => {
@@ -1789,7 +1789,7 @@ export const KiboApp: React.FC = () => {
 
   // Initial sync of embers to tray
   useEffect(() => {
-    const api = (window as any).hitodamaAPI;
+    const api = (window as any).kiboAPI;
     api?.syncEmbersState?.({ count: embers, isWaiting: isEmberWaiting });
     api?.setEmbersCount?.(embers);
   }, []);
@@ -1859,7 +1859,7 @@ export const KiboApp: React.FC = () => {
 
   // Sync shortcuts to Electron on startup
   useEffect(() => {
-    window.hitodamaAPI?.updateShortcuts?.(customShortcuts);
+    window.kiboAPI?.updateShortcuts?.(customShortcuts);
   }, []);
 
   // Listen to key combinations when recording a shortcut
@@ -1896,7 +1896,7 @@ export const KiboApp: React.FC = () => {
           const updated = { ...prev, [bindingShortcutKey]: comboStr };
           try {
             localStorage.setItem('kibo_custom_shortcuts', JSON.stringify(updated));
-            window.hitodamaAPI?.updateShortcuts?.(updated);
+            window.kiboAPI?.updateShortcuts?.(updated);
           } catch (_) {}
           return updated;
         });
@@ -1938,7 +1938,7 @@ export const KiboApp: React.FC = () => {
 
   useEffect(() => {
     // 1. Initial Load from background watcher on startup
-    window.hitodamaAPI?.getClipboardHistory?.().then((items) => {
+    window.kiboAPI?.getClipboardHistory?.().then((items) => {
       if (Array.isArray(items) && items.length > 0) {
         setClipboardItems((prev) => mergeClipboardSafely(items, prev));
         setSelectedClipboardId((curr) => curr || items[0].id);
@@ -1946,8 +1946,8 @@ export const KiboApp: React.FC = () => {
     });
 
     // 2. Subscribe to new text & screenshot copies emitted by background Electron watcher
-    const unreg = window.hitodamaAPI?.onClipboardItemAdded
-      ? window.hitodamaAPI.onClipboardItemAdded((newItem) => {
+    const unreg = window.kiboAPI?.onClipboardItemAdded
+      ? window.kiboAPI.onClipboardItemAdded((newItem) => {
           setClipboardItems((prev) => {
             const filtered = prev.filter((i) =>
               newItem.category === 'Images' && newItem.imageDataUrl && i.imageDataUrl
@@ -1961,8 +1961,8 @@ export const KiboApp: React.FC = () => {
       : () => {};
 
     // 3. Subscribe to tray menu "open-settings" commands (Shortcuts, Chassis Bay, API Keys)
-    const unregSettings = window.hitodamaAPI?.onOpenSettings
-      ? window.hitodamaAPI.onOpenSettings((section) => {
+    const unregSettings = window.kiboAPI?.onOpenSettings
+      ? window.kiboAPI.onOpenSettings((section) => {
           setIsExpanded(false);
           setShowCompanionWindow(true);
           if (section === 'soul') {
@@ -1982,9 +1982,9 @@ export const KiboApp: React.FC = () => {
 
     // 4. Focus/Sync reader (supports both Electron direct readers and Browser navigator.clipboard)
     const syncActiveClipboard = async () => {
-      if (window.hitodamaAPI?.getClipboardHistory) {
+      if (window.kiboAPI?.getClipboardHistory) {
         try {
-          const items = await window.hitodamaAPI.getClipboardHistory();
+          const items = await window.kiboAPI.getClipboardHistory();
           if (Array.isArray(items) && items.length > 0) {
             setClipboardItems((prev) => mergeClipboardSafely(items, prev));
             setSelectedClipboardId((curr) => curr || items[0].id);
@@ -2033,7 +2033,7 @@ export const KiboApp: React.FC = () => {
   // Sync latest clipboard history whenever user navigates to the Clipboard tab
   useEffect(() => {
     if (activeTab === 'Clipboard') {
-      window.hitodamaAPI?.getClipboardHistory?.().then((items) => {
+      window.kiboAPI?.getClipboardHistory?.().then((items) => {
         if (Array.isArray(items) && items.length > 0) {
           setClipboardItems((prev) => mergeClipboardSafely(items, prev));
           setSelectedClipboardId((curr) => curr || items[0].id);
@@ -2058,8 +2058,8 @@ export const KiboApp: React.FC = () => {
       if (!target) return;
       try {
         let srcToLoad = target.url;
-        if (window.hitodamaAPI?.getWallpaperDataUrl) {
-          srcToLoad = await window.hitodamaAPI.getWallpaperDataUrl(target.filePath || target.url);
+        if (window.kiboAPI?.getWallpaperDataUrl) {
+          srcToLoad = await window.kiboAPI.getWallpaperDataUrl(target.filePath || target.url);
         }
         const img = new Image();
         img.crossOrigin = 'Anonymous';
@@ -2112,8 +2112,8 @@ export const KiboApp: React.FC = () => {
   const [appsList, setAppsList] = useState<InstalledAppItem[]>([]);
 
   useEffect(() => {
-    if (window.hitodamaAPI?.getInstalledApps) {
-      window.hitodamaAPI.getInstalledApps().then((list) => {
+    if (window.kiboAPI?.getInstalledApps) {
+      window.kiboAPI.getInstalledApps().then((list) => {
         if (Array.isArray(list) && list.length > 0) {
           setAppsList(list);
         }
@@ -2379,8 +2379,8 @@ export const KiboApp: React.FC = () => {
   );
 
   useEffect(() => {
-    if (!window.hitodamaAPI?.onOpenSettings) return;
-    const unreg = window.hitodamaAPI.onOpenSettings((section) => {
+    if (!window.kiboAPI?.onOpenSettings) return;
+    const unreg = window.kiboAPI.onOpenSettings((section) => {
       if (section === 'soul') openCompanionApp('soul', false);
       else if (section === 'connect') openCompanionApp('settings', true);
       else if (section === 'shortcuts') {
@@ -2392,16 +2392,16 @@ export const KiboApp: React.FC = () => {
   }, [openCompanionApp, setSettingsSection]);
 
   useEffect(() => {
-    if (!window.hitodamaAPI?.setAppWindowRect) return;
+    if (!window.kiboAPI?.setAppWindowRect) return;
     if (showCompanionWindow) {
-      window.hitodamaAPI.setAppWindowRect({
+      window.kiboAPI.setAppWindowRect({
         x: appWindowPos.x,
         y: appWindowPos.y,
         width: APP_WIN_W,
         height: APP_WIN_H,
       });
     } else {
-      window.hitodamaAPI.setAppWindowRect(null);
+      window.kiboAPI.setAppWindowRect(null);
     }
   }, [showCompanionWindow, appWindowPos]);
 
@@ -2444,7 +2444,7 @@ export const KiboApp: React.FC = () => {
       askNotchPhase !== 'idle' ||
       Boolean(contextCard) ||
       Boolean(userBubbleText) ||
-      Boolean(hitodamaReply) ||
+      Boolean(kiboReply) ||
       dictationState !== 'idle' ||
       lassoActive ||
       soulAnnoyance > 0 ||
@@ -2473,7 +2473,7 @@ export const KiboApp: React.FC = () => {
     askNotchPhase,
     contextCard,
     userBubbleText,
-    hitodamaReply,
+    kiboReply,
     dictationState,
     lassoActive,
     soulAnnoyance,
@@ -2566,7 +2566,7 @@ export const KiboApp: React.FC = () => {
       askNotchPhase !== 'idle' ||
       contextCard ||
       userBubbleText ||
-      hitodamaReply ||
+      kiboReply ||
       dictationState !== 'idle' ||
       lassoActive
   );
@@ -2581,7 +2581,7 @@ export const KiboApp: React.FC = () => {
   const activeHitboxHeight =
     lassoActive || onboardingStep !== null
       ? window.innerHeight || 1080
-      : askNotchPhase !== 'idle' || dictationState !== 'idle' || userBubbleText || hitodamaReply
+      : askNotchPhase !== 'idle' || dictationState !== 'idle' || userBubbleText || kiboReply
       ? 720
     : contextCard
     ? Math.max(notchShellHeight + 125, 220)
@@ -2594,7 +2594,7 @@ export const KiboApp: React.FC = () => {
     : notchShellHeight;
 
   useEffect(() => {
-    if (!window.hitodamaAPI?.setWindowBounds) return;
+    if (!window.kiboAPI?.setWindowBounds) return;
 
     if (boundsTimeoutRef.current) {
       clearTimeout(boundsTimeoutRef.current);
@@ -2605,11 +2605,11 @@ export const KiboApp: React.FC = () => {
     const isGrowing = activeHitboxWidth > prev.w || activeHitboxHeight > prev.h;
 
     if (isGrowing) {
-      window.hitodamaAPI.setWindowBounds(activeHitboxWidth, activeHitboxHeight);
+      window.kiboAPI.setWindowBounds(activeHitboxWidth, activeHitboxHeight);
       prevWindowBoundsRef.current = { w: activeHitboxWidth, h: activeHitboxHeight };
     } else if (activeHitboxWidth !== prev.w || activeHitboxHeight !== prev.h) {
       boundsTimeoutRef.current = setTimeout(() => {
-        window.hitodamaAPI?.setWindowBounds(activeHitboxWidth, activeHitboxHeight);
+        window.kiboAPI?.setWindowBounds(activeHitboxWidth, activeHitboxHeight);
         prevWindowBoundsRef.current = { w: activeHitboxWidth, h: activeHitboxHeight };
       }, 180);
     }
@@ -2871,8 +2871,8 @@ export const KiboApp: React.FC = () => {
         });
         speakAsKibo(`Playing ${displayTarget} on Spotify.`);
 
-        if (window.hitodamaAPI?.playSpotify) {
-          const spRes = await window.hitodamaAPI.playSpotify(
+        if (window.kiboAPI?.playSpotify) {
+          const spRes = await window.kiboAPI.playSpotify(
             displayTarget,
             isLiked ? 'liked_songs' : 'track_or_artist'
           );
@@ -2901,7 +2901,7 @@ export const KiboApp: React.FC = () => {
           const fallbackUrl = isLiked
             ? 'https://open.spotify.com/collection/tracks'
             : `https://open.spotify.com/search/${encodeURIComponent(displayTarget)}`;
-          window.hitodamaAPI?.openUrl(fallbackUrl);
+          window.kiboAPI?.openUrl(fallbackUrl);
         }
 
         setTimeout(() => {
@@ -3119,7 +3119,7 @@ export const KiboApp: React.FC = () => {
             header: 'Today · Scheduled Routines',
             title: `${routines.length} Scheduled Task${routines.length !== 1 ? 's' : ''}`,
             subtitle: routines.length > 0 ? routines.map((r) => r.title).join(' · ') : 'No scheduled tasks yet',
-            domain: 'Hito Today',
+            domain: 'Kibo Today',
           });
         } else if (fc.name === 'open_application') {
           const appName = String(fc.args.appName || '').trim();
@@ -3138,7 +3138,7 @@ export const KiboApp: React.FC = () => {
             domain: matchedDomain,
             badgeType: 'app',
           });
-          window.hitodamaAPI?.openApp(appName);
+          window.kiboAPI?.openApp(appName);
         } else if (fc.name === 'search_web') {
           const query = String(fc.args.query || text).trim();
           const platform = String(fc.args.platform || 'google').toLowerCase();
@@ -3179,27 +3179,27 @@ export const KiboApp: React.FC = () => {
             subtitle: target.url.replace(/^https?:\/\/(www\.)?/, ''),
             domain: target.domain,
           });
-          window.hitodamaAPI?.openUrl(target.url);
+          window.kiboAPI?.openUrl(target.url);
         } else if (fc.name === 'system_action') {
           const act = String(fc.args.action || '').toLowerCase();
           const val = String(fc.args.value || '').toLowerCase();
           if (act === 'dark_mode' || act === 'light_mode') {
             const wantDark = act === 'dark_mode' ? val !== 'off' : val === 'off';
             setSystemDarkMode(wantDark);
-            window.hitodamaAPI?.toggleSystemDarkMode(wantDark).catch(() => {});
+            window.kiboAPI?.toggleSystemDarkMode(wantDark).catch(() => {});
           } else if (act === 'night_light') {
             const wantOn = val !== 'off';
             setNightLight(wantOn);
-            window.hitodamaAPI?.toggleNightLight?.(wantOn, nightLightStrength).catch(() => {});
+            window.kiboAPI?.toggleNightLight?.(wantOn, nightLightStrength).catch(() => {});
           } else if (act === 'volume') {
             const num = parseInt(val, 10);
             if (!isNaN(num)) applyUserVolumeChange(num);
           } else if (act === 'mute') {
             const wantMute = val !== 'off';
             setIsMuted(wantMute);
-            window.hitodamaAPI?.setMute?.(wantMute).catch(() => {});
+            window.kiboAPI?.setMute?.(wantMute).catch(() => {});
           } else if (act === 'lock' || act === 'sleep') {
-            window.hitodamaAPI?.powerAction(act as 'lock' | 'sleep').catch(() => {});
+            window.kiboAPI?.powerAction(act as 'lock' | 'sleep').catch(() => {});
           }
         } else if (fc.name === 'schedule_routine') {
           const title = String(fc.args.title || text);
@@ -3220,7 +3220,7 @@ export const KiboApp: React.FC = () => {
             header: 'Scheduled · Added to Routines',
             title,
             subtitle: timeLabel,
-            domain: 'Hito Today',
+            domain: 'Kibo Today',
           });
         } else if (fc.name === 'add_todo') {
           setTodos((prev) => [
@@ -3360,7 +3360,7 @@ export const KiboApp: React.FC = () => {
     setShowMediaNotch(false);
     setIsTucked(true);
     setLassoActive(true);
-    window.hitodamaAPI?.setLassoActive?.(true);
+    window.kiboAPI?.setLassoActive?.(true);
     // Clear all previous speech state so old questions never appear!
     setLassoQuery('');
     lassoQueryRef.current = '';
@@ -3371,7 +3371,7 @@ export const KiboApp: React.FC = () => {
     setLassoPoints([]);
     lassoPointsRef.current = [];
     capturedScreenRef.current = null;
-    window.hitodamaAPI?.captureScreen().then((res) => {
+    window.kiboAPI?.captureScreen().then((res) => {
       if (res?.success && res.image) {
         capturedScreenRef.current = res.image;
       }
@@ -3448,13 +3448,13 @@ export const KiboApp: React.FC = () => {
   }, [isPlayingMedia, totalMediaDuration]);
 
   useEffect(() => {
-    if (window.hitodamaAPI?.getSystemStats) {
-      window.hitodamaAPI.getSystemStats().then((data) => {
+    if (window.kiboAPI?.getSystemStats) {
+      window.kiboAPI.getSystemStats().then((data) => {
         if (data) setSystemStats(data);
       });
       const interval = setInterval(async () => {
         try {
-          const data = await window.hitodamaAPI?.getSystemStats();
+          const data = await window.kiboAPI?.getSystemStats();
           if (data) setSystemStats(data);
         } catch (_) {}
       }, 2500);
@@ -3504,8 +3504,8 @@ export const KiboApp: React.FC = () => {
     const action = pendingPowerAction;
     setPendingPowerAction(null);
     setPowerFeedback(`Executing ${action}...`);
-    if (window.hitodamaAPI?.powerAction) {
-      await window.hitodamaAPI.powerAction(action);
+    if (window.kiboAPI?.powerAction) {
+      await window.kiboAPI.powerAction(action);
     }
     setTimeout(() => setPowerFeedback(null), 2500);
   };
@@ -3513,8 +3513,8 @@ export const KiboApp: React.FC = () => {
   const handleRunSpeedTest = async () => {
     if (isSpeedTesting) return;
     setIsSpeedTesting(true);
-    if (window.hitodamaAPI?.runSpeedTest) {
-      const res = await window.hitodamaAPI.runSpeedTest();
+    if (window.kiboAPI?.runSpeedTest) {
+      const res = await window.kiboAPI.runSpeedTest();
       if (res?.success) {
         setSpeedDownload(res.downloadMbps);
         setSpeedUpload(res.uploadMbps);
@@ -3532,8 +3532,8 @@ export const KiboApp: React.FC = () => {
   };
 
   const handleLaunchApp = async (nameOrId: string) => {
-    if (window.hitodamaAPI?.openApp) {
-      await window.hitodamaAPI.openApp(nameOrId);
+    if (window.kiboAPI?.openApp) {
+      await window.kiboAPI.openApp(nameOrId);
     }
   };
 
@@ -3604,7 +3604,7 @@ export const KiboApp: React.FC = () => {
       } catch (_) {}
       return updated;
     });
-    window.hitodamaAPI?.togglePinClipboardItem?.(id);
+    window.kiboAPI?.togglePinClipboardItem?.(id);
   }, []);
 
   const handleDeleteClip = useCallback((id: number) => {
@@ -3616,7 +3616,7 @@ export const KiboApp: React.FC = () => {
       } catch (_) {}
       return remaining;
     });
-    window.hitodamaAPI?.deleteClipboardItem?.(id);
+    window.kiboAPI?.deleteClipboardItem?.(id);
     triggerClipboardToast('Removed');
   }, []);
 
@@ -3624,10 +3624,10 @@ export const KiboApp: React.FC = () => {
     if (!clip) return;
     if (clip.preview) {
       navigator.clipboard?.writeText(clip.preview).catch(() => {});
-      window.hitodamaAPI?.writeClipboardText?.(clip.preview);
+      window.kiboAPI?.writeClipboardText?.(clip.preview);
     }
     if (clip.imageDataUrl) {
-      window.hitodamaAPI?.writeClipboardImage?.(clip.imageDataUrl);
+      window.kiboAPI?.writeClipboardImage?.(clip.imageDataUrl);
     }
     triggerClipboardToast('Copied!');
   }, []);
@@ -3665,7 +3665,7 @@ export const KiboApp: React.FC = () => {
 
           if (!el) {
             const sourcePathOrUrl = targetWp.filePath || targetWp.url;
-            window.hitodamaAPI?.setWallpaper?.(sourcePathOrUrl).finally(() => {
+            window.kiboAPI?.setWallpaper?.(sourcePathOrUrl).finally(() => {
               setIsWallpaperRippling(false);
               setIsApplyingWallpaper(false);
             });
@@ -3686,9 +3686,9 @@ export const KiboApp: React.FC = () => {
               ease: 'power2.inOut',
               onComplete: async () => {
                 const sourcePathOrUrl = targetWp.filePath || targetWp.url;
-                if (window.hitodamaAPI?.setWallpaper) {
+                if (window.kiboAPI?.setWallpaper) {
                   try {
-                    await window.hitodamaAPI.setWallpaper(sourcePathOrUrl);
+                    await window.kiboAPI.setWallpaper(sourcePathOrUrl);
                   } catch (_) {}
                 }
                 gsap.to(el, {
@@ -3756,8 +3756,8 @@ export const KiboApp: React.FC = () => {
 
   const handlePickLocalWallpapers = useCallback(async () => {
     setWallpaperSourceTab('My folder');
-    if (!window.hitodamaAPI?.pickWallpaperFiles) return;
-    const res = await window.hitodamaAPI.pickWallpaperFiles();
+    if (!window.kiboAPI?.pickWallpaperFiles) return;
+    const res = await window.kiboAPI.pickWallpaperFiles();
     if (res?.success && res.files && res.files.length > 0) {
       const newThemes: WallpaperTheme[] = await Promise.all(
         res.files.map(async (f, i) => {
@@ -3984,7 +3984,7 @@ export const KiboApp: React.FC = () => {
             e.preventDefault();
             if (selectedClip.preview) {
               navigator.clipboard?.writeText(selectedClip.preview).catch(() => {});
-              window.hitodamaAPI?.typeText?.(selectedClip.preview);
+              window.kiboAPI?.typeText?.(selectedClip.preview);
             }
             triggerClipboardToast('Pasted!');
           }
@@ -4007,7 +4007,7 @@ export const KiboApp: React.FC = () => {
           e.preventDefault();
           if (selectedClip.preview) {
             navigator.clipboard?.writeText(selectedClip.preview).catch(() => {});
-            window.hitodamaAPI?.typeText?.(selectedClip.preview);
+            window.kiboAPI?.typeText?.(selectedClip.preview);
           }
           triggerClipboardToast('Pasted!');
         } else if ((e.key === 'c' || e.key === 'C') && (e.ctrlKey || e.metaKey) && selectedClip) {
@@ -4095,7 +4095,7 @@ export const KiboApp: React.FC = () => {
         setShowMediaNotch(false);
         setIsTucked(true);
         setLassoActive(true);
-        window.hitodamaAPI?.setLassoActive?.(true);
+        window.kiboAPI?.setLassoActive?.(true);
         // Clear all previous speech state so old questions never appear!
         setLassoQuery('');
         lassoQueryRef.current = '';
@@ -4106,7 +4106,7 @@ export const KiboApp: React.FC = () => {
         setLassoPoints([]);
         lassoPointsRef.current = [];
         capturedScreenRef.current = null;
-        window.hitodamaAPI?.captureScreen().then((res) => {
+        window.kiboAPI?.captureScreen().then((res) => {
           if (res?.success && res.image) {
             capturedScreenRef.current = res.image;
           }
@@ -4205,7 +4205,7 @@ export const KiboApp: React.FC = () => {
                   ) {
                     let shotImage = capturedScreenRef.current;
                     if (!shotImage) {
-                      const shot = await window.hitodamaAPI?.captureScreen();
+                      const shot = await window.kiboAPI?.captureScreen();
                       shotImage = shot?.image;
                     }
                     screenImage = shotImage;
@@ -4235,7 +4235,7 @@ export const KiboApp: React.FC = () => {
                 if (cleaned && !cleaned.includes('<noise>') && !cleaned.includes('(silence)')) {
                   setDictationText(cleaned);
                   setDictationState('done');
-                  await window.hitodamaAPI?.typeText(cleaned);
+                  await window.kiboAPI?.typeText(cleaned);
                   addEmbers(2);
                   setTimeout(() => setDictationState('idle'), 1400);
                 } else {
@@ -4246,7 +4246,7 @@ export const KiboApp: React.FC = () => {
               } else if (mode === 'LASSO') {
                 const points = [...lassoPointsRef.current];
                 setLassoActive(false);
-                window.hitodamaAPI?.setLassoActive?.(false);
+                window.kiboAPI?.setLassoActive?.(false);
                 setAskNotchPhase('thinking');
                 setSoulMode('THINKING');
 
@@ -4279,7 +4279,7 @@ export const KiboApp: React.FC = () => {
 
                 let shotImage = capturedScreenRef.current;
                 if (!shotImage) {
-                  const shot = await window.hitodamaAPI?.captureScreen();
+                  const shot = await window.kiboAPI?.captureScreen();
                   shotImage = shot?.image || '';
                 }
                 const cropped = await cropScreenToLasso(shotImage, points);
@@ -4310,7 +4310,7 @@ export const KiboApp: React.FC = () => {
               setAskNotchPhase('idle');
               setDictationState('idle');
               setLassoActive(false);
-              window.hitodamaAPI?.setLassoActive?.(false);
+              window.kiboAPI?.setLassoActive?.(false);
               const errMsg = String(err?.message || '');
               const userMsg = errMsg.includes('429')
                 ? 'Rate limit reached · Please wait a moment'
@@ -4353,7 +4353,7 @@ export const KiboApp: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const api = window.hitodamaAPI as any;
+    const api = window.kiboAPI as any;
     if (!api) return;
 
     const unregHotkey = api.onHotkeyEvent
@@ -4582,7 +4582,7 @@ export const KiboApp: React.FC = () => {
 
   return (
     <div
-      className="hitodama-companion-root"
+      className="kibo-companion-root"
       style={{
         ...adaptiveVars,
         background: isElectron
@@ -4595,8 +4595,8 @@ export const KiboApp: React.FC = () => {
     >
       {/* Glowing Blue Desktop Border ONLY when Kibo is actively working / controlling the PC */}
       <div
-        className={`hitodama-screen-edge-glow ${
-          askNotchPhase === 'thinking' || Boolean(contextCard) || Boolean(hitodamaReply)
+        className={`kibo-screen-edge-glow ${
+          askNotchPhase === 'thinking' || Boolean(contextCard) || Boolean(kiboReply)
             ? 'is-active'
             : ''
         }`}
@@ -4620,7 +4620,7 @@ export const KiboApp: React.FC = () => {
           ===================================================================== */}
       <div
         ref={notchShellRef}
-        className={`hitodama-bezel-shell ${isExpanded ? 'is-expanded' : ''} ${isTuckedSliver ? 'is-tucked' : ''}`}
+        className={`kibo-bezel-shell ${isExpanded ? 'is-expanded' : ''} ${isTuckedSliver ? 'is-tucked' : ''}`}
         style={{
           width: `${notchShellWidth}px`,
           height: `${notchShellHeight}px`,
@@ -4633,7 +4633,7 @@ export const KiboApp: React.FC = () => {
         onWheel={handleNotchWheel}
       >
         <svg
-          className="hitodama-svg-arch left"
+          className="kibo-svg-arch left"
           viewBox="0 0 24 24"
           style={{
             left: `-${archSize}px`,
@@ -4649,7 +4649,7 @@ export const KiboApp: React.FC = () => {
         </svg>
 
         <svg
-          className="hitodama-svg-arch right"
+          className="kibo-svg-arch right"
           viewBox="0 0 24 24"
           style={{
             right: `-${archSize}px`,
@@ -4665,7 +4665,7 @@ export const KiboApp: React.FC = () => {
         </svg>
 
         <div
-          className="hitodama-bezel-inner"
+          className="kibo-bezel-inner"
           style={{
             borderBottomLeftRadius: `${bottomRadius}px`,
             borderBottomRightRadius: `${bottomRadius}px`,
@@ -4702,7 +4702,7 @@ export const KiboApp: React.FC = () => {
 
           {!isExpanded && !showProactiveBanner && !showMediaNotch && notchApiAlert && (
             <div
-              className="hitodama-notch-api-alert"
+              className="kibo-notch-api-alert"
               onClick={() => {
                 setNotchApiAlert(null);
                 openCompanionApp('settings', true);
@@ -4714,7 +4714,7 @@ export const KiboApp: React.FC = () => {
           )}
 
           {!isExpanded && !showProactiveBanner && !showMediaNotch && !notchApiAlert && isCompactAskBar && (
-            <div className="hitodama-notch-ask-compact" onClick={() => setAskNotchPhase('idle')}>
+            <div className="kibo-notch-ask-compact" onClick={() => setAskNotchPhase('idle')}>
               <div className="ask-mini-soul-left">
                 <SoulCanvas
                   soul={currentSoul}
@@ -4762,7 +4762,7 @@ export const KiboApp: React.FC = () => {
 
           {!isExpanded && !showProactiveBanner && !showMediaNotch && !notchApiAlert && !isCompactAskBar && isTimerNotchActive && (
             <div
-              className={`hitodama-notch-timer-bar ${timerAlarmRinging ? 'is-ringing' : ''}`}
+              className={`kibo-notch-timer-bar ${timerAlarmRinging ? 'is-ringing' : ''}`}
               onClick={() => {
                 if (timerAlarmRinging) {
                   setTimerAlarmRinging(false);
@@ -4802,7 +4802,7 @@ export const KiboApp: React.FC = () => {
           {/* STATE 1C: APPLE DYNAMIC ISLAND MINI MEDIA NOTCH (Synth freezes when paused) */}
           {!isExpanded && !showProactiveBanner && !showMediaNotch && !notchApiAlert && !isCompactAskBar && !isTimerNotchActive && isMiniMediaPill && (
             <div
-              className="hitodama-notch-mini-media"
+              className="kibo-notch-mini-media"
               onClick={() => setShowMediaNotch(true)}
               onContextMenu={(e) => {
                 e.preventDefault();
@@ -4844,7 +4844,7 @@ export const KiboApp: React.FC = () => {
           {/* STATE 1E: AWAKE OR TUCKED SOUL NOTCH (standard Kibo notch) */}
           {!isExpanded && !showProactiveBanner && !showMediaNotch && !notchApiAlert && !isCompactAskBar && !isTimerNotchActive && !isMiniMediaPill && (
             <div
-              className={`hitodama-notch-soul ${soulIsHit ? 'is-hit' : ''}`}
+              className={`kibo-notch-soul ${soulIsHit ? 'is-hit' : ''}`}
               style={{
                 opacity: roamingStage !== 'IDLE' || onboardingStep !== null ? 0 : 1,
                 pointerEvents: roamingStage !== 'IDLE' || onboardingStep !== null ? 'none' : 'auto',
@@ -4857,7 +4857,7 @@ export const KiboApp: React.FC = () => {
               }}
             >
               <div
-                className="hitodama-soul-underglow"
+                className="kibo-soul-underglow"
                 style={{
                   opacity: isTucked ? 0 : isSoulDull ? 0.35 : 1,
                   background:
@@ -4872,7 +4872,7 @@ export const KiboApp: React.FC = () => {
                 }}
               />
               <div
-                className="hitodama-idle-soul-wrap"
+                className="kibo-idle-soul-wrap"
                 style={{
                   opacity: 1,
                   transform: isTucked ? 'translateY(-14px) scale(0.78)' : isHovered ? 'scale(1.06)' : 'scale(1)',
@@ -4898,7 +4898,7 @@ export const KiboApp: React.FC = () => {
           {/* STATE 2: COMPACT MEDIA PLAYER NOTCH (Bottom-anchored glow keeps top-left & top-right #0C0C0E seamless!) */}
           {!isExpanded && showMediaNotch && (
             <div
-              className="hitodama-notch-media-v2"
+              className="kibo-notch-media-v2"
               style={{
                 background: `radial-gradient(circle at 50% 95%, rgba(${mediaArtPalette.rgb}, 0.28) 0%, rgba(12, 12, 14, 0) 68%), #0C0C0E`,
               }}
@@ -4982,7 +4982,7 @@ export const KiboApp: React.FC = () => {
 
           {/* STATE 4: FULL EXPANDED DYNAMIC ISLAND */}
           {isExpanded && (
-            <div className="hitodama-expanded-inner">
+            <div className="kibo-expanded-inner">
               <div className="kibo-console-header">
                 {/* Left: Live Mini Kibo Droid +Watts Status */}
                 <div
@@ -5070,7 +5070,7 @@ export const KiboApp: React.FC = () => {
                             const next = !wifiEnabled;
                             setWifiEnabled(next);
                             setWifiSsid(next ? 'Connected' : 'Off');
-                            await window.hitodamaAPI?.toggleWifi?.(next);
+                            await window.kiboAPI?.toggleWifi?.(next);
                           }}
                         >
                           <span className="tile-icon-circle">
@@ -5096,7 +5096,7 @@ export const KiboApp: React.FC = () => {
                             e.stopPropagation();
                             const next = !bluetoothEnabled;
                             setBluetoothEnabled(next);
-                            await window.hitodamaAPI?.toggleBluetooth?.(next);
+                            await window.kiboAPI?.toggleBluetooth?.(next);
                           }}
                         >
                           <span className="tile-icon-circle">
@@ -5166,7 +5166,7 @@ export const KiboApp: React.FC = () => {
                                 setWifiEnabled(true);
                                 setWifiSsid(net.ssid);
                                 setActiveControlDropdown(null);
-                                await window.hitodamaAPI?.toggleWifi?.(true, net.ssid);
+                                await window.kiboAPI?.toggleWifi?.(true, net.ssid);
                               }}
                               className={`audio-device-option ${wifiSsid === net.ssid ? 'selected' : ''}`}
                             >
@@ -5244,7 +5244,7 @@ export const KiboApp: React.FC = () => {
                             e.stopPropagation();
                             const next = !nightLight;
                             setNightLight(next);
-                            await window.hitodamaAPI?.toggleNightLight?.(next, nightLightStrength);
+                            await window.kiboAPI?.toggleNightLight?.(next, nightLightStrength);
                           }}
                         >
                           <span className="tile-icon-circle">
@@ -5270,7 +5270,7 @@ export const KiboApp: React.FC = () => {
                           e.stopPropagation();
                           const nextDark = !systemDarkMode;
                           setSystemDarkMode(nextDark);
-                          await window.hitodamaAPI?.toggleSystemDarkMode(nextDark);
+                          await window.kiboAPI?.toggleSystemDarkMode(nextDark);
                         }}
                         className={`companion-adaptive-tile ${systemDarkMode ? 'is-on' : ''}`}
                       >
@@ -5308,7 +5308,7 @@ export const KiboApp: React.FC = () => {
                               const val = parseInt(e.target.value, 10);
                               setNightLightStrength(val);
                               setNightLight(true);
-                              window.hitodamaAPI?.toggleNightLight?.(true, val);
+                              window.kiboAPI?.toggleNightLight?.(true, val);
                             }}
                             className="nightlight-strength-slider"
                           />
@@ -5344,7 +5344,7 @@ export const KiboApp: React.FC = () => {
                             e.stopPropagation();
                             const nextMute = !isMuted;
                             setIsMuted(nextMute);
-                            window.hitodamaAPI?.setMute?.(nextMute);
+                            window.kiboAPI?.setMute?.(nextMute);
                           }}
                           className="volume-inner-speaker-btn"
                         >
@@ -5528,7 +5528,7 @@ export const KiboApp: React.FC = () => {
                               {routines.length > 0 ? routines[0].timeLabel : 'No scheduled routines'}
                             </div>
                             <div className="companion-truncate" style={{ fontSize: '10.5px', color: '#8A8A93' }}>
-                              {routines.length > 0 ? routines[0].title : 'Ask Hito to schedule any task'}
+                              {routines.length > 0 ? routines[0].title : 'Ask Kibo to schedule any task'}
                             </div>
                           </div>
                         </div>
@@ -5927,8 +5927,8 @@ export const KiboApp: React.FC = () => {
                                           setSelectedClipboardId(item.id);
                                           if (item.preview) {
                                             navigator.clipboard?.writeText(item.preview).catch(() => {});
-                                            window.hitodamaAPI?.writeClipboardText?.(item.preview);
-                                            window.hitodamaAPI?.typeText?.(item.preview);
+                                            window.kiboAPI?.writeClipboardText?.(item.preview);
+                                            window.kiboAPI?.typeText?.(item.preview);
                                           }
                                           triggerClipboardToast('Pasted!');
                                         }}
@@ -6030,8 +6030,8 @@ export const KiboApp: React.FC = () => {
                                         setSelectedClipboardId(item.id);
                                         if (item.preview) {
                                           navigator.clipboard?.writeText(item.preview).catch(() => {});
-                                          window.hitodamaAPI?.writeClipboardText?.(item.preview);
-                                          window.hitodamaAPI?.typeText?.(item.preview);
+                                          window.kiboAPI?.writeClipboardText?.(item.preview);
+                                          window.kiboAPI?.typeText?.(item.preview);
                                         }
                                         triggerClipboardToast('Pasted!');
                                       }}
@@ -6165,8 +6165,8 @@ export const KiboApp: React.FC = () => {
                             if (!selectedClip) return;
                             if (selectedClip.preview) {
                               navigator.clipboard?.writeText(selectedClip.preview).catch(() => {});
-                              window.hitodamaAPI?.writeClipboardText?.(selectedClip.preview);
-                              window.hitodamaAPI?.typeText?.(selectedClip.preview);
+                              window.kiboAPI?.writeClipboardText?.(selectedClip.preview);
+                              window.kiboAPI?.typeText?.(selectedClip.preview);
                             }
                             triggerClipboardToast('Pasted!');
                           }}
@@ -6211,7 +6211,7 @@ export const KiboApp: React.FC = () => {
                   <AgentsNotchView
                     tasks={agentTasks}
                     onOpenGeneratedPage={(html, filePath) => {
-                      (window as any).hitodamaAPI?.openGeneratedPage?.(html, filePath);
+                      (window as any).kiboAPI?.openGeneratedPage?.(html, filePath);
                     }}
                   />
                 )}
@@ -6254,7 +6254,7 @@ export const KiboApp: React.FC = () => {
                               alignItems: 'center',
                               gap: '4px',
                             }}
-                            title="Have Hito fly across your monitor and point at this on screen"
+                            title="Have Kibo fly across your monitor and point at this on screen"
                           >
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                               <circle cx="12" cy="12" r="9" />
@@ -6503,7 +6503,7 @@ export const KiboApp: React.FC = () => {
           ===================================================================== */}
       {showCompanionWindow && (
         <div
-          className={`hitodama-config-app-window ${companionDockTab === 'soul' ? 'loadout-theme' : 'settings-theme'}`}
+          className={`kibo-config-app-window ${companionDockTab === 'soul' ? 'loadout-theme' : 'settings-theme'}`}
           style={{
             position: 'fixed',
             left: `${appWindowPos.x}px`,
@@ -6816,7 +6816,7 @@ export const KiboApp: React.FC = () => {
                 <div className="config-sidebar-nav">
                   {(
                     [
-                      { id: 'Hito', icon: 'user' },
+                      { id: 'Kibo', icon: 'user' },
                       { id: 'Shortcuts', icon: 'keyboard' },
                       { id: 'Behavior', icon: 'sliders' },
                       { id: 'System', icon: 'gear' },
@@ -6873,7 +6873,7 @@ export const KiboApp: React.FC = () => {
                         <div className="config-row-copy">
                           <div className="config-row-title">Forget my API key</div>
                           <div className="config-row-desc">
-                            Erases your Gemini key from this PC; Hito asks for one again
+                            Erases your Gemini key from this PC; Kibo asks for one again
                           </div>
                         </div>
                         <button onClick={handleForgetGeminiKey} className="config-pill-btn">
@@ -6937,7 +6937,7 @@ export const KiboApp: React.FC = () => {
                           </div>
                         </div>
                         <button
-                          onClick={() => window.hitodamaAPI?.openUrl('https://tavily.com')}
+                          onClick={() => window.kiboAPI?.openUrl('https://tavily.com')}
                           className="config-pill-btn"
                         >
                           Get one
@@ -6998,9 +6998,9 @@ export const KiboApp: React.FC = () => {
                   </>
                 )}
 
-                {settingsSection === 'Hito' && (
+                {settingsSection === 'Kibo' && (
                   <>
-                    <h2 className="config-panel-heading">Hito</h2>
+                    <h2 className="config-panel-heading">Kibo</h2>
                     <p className="config-panel-sub">Your soul's identity, active loadout, and onboarding guide.</p>
                     <div className="config-card-group">
                       <div className="config-card-row">
@@ -7062,7 +7062,7 @@ export const KiboApp: React.FC = () => {
                     <div className="config-card-group">
                       <div className="config-card-row">
                         <div className="config-row-copy">
-                          <div className="config-row-title">Ask Hito</div>
+                          <div className="config-row-title">Ask Kibo</div>
                           <div className="config-row-desc">Wake the soul to run commands, toggle dark mode, or search YouTube & Google</div>
                         </div>
                         <button
@@ -7140,7 +7140,7 @@ export const KiboApp: React.FC = () => {
                       <div className="config-card-row">
                         <div className="config-row-copy">
                           <div className="config-row-title">Spoken voice responses ({getEquippedCardName('Voice')})</div>
-                          <div className="config-row-desc">Read Hito's replies out loud alongside the on-screen pill</div>
+                          <div className="config-row-desc">Read Kibo's replies out loud alongside the on-screen pill</div>
                         </div>
                         <button
                           onClick={() => {
@@ -7164,7 +7164,7 @@ export const KiboApp: React.FC = () => {
                     <div className="config-card-group">
                       <div className="config-card-row">
                         <div className="config-row-copy">
-                          <div className="config-row-title">Launch Hito at Windows startup</div>
+                          <div className="config-row-title">Launch Kibo at Windows startup</div>
                           <div className="config-row-desc">Start minimized in your top monitor bezel and system tray</div>
                         </div>
                         <button
@@ -7197,7 +7197,7 @@ export const KiboApp: React.FC = () => {
                       <div className="config-card-row">
                         <div className="config-row-copy">
                           <div className="config-row-title">Clear Clipboard History ({clipboardItems.length} items)</div>
-                          <div className="config-row-desc">Removes all unpinned items from Hito's local clipboard list</div>
+                          <div className="config-row-desc">Removes all unpinned items from Kibo's local clipboard list</div>
                         </div>
                         <button
                           onClick={() => {
@@ -7208,7 +7208,7 @@ export const KiboApp: React.FC = () => {
                               } catch (_) {}
                               return remaining;
                             });
-                            window.hitodamaAPI?.clearClipboardHistory?.();
+                            window.kiboAPI?.clearClipboardHistory?.();
                           }}
                           className="config-pill-btn"
                         >
@@ -7243,7 +7243,7 @@ export const KiboApp: React.FC = () => {
                         <div className="config-row-copy">
                           <div className="config-row-title">Direct-to-Provider Architecture</div>
                           <div className="config-row-desc" style={{ lineHeight: 1.5 }}>
-                            Hito runs directly on your PC. Voice, screen lasso captures, and search prompts go straight from your machine to Google Gemini and Tavily using your own keys.
+                            Kibo runs directly on your PC. Voice, screen lasso captures, and search prompts go straight from your machine to Google Gemini and Tavily using your own keys.
                           </div>
                         </div>
                       </div>
@@ -7409,12 +7409,12 @@ export const KiboApp: React.FC = () => {
           {showConnectModal && (
             <div className="connect-modal-backdrop" onClick={() => setShowConnectModal(false)}>
               <div className="connect-modal-card" onClick={(e) => e.stopPropagation()}>
-                <h3 className="connect-modal-title">Connect Hito</h3>
+                <h3 className="connect-modal-title">Connect Kibo</h3>
                 <p className="connect-modal-p">
-                  Watch the full video to learn how to create your Gemini API key and add it to Hito.
+                  Watch the full video to learn how to create your Gemini API key and add it to Kibo.
                 </p>
                 <p className="connect-modal-p secondary">
-                  The key belongs to your own Google account, and Google's Gemini API terms apply. On a free key Google may use what you send to improve its products, and people may review it, so use a billing-enabled key for anything private. Google's terms require one for apps used in the European Economic Area, the UK and Switzerland. Hito is not affiliated with Google.
+                  The key belongs to your own Google account, and Google's Gemini API terms apply. On a free key Google may use what you send to improve its products, and people may review it, so use a billing-enabled key for anything private. Google's terms require one for apps used in the European Economic Area, the UK and Switzerland. Kibo is not affiliated with Google.
                 </p>
 
                 <input
@@ -7438,7 +7438,7 @@ export const KiboApp: React.FC = () => {
 
       {!isExpanded && !showCompanionWindow && contextCard && (
         <div
-          className="hitodama-context-drop-card"
+          className="kibo-context-drop-card"
           onClick={() => {
             if (contextCard.header.includes('Ember Waiting')) {
               handleClaimWaitingEmber();
@@ -7447,8 +7447,8 @@ export const KiboApp: React.FC = () => {
             }
           }}
         >
-          <div className="hitodama-context-header">{contextCard.header}</div>
-          <div className="hitodama-context-main">
+          <div className="kibo-context-header">{contextCard.header}</div>
+          <div className="kibo-context-main">
             {contextCard.domain ? (
               <img
                 src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(contextCard.domain)}&sz=32`}
@@ -7456,19 +7456,19 @@ export const KiboApp: React.FC = () => {
                 style={{ width: '20px', height: '20px', borderRadius: '5px', flexShrink: 0 }}
               />
             ) : (
-              <div className="hitodama-badge-icon app">
+              <div className="kibo-badge-icon app">
                 <SvgIcon name="bolt" size={12} />
               </div>
             )}
-            <span className="hitodama-context-title">{contextCard.title}</span>
+            <span className="kibo-context-title">{contextCard.title}</span>
           </div>
-          {contextCard.subtitle && <div className="hitodama-context-sub">{contextCard.subtitle}</div>}
+          {contextCard.subtitle && <div className="kibo-context-sub">{contextCard.subtitle}</div>}
         </div>
       )}
 
       {!isExpanded && !showCompanionWindow && askNotchPhase !== 'idle' && (
-        <div className="hitodama-ask-stage-hud">
-          <div className="hitodama-voice-pill user-white ask-wide-pill">
+        <div className="kibo-ask-stage-hud">
+          <div className="kibo-voice-pill user-white ask-wide-pill">
             <span className="pill-tag">YOU</span>
             <input
               type="text"
@@ -7482,8 +7482,8 @@ export const KiboApp: React.FC = () => {
                   executeVoiceCommand(askWords.join(' '));
                 }
               }}
-              placeholder="Ask Hito..."
-              className="hitodama-lasso-input"
+              placeholder="Ask Kibo..."
+              className="kibo-lasso-input"
               style={{ width: '400px' }}
               autoFocus
             />
@@ -7491,20 +7491,20 @@ export const KiboApp: React.FC = () => {
         </div>
       )}
 
-      {!isExpanded && askNotchPhase === 'idle' && dictationState === 'idle' && !lassoActive && (userBubbleText || hitodamaReply) && (
-        <div className="hitodama-floating-hud-stack">
+      {!isExpanded && askNotchPhase === 'idle' && dictationState === 'idle' && !lassoActive && (userBubbleText || kiboReply) && (
+        <div className="kibo-floating-hud-stack">
           {userBubbleText && (
-            <div className="hitodama-voice-pill user-white">
+            <div className="kibo-voice-pill user-white">
               <span className="pill-tag">YOU</span>
               <span className="pill-text">{userBubbleText}</span>
             </div>
           )}
-          {hitodamaReply && (
-            <div className="hitodama-voice-pill hitodama-dark">
+          {kiboReply && (
+            <div className="kibo-voice-pill kibo-dark">
               <span className="pill-tag">KIBO</span>
               <span className="pill-text">
-                {hitodamaReply.bold && <strong>{hitodamaReply.bold} </strong>}
-                {hitodamaReply.rest && <span className="muted">{hitodamaReply.rest}</span>}
+                {kiboReply.bold && <strong>{kiboReply.bold} </strong>}
+                {kiboReply.rest && <span className="muted">{kiboReply.rest}</span>}
               </span>
             </div>
           )}
@@ -7512,9 +7512,9 @@ export const KiboApp: React.FC = () => {
       )}
 
       {dictationState !== 'idle' && (
-        <div className="hitodama-dictation-stage">
+        <div className="kibo-dictation-stage">
           {dictationState === 'recording' && (
-            <div className="hitodama-dictation-card">
+            <div className="kibo-dictation-card">
               <span className="pill-tag">YOU</span>
               <input
                 type="text"
@@ -7532,21 +7532,21 @@ export const KiboApp: React.FC = () => {
                     }
                     setDictationText(finalClean);
                     setDictationState('done');
-                    await window.hitodamaAPI?.typeText(finalClean);
+                    await window.kiboAPI?.typeText(finalClean);
                     addEmbers(2);
                     setTimeout(() => setDictationState('idle'), 1400);
                   }
                 }}
-                className="hitodama-lasso-input"
+                className="kibo-lasso-input"
                 style={{ width: '480px' }}
                 autoFocus
               />
             </div>
           )}
 
-          <div className="hitodama-dictation-status-pill" onClick={() => setDictationState('idle')}>
+          <div className="kibo-dictation-status-pill" onClick={() => setDictationState('idle')}>
             {dictationState === 'recording' ? (
-              <div className="hitodama-blue-bars">
+              <div className="kibo-blue-bars">
                 {[0.55, 0.95, 1.0, 0.85, 0.55].map((s, idx) => (
                   <span
                     key={idx}
@@ -7560,7 +7560,7 @@ export const KiboApp: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <span className="hitodama-dictation-check">
+              <span className="kibo-dictation-check">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
@@ -7572,7 +7572,7 @@ export const KiboApp: React.FC = () => {
 
       {lassoActive && (
         <div
-          className="hitodama-lasso-overlay"
+          className="kibo-lasso-overlay"
           onPointerDown={(e) => {
             const rect = e.currentTarget.getBoundingClientRect();
             setIsDrawingLasso(true);
@@ -7592,7 +7592,7 @@ export const KiboApp: React.FC = () => {
           }}
           onPointerUp={() => setIsDrawingLasso(false)}
         >
-          <svg className="hitodama-lasso-svg" width="100%" height="100%">
+          <svg className="kibo-lasso-svg" width="100%" height="100%">
             {lassoPathString && (
               <>
                 <path
@@ -7615,8 +7615,8 @@ export const KiboApp: React.FC = () => {
             )}
           </svg>
 
-          <div className="hitodama-lasso-hud" onPointerDown={(e) => e.stopPropagation()}>
-            <div className="hitodama-voice-pill user-white">
+          <div className="kibo-lasso-hud" onPointerDown={(e) => e.stopPropagation()}>
+            <div className="kibo-voice-pill user-white">
               <span className="pill-tag">YOU</span>
               <input
                 type="text"
@@ -7631,14 +7631,14 @@ export const KiboApp: React.FC = () => {
                     const q = lassoQuery.trim() || 'What is this circled item?';
                     const points = [...lassoPointsRef.current];
                     setLassoActive(false);
-                    window.hitodamaAPI?.setLassoActive?.(false);
+                    window.kiboAPI?.setLassoActive?.(false);
                     setAskNotchPhase('thinking');
                     setSoulMode('THINKING');
                     setUserBubbleText(q);
                     try {
                       let shotImage = capturedScreenRef.current;
                       if (!shotImage) {
-                        const shot = await window.hitodamaAPI?.captureScreen();
+                        const shot = await window.kiboAPI?.captureScreen();
                         shotImage = shot?.image || '';
                       }
                       const cropped = await cropScreenToLasso(shotImage, points);
@@ -7669,7 +7669,7 @@ export const KiboApp: React.FC = () => {
                     }
                   }
                 }}
-                className="hitodama-lasso-input"
+                className="kibo-lasso-input"
                 autoFocus
               />
             </div>
@@ -7708,10 +7708,10 @@ export const KiboApp: React.FC = () => {
           setActiveTab('Agents');
         }}
         onDockActiveChange={(active, isHovered) => {
-          window.hitodamaAPI?.setAgentDockActive?.({ active, isHovered });
+          window.kiboAPI?.setAgentDockActive?.({ active, isHovered });
         }}
       />
     </div>
   );
 };
-export { KiboApp as HitodamaApp };
+

@@ -1,5 +1,5 @@
 // src/components/ProactiveContextNotch.tsx
-// Proactive App Detection & Context Suggestion Banner ("Connect to Hito?")
+// Proactive App Detection & Context Suggestion Banner ("Connect to Kibo?")
 // Kibo Soul-Link + Authentic App Logos + App-Matched Gradients + Infinite Marquee
 
 import React from 'react';
@@ -191,7 +191,7 @@ export const ProactiveContextNotch: React.FC<ProactiveContextNotchProps> = ({
                   whiteSpace: 'nowrap',
                 }}
               >
-                {isConnected ? `${app.name} Linked` : `Connect ${app.name} to Hito?`}
+                {isConnected ? `${app.name} Linked` : `Connect ${app.name} to Kibo?`}
               </span>
             </div>
             <div
@@ -203,7 +203,7 @@ export const ProactiveContextNotch: React.FC<ProactiveContextNotchProps> = ({
                 letterSpacing: '0.01em',
               }}
             >
-              Use Hito in {app.name} to:
+              Use Kibo in {app.name} to:
             </div>
           </div>
         </div>
@@ -213,7 +213,7 @@ export const ProactiveContextNotch: React.FC<ProactiveContextNotchProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
             <button
               onClick={() => onDismiss('NO')}
-              className="hitodama-context-btn muted"
+              className="kibo-context-btn muted"
               style={{
                 padding: '5px 11px',
                 fontSize: '11px',
@@ -230,7 +230,7 @@ export const ProactiveContextNotch: React.FC<ProactiveContextNotchProps> = ({
 
             <button
               onClick={() => onDismiss('NOT_NOW')}
-              className="hitodama-context-btn muted"
+              className="kibo-context-btn muted"
               style={{
                 padding: '5px 11px',
                 fontSize: '11px',
@@ -247,7 +247,7 @@ export const ProactiveContextNotch: React.FC<ProactiveContextNotchProps> = ({
 
             <button
               onClick={onConnect}
-              className="hitodama-context-btn primary"
+              className="kibo-context-btn primary"
               style={{
                 padding: '5px 13px',
                 fontSize: '11px',
@@ -296,8 +296,8 @@ export const ProactiveContextNotch: React.FC<ProactiveContextNotchProps> = ({
                 if (onUnlink) onUnlink();
                 else multitaskAgent.unlinkApp(app.id);
               }}
-              className="hitodama-context-btn muted"
-              title={`Unlink ${app.name} from Hito`}
+              className="kibo-context-btn muted"
+              title={`Unlink ${app.name} from Kibo`}
               style={{
                 padding: '5px 11px',
                 fontSize: '11px',
@@ -314,7 +314,7 @@ export const ProactiveContextNotch: React.FC<ProactiveContextNotchProps> = ({
 
             <button
               onClick={() => onDismiss('NOT_NOW')}
-              className="hitodama-context-btn muted"
+              className="kibo-context-btn muted"
               style={{
                 padding: '5px 11px',
                 fontSize: '11px',
@@ -333,8 +333,8 @@ export const ProactiveContextNotch: React.FC<ProactiveContextNotchProps> = ({
       </div>
 
       {/* BOTTOM ROW: Continuous Smooth Infinite Marquee Ticker (Pauses on Hover, No Diamond Icons) */}
-      <div className="hitodama-marquee-viewport">
-        <div className="hitodama-marquee-track">
+      <div className="kibo-marquee-viewport">
+        <div className="kibo-marquee-track">
           {marqueeItems.map((suggestion, idx) => (
             <button
               key={idx}
@@ -342,7 +342,7 @@ export const ProactiveContextNotch: React.FC<ProactiveContextNotchProps> = ({
                 if (!isConnected) multitaskAgent.connectApp(app.id);
                 onRunSuggestion(suggestion);
               }}
-              className="hitodama-marquee-pill"
+              className="kibo-marquee-pill"
               style={{
                 borderColor: 'rgba(255, 255, 255, 0.1)',
                 background: 'rgba(255, 255, 255, 0.04)',

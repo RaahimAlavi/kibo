@@ -174,7 +174,6 @@ function startHitTestLoop() {
   }, 16);
 }
 
-function createHitodamaTrayIcon() { return createKiboTrayIcon(); }
 function createKiboTrayIcon() {
   const size = 32;
   const buf = Buffer.alloc(size * size * 4, 0);
@@ -235,7 +234,7 @@ function createKiboTrayIcon() {
 
 // Dedicated Fiery Ember Tray Icon with white core, radiant amber-vermilion body and ascending sparks
 function createEmberTrayIcon() {
-  const emberIconPath = path.join(__dirname, '../public/ember-tray.png');
+  const emberIconPath = path.join(__dirname, '../public/kibo-core-tray.png');
   if (fs.existsSync(emberIconPath)) {
     const loaded = nativeImage.createFromPath(emberIconPath);
     if (!loaded.isEmpty()) {
@@ -343,6 +342,17 @@ function updateTrayMenu() {
     : `Watts: ${emberState.count.toLocaleString()} Available`;
 
   const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Show / Expand Kibo Notch',
+      click: () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.showInactive();
+          mainWindow.setAlwaysOnTop(true, 'pop-up-menu');
+          mainWindow.webContents.send('expand-island');
+        }
+      },
+    },
+    { type: 'separator' },
     {
       label: emberHeaderLabel,
       submenu: [
@@ -519,10 +529,17 @@ function createSystemTray() {
   updateTrayMenu();
 
   tray.on('click', () => {
-    if (mainWindow) {
-      mainWindow.show();
-      mainWindow.focus();
-      mainWindow.webContents.send('open-settings', 'soul');
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.showInactive();
+      mainWindow.setAlwaysOnTop(true, 'pop-up-menu');
+    }
+    if (tray) {
+      tray.popUpContextMenu();
+    }
+  });
+  tray.on('right-click', () => {
+    if (tray) {
+      tray.popUpContextMenu();
     }
   });
 }
@@ -589,7 +606,7 @@ function createWindow() {
       width: 0px !important;
       height: 0px !important;
     }
-    html, body, #root, .kibo-companion-root, .hitodama-companion-root {
+    html, body, #root, .kibo-companion-root, .kibo-companion-root {
       background: transparent !important;
       background-color: transparent !important;
       background-image: none !important;
@@ -614,9 +631,52 @@ function createWindow() {
       .catch(() => {});
   });
 
-  const prodPath = path.join(__dirname, '../dist/index.html');
-  mainWindow.loadFile(prodPath, { query: { mode: 'desktop' } }).catch((err) => {
-    console.error('[Kibo] loadFile error:', err);
+  const distRoot = path.join(__dirname, '../dist');
+  const mimeTypes = {
+    '.html': 'text/html; charset=utf-8',
+    '.js': 'application/javascript; charset=utf-8',
+    '.mjs': 'application/javascript; charset=utf-8',
+    '.css': 'text/css; charset=utf-8',
+    '.json': 'application/json; charset=utf-8',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.svg': 'image/svg+xml',
+    '.ico': 'image/x-icon',
+    '.woff': 'font/woff',
+    '.woff2': 'font/woff2',
+  };
+
+  const localServer = http.createServer((req, res) => {
+    try {
+      const parsedUrl = new URL(req.url || '/', 'http://127.0.0.1');
+      let safePath = decodeURIComponent(parsedUrl.pathname);
+      if (safePath === '/' || safePath === '/index.html') safePath = '/index.html';
+      const filePath = path.join(distRoot, safePath);
+      if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+        const ext = path.extname(filePath).toLowerCase();
+        res.writeHead(200, {
+          'Content-Type': mimeTypes[ext] || 'application/octet-stream',
+          'Cache-Control': 'no-cache',
+        });
+        fs.createReadStream(filePath).pipe(res);
+      } else {
+        const fallbackIndex = path.join(distRoot, 'index.html');
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        fs.createReadStream(fallbackIndex).pipe(res);
+      }
+    } catch (e) {
+      res.writeHead(500);
+      res.end('Internal error');
+    }
+  });
+
+  localServer.listen(0, '127.0.0.1', () => {
+    const addr = localServer.address();
+    const port = typeof addr === 'object' && addr ? addr.port : 5173;
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.loadURL(`http://127.0.0.1:${port}/?mode=desktop`);
+    }
   });
 
   mainWindow.webContents.on('did-finish-load', () => {
@@ -1033,7 +1093,7 @@ ipcMain.handle('capture-screen', async () => {
       return { success: true, image: base64Data };
     }
   } catch (err) {
-    console.warn('[Hito] desktopCapturer failed, falling back to PowerShell capture:', err);
+    console.warn('[Kibo] desktopCapturer failed, falling back to PowerShell capture:', err);
   } finally {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.setOpacity(1);
@@ -1689,7 +1749,7 @@ ipcMain.handle('sync-to-notion', async (event, { apiKey, databaseId, pageData })
           title: [
             {
               text: {
-                content: pageData.title || 'Hito Inspiration Entry',
+                content: pageData.title || 'Kibo Inspiration Entry',
               },
             },
           ],
@@ -1784,29 +1844,13 @@ function getNewestMtimeInDir(dirPath) {
 function ensureLatestFrontendBuild() {
   try {
     const rootDir = path.join(__dirname, '..');
-    const distDir = path.join(rootDir, 'dist');
-    const stampFile = path.join(distDir, '.build_stamp');
-    const srcNewest = getNewestMtimeInDir(path.join(rootDir, 'src'));
-    const htmlMtime = fs.existsSync(path.join(rootDir, 'index.html'))
-      ? Math.floor(fs.statSync(path.join(rootDir, 'index.html')).mtimeMs)
-      : 0;
-
-    const currentSignature = `${srcNewest}_${htmlMtime}`;
-    const lastSignature = fs.existsSync(stampFile)
-      ? fs.readFileSync(stampFile, 'utf8').trim()
-      : '';
-
-    if (
-      currentSignature !== lastSignature ||
-      !fs.existsSync(path.join(distDir, 'index.html'))
-    ) {
-      console.log('[Kibo] Compiling latest UI changes into dist/...');
+    const distIndex = path.join(rootDir, 'dist', 'index.html');
+    if (!fs.existsSync(distIndex)) {
+      console.log('[Kibo] Compiling initial dist/ build...');
       execSync('npx vite build --base=./', { cwd: rootDir, stdio: 'inherit' });
-      if (!fs.existsSync(distDir)) fs.mkdirSync(distDir, { recursive: true });
-      fs.writeFileSync(stampFile, currentSignature, 'utf8');
     }
   } catch (err) {
-    console.error('[Kibo] Auto-build warning:', err.message);
+    console.error('[Kibo] Build check warning:', err.message);
   }
 }
 

@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build --base=./",
     "preview": "vite preview",
-    "app": "electron --disable-logging electron/main.cjs",
-    "electron:start": "electron --disable-logging electron/main.cjs"
+    "app": "vite build --base=./ && electron electron/main.cjs",
+    "electron:start": "electron electron/main.cjs"
   },
   "dependencies": {
     "@designcodeio/threeui": "^1.2.0",

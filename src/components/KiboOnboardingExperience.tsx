@@ -136,7 +136,7 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
       setSoulMode('TALKING');
       setSoulExpr('HAPPY');
       setDialogueTitle('Voice Command Detected!');
-      setDialogueSub(`Heard: "${heard}" — Hito can answer, search YouTube, or control apps!`);
+      setDialogueSub(`Heard: "${heard}" — Kibo can answer, search YouTube, or control apps!`);
       onSpeak(`Searching for "${heard}"! That's how easy it is to summon my voice.`);
     }
   }, [act, liveSpeechText, voiceHeard, flashEmberReward, onSpeak]);
@@ -166,7 +166,7 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
     flySoulTo(50, 30, 1.05, 0.75);
     const line = `Hold ${customShortcuts.ask} on your keyboard and say: 'Search how to cook spaghetti on youtube'.`;
     setDialogueTitle(`Quest 2 · Voice Summon (${customShortcuts.ask})`);
-    setDialogueSub(`Hold your shortcut, say the phrase below, and Hito will instantly wake up.`);
+    setDialogueSub(`Hold your shortcut, say the phrase below, and Kibo will instantly wake up.`);
     onSpeak(line);
   }, [customShortcuts.ask, flySoulTo, onPreviewExpandIsland, onSpeak]);
 
@@ -190,7 +190,7 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
     flySoulTo(50, 30, 1.05, 0.75);
     const line = `Last power! Hold ${customShortcuts.dictate} to test Clean Dictation in any document or chat.`;
     setDialogueTitle(`Quest 4 · Clean Dictation (${customShortcuts.dictate})`);
-    setDialogueSub('Talk messy in any app—Hito removes filler words and types clean prose.');
+    setDialogueSub('Talk messy in any app—Kibo removes filler words and types clean prose.');
     onSpeak(line);
   }, [customShortcuts.dictate, flySoulTo, onSpeak]);
 
@@ -255,8 +255,8 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
       setSoulMode('TALKING');
       setSoulExpr('HAPPY');
       const greeting =
-        "Good morning! I'm Hito. I float freely above your desktop without blocking your work. Let's try your powers together!";
-      setDialogueTitle('"Good morning! I am Hito."');
+        "Good morning! I'm Kibo. I float freely above your desktop without blocking your work. Let's try your powers together!";
+      setDialogueTitle('"Good morning! I am Kibo."');
       setDialogueSub(greeting);
       onSpeak(greeting);
       actLockRef.current = false;
@@ -287,7 +287,7 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
     setSoulMode('TALKING');
     setSoulExpr('HAPPY');
     setDialogueTitle('Voice Command Tested!');
-    setDialogueSub(`Heard: "${phrase}" — Hito searches YouTube and opens the result!`);
+    setDialogueSub(`Heard: "${phrase}" — Kibo searches YouTube and opens the result!`);
     onSpeak(`Searching YouTube for "${phrase}"! That's how quick it is.`);
   };
 
@@ -436,7 +436,7 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
               setSoulMode('TALKING');
               setSoulExpr('EXCITED');
               setDialogueTitle('Target Acquired & Lasso Mastered!');
-              setDialogueSub('Any region you circle gets sent straight to Hito vision engine.');
+              setDialogueSub('Any region you circle gets sent straight to Kibo vision engine.');
               onSpeak('Target acquired! Any region you lasso gets sent straight to my vision.');
             }
             return next;
@@ -487,7 +487,7 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
                 setSoulMode('TALKING');
                 setSoulExpr('EXCITED');
                 setDialogueTitle('Target Acquired & Lasso Mastered!');
-                setDialogueSub('Any region you circle gets sent straight to Hito vision engine.');
+                setDialogueSub('Any region you circle gets sent straight to Kibo vision engine.');
                 onSpeak('Target acquired! Any region you lasso gets sent straight to my vision.');
               }
             }}
@@ -625,7 +625,7 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
                   setSoulMode('TALKING');
                   setSoulExpr('EXCITED');
                   setDialogueTitle('Target Acquired & Lasso Mastered!');
-                  setDialogueSub('Any region you circle gets sent straight to Hito vision engine.');
+                  setDialogueSub('Any region you circle gets sent straight to Kibo vision engine.');
                   onSpeak('Target acquired! Any region you lasso gets sent straight to my vision.');
                 }}
                 className="spatial-glow-cta"
@@ -708,7 +708,7 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
         {act === 'SLEEPING' && (
           <div className="spatial-action-row">
             <button onClick={triggerWakeSequence} className="spatial-glow-cta">
-              Wake Hito (Space)
+              Wake Kibo (Space)
             </button>
           </div>
         )}
@@ -725,4 +725,4 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
   );
 };
 
-export { KiboOnboardingExperience as HitodamaOnboardingExperience };
+

@@ -12,7 +12,7 @@ export function App() {
     }
     return (
       Boolean((window as any).kiboAPI) ||
-      Boolean((window as any).hitodamaAPI) ||
+      Boolean((window as any).kiboAPI) ||
       navigator.userAgent.toLowerCase().includes('electron')
     );
   })();

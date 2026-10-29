@@ -46,9 +46,9 @@ export async function findTargetOnScreen(
   if (!cleanQ) return null;
 
   // 1. FAST-PATH: Native Windows UIAutomation Hierarchy (<100ms)
-  if (typeof window !== 'undefined' && ((window as any).kiboAPI || (window as any).hitodamaAPI)?.scanUIElements) {
+  if (typeof window !== 'undefined' && ((window as any).kiboAPI || (window as any).kiboAPI)?.scanUIElements) {
     try {
-      const scanRes = await ((window as any).kiboAPI || (window as any).hitodamaAPI).scanUIElements();
+      const scanRes = await ((window as any).kiboAPI || (window as any).kiboAPI).scanUIElements();
       const elements = scanRes?.elements || (Array.isArray(scanRes) ? scanRes : []);
       if (Array.isArray(elements) && elements.length > 0) {
         const qLower = cleanQ.toLowerCase();
@@ -103,9 +103,9 @@ export async function findTargetOnScreen(
   if (!apiKey || !apiKey.trim()) return null;
 
   let base64Img = screenshotBase64;
-  if (!base64Img && typeof window !== 'undefined' && ((window as any).kiboAPI || (window as any).hitodamaAPI)?.captureScreen) {
+  if (!base64Img && typeof window !== 'undefined' && ((window as any).kiboAPI || (window as any).kiboAPI)?.captureScreen) {
     try {
-      const cap = await ((window as any).kiboAPI || (window as any).hitodamaAPI).captureScreen();
+      const cap = await ((window as any).kiboAPI || (window as any).kiboAPI).captureScreen();
       if (cap?.success && cap.image) {
         base64Img = cap.image;
       }
@@ -124,7 +124,7 @@ export async function findTargetOnScreen(
   const screenW = typeof window !== 'undefined' ? window.innerWidth || window.screen.width : 1920;
   const screenH = typeof window !== 'undefined' ? window.innerHeight || window.screen.height : 1080;
 
-  const promptText = `You are Hito, an ultra-precise Windows spatial screen locator.
+  const promptText = `You are Kibo, an ultra-precise Windows spatial screen locator.
 The user wants to locate or point to: "${cleanQ}".
 
 INSTRUCTIONS:
@@ -209,7 +209,7 @@ Respond with a JSON object:
       }
     }
   } catch (err) {
-    console.warn('[Hito] Vision target locator fallback error:', err);
+    console.warn('[Kibo] Vision target locator fallback error:', err);
   }
 
   return null;

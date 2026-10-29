@@ -492,7 +492,7 @@ class MultitaskAgentManager {
 
   private async runWorkerFiber(task: AgentTask, preCapturedScreenshot?: string) {
     const apiKey = localStorage.getItem('kibo_gemini_key') || '';
-    const api = ((window as any).kiboAPI || (window as any).hitodamaAPI);
+    const api = ((window as any).kiboAPI || (window as any).kiboAPI);
 
     try {
       // ======================================================================
