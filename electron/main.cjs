@@ -671,6 +671,14 @@ function createWindow() {
     }
   });
 
+  localServer.on('error', (err) => {
+    console.error('[Kibo] Local HTTP server error, falling back to direct file load:', err);
+    const prodPath = path.join(__dirname, '../dist/index.html');
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.loadFile(prodPath, { query: { mode: 'desktop' } }).catch(() => {});
+    }
+  });
+
   localServer.listen(0, '127.0.0.1', () => {
     const addr = localServer.address();
     const port = typeof addr === 'object' && addr ? addr.port : 5173;
@@ -686,6 +694,9 @@ function createWindow() {
   });
 
   mainWindow.on('closed', () => {
+    try {
+      localServer.close();
+    } catch (_) {}
     if (hitTestInterval) clearInterval(hitTestInterval);
     mainWindow = null;
   });

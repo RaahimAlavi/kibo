@@ -1214,19 +1214,26 @@ async function getSystemClipboardContent() {
 
   if (!imageItem && typeof clipboard.readImage === 'function') {
     try {
-      const img = clipboard.readImage();
-      if (img && !img.isEmpty()) {
-        const pngBuf = img.toPNG();
-        const hash = crypto.createHash('md5').update(pngBuf).digest('hex');
-        const { width, height } = img.getSize();
-        const mb = (pngBuf.length / (1024 * 1024)).toFixed(2);
-        imageItem = {
-          hash,
-          dataUrl: img.toDataURL(),
-          width,
-          height,
-          mb,
-        };
+      const formats = clipboard.availableFormats ? clipboard.availableFormats() : [];
+      const hasImage = formats.some((f) => f.startsWith('image/'));
+      if (hasImage) {
+        const img = clipboard.readImage();
+        if (img && !img.isEmpty()) {
+          const { width, height } = img.getSize();
+          const bmp = img.toBitmap();
+          // Fast sample hash (<0.5ms) instead of encoding full PNG every 400ms
+          const step = Math.max(1, Math.floor(bmp.length / 512));
+          const sample = Buffer.alloc(512);
+          for (let i = 0; i < 512; i++) sample[i] = bmp[(i * step) % bmp.length] || 0;
+          const quickHash = `${width}x${height}_${crypto.createHash('md5').update(sample).digest('hex')}`;
+          if (quickHash !== lastClipImgHash) {
+            const dataUrl = img.toDataURL();
+            const mb = ((bmp.length * 0.35) / (1024 * 1024)).toFixed(2);
+            imageItem = { hash: quickHash, dataUrl, width, height, mb };
+          } else {
+            imageItem = { hash: quickHash, unchanged: true };
+          }
+        }
       }
     } catch (_) {}
   }
