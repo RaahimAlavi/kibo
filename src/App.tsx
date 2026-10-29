@@ -1,660 +1,511 @@
-// src/App.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { KiboApp } from './desktop/KiboApp';
 import { SoulCanvas } from './components/SoulCanvas';
 import { SOUL_SKINS } from './lib/soulMath';
 
 export function App() {
-  const [viewMode, setViewMode] = useState<'desktop' | 'web'>(() => {
-    if (typeof window === 'undefined') return 'web';
+  const isDesktopRuntime = (() => {
+    if (typeof window === 'undefined') return false;
     const params = new URLSearchParams(window.location.search);
-    if (params.get('view') === 'web') return 'web';
-    if (params.get('view') === 'desktop' || window.location.hash === '#desktop') return 'desktop';
-    const isElectron =
-      Boolean((window as any).hitodamaAPI) ||
+    if (params.get('mode') === 'desktop' || params.get('view') === 'desktop') {
+      return true;
+    }
+    return (
       Boolean((window as any).kiboAPI) ||
-      navigator.userAgent.toLowerCase().includes('electron');
-    return isElectron ? 'desktop' : 'web';
-  });
-
-  const [selectedSkinIdx, setSelectedSkinIdx] = useState(0);
-  const [demoMode, setDemoMode] = useState<'LISTENING' | 'TALKING' | 'THINKING' | 'YAWNING'>('LISTENING');
-  const [demoExpression, setDemoExpression] = useState<'NORMAL' | 'HAPPY' | 'EXCITED'>('NORMAL');
+      Boolean((window as any).hitodamaAPI) ||
+      navigator.userAgent.toLowerCase().includes('electron')
+    );
+  })();
 
   useEffect(() => {
-    if (viewMode === 'desktop') {
+    if (isDesktopRuntime) {
       document.documentElement.style.background = 'transparent';
       document.body.style.background = 'transparent';
     } else {
-      document.documentElement.style.background = '#090B10';
-      document.body.style.background = '#090B10';
+      document.documentElement.style.background = '#F4F3EF';
+      document.body.style.background = '#F4F3EF';
+      document.body.style.overflow = 'auto';
     }
-  }, [viewMode]);
+  }, [isDesktopRuntime]);
 
-  // 1. Inside Electron (or when toggled to Desktop Mode), render the Top Notch Overlay!
-  if (viewMode === 'desktop') {
+  // Native Electron Desktop Companion always boots directly into KiboApp
+  if (isDesktopRuntime) {
     return <KiboApp />;
   }
 
-  const activeSkin = SOUL_SKINS[selectedSkinIdx] || SOUL_SKINS[0];
-
-  // 2. In a standard Web Browser, render the 100% Original KIBO Industrial Landing Page
+  // Standalone Web Product Page (Editorial Field-Synth Aesthetic · No Web Testing Toys)
   return (
-    <div style={styles.page}>
-      {/* Subtle Technical Dot-Matrix Grid Background */}
-      <div style={styles.gridBackdrop} />
-
-      {/* Top Industrial Telemetry Bar */}
-      <header style={styles.navbar}>
-        <div style={styles.navInner}>
-          <div style={styles.brandGroup}>
-            <div style={styles.brandDot} />
-            <span style={styles.brandName}>KIBO // OS-01</span>
-            <span style={styles.brandTag}>TACTILE DESKTOP CYBER-DROID</span>
+    <div style={web.page}>
+      {/* Top Editorial Specification Bar */}
+      <header style={web.header}>
+        <div style={web.headerInner}>
+          <div style={web.brandRow}>
+            <span style={web.orangeSquare} />
+            <span style={web.brandCode}>KIBO™</span>
+            <span style={web.brandModel}>FIELD-OS // MK-I</span>
           </div>
 
-          <nav style={styles.navLinks}>
-            <a href="#modules" style={styles.navLink}>MODULES</a>
-            <a href="#chassis" style={styles.navLink}>CHASSIS BAY</a>
-            <a href="#architecture" style={styles.navLink}>TELEMETRY</a>
-            <button
-              onClick={() => setViewMode('desktop')}
-              style={styles.launchOverlayBtn}
-            >
-              LAUNCH NOTCH OVERLAY →
-            </button>
+          <nav style={web.nav}>
+            <a href="#overview" style={web.navItem}>Overview</a>
+            <a href="#workflow" style={web.navItem}>Workflow</a>
+            <a href="#specs" style={web.navItem}>Specifications</a>
           </nav>
+
+          <a href="#download" style={web.downloadPill}>
+            Windows 11 (.exe)
+          </a>
         </div>
       </header>
 
-      {/* Hero Section with Live Interactive 3D Kibo Droid */}
-      <main style={styles.main}>
-        <section style={styles.heroSection}>
-          <div style={styles.heroLeft}>
-            <div style={styles.statusPill}>
-              <span style={styles.statusPulse} />
-              <span>SYS.VER 2.4 · NATIVE WIN32 UI-AUTOMATION + GEMINI MULTIMODAL</span>
-            </div>
-
-            <h1 style={styles.heroTitle}>
-              Precision hardware intelligence inside your top bezel.
+      <main style={web.main}>
+        {/* Editorial Hero */}
+        <section id="overview" style={web.heroGrid}>
+          <div style={web.heroCopyCol}>
+            <div style={web.serialTag}>REF. 2026-KB01 · WINDOWS NATIVE OVERLAY</div>
+            <h1 style={web.h1}>
+              A tactile hardware companion built into your monitor bezel.
             </h1>
-
-            <p style={styles.heroSubtitle}>
-              Kibo is an anti-gravity cyber-droid engineered for Windows power users.
-              Execute native UI clicks, lock onto screen regions with optical radar,
-              dictate clean code or prose, and dispatch autonomous web-engineering
-              agents without leaving your active window.
+            <p style={web.lead}>
+              Kibo sits flush at the top center of your Windows display. Hold a
+              key to execute native UI clicks, scan screen regions with optical
+              vision, dictate clean text into any editor, or dispatch background
+              engineering agents while you work.
             </p>
 
-            <div style={styles.heroActions}>
-              <button
-                onClick={() => setViewMode('desktop')}
-                style={styles.primaryCta}
-              >
-                INITIALIZE KIBO OVERLAY
-              </button>
-              <a href="#chassis" style={styles.secondaryCta}>
-                TEST DROID OPTICS
-              </a>
-            </div>
-
-            <div style={styles.hotkeyStrip}>
-              <div style={styles.hotkeyItem}>
-                <kbd style={styles.kbd}>WIN + ALT</kbd>
-                <span>VOICE COMMAND</span>
+            <div id="download" style={web.ctaRow}>
+              <div style={web.cmdBox}>
+                <span style={web.cmdPrompt}>$</span>
+                <code style={web.cmdText}>npm run app</code>
               </div>
-              <div style={styles.hotkeyItem}>
-                <kbd style={styles.kbd}>CTRL + SHIFT</kbd>
-                <span>LASER SCAN</span>
-              </div>
-              <div style={styles.hotkeyItem}>
-                <kbd style={styles.kbd}>CTRL + WIN</kbd>
-                <span>GHOSTTYPE</span>
-              </div>
+              <span style={web.ctaHint}>
+                Launches native Windows DWM overlay via Electron
+              </span>
             </div>
           </div>
 
-          {/* Interactive Kibo Hardware Test Pod */}
-          <div id="chassis" style={styles.heroRight}>
-            <div style={styles.droidPod}>
-              <div style={styles.podHeader}>
-                <span style={styles.podLabel}>OPTICAL GIMBAL TEST BAY</span>
-                <span style={{ ...styles.podBadge, color: activeSkin.primaryColor }}>
-                  {activeSkin.name}
-                </span>
+          {/* Hardware Bezel Showcase Card (Static Product Visual, Not a Testing Toy) */}
+          <div style={web.heroVisualCol}>
+            <div style={web.monitorFrame}>
+              <div style={web.monitorTopBezel}>
+                <div style={web.notchCutout}>
+                  <SoulCanvas
+                    soul={SOUL_SKINS[0]}
+                    width={76}
+                    height={56}
+                    scale={1.05}
+                    mode="LISTENING"
+                    expression="HAPPY"
+                    interactive={false}
+                  />
+                </div>
               </div>
 
-              <div style={styles.droidStage}>
-                <div
-                  style={{
-                    ...styles.droidGlow,
-                    background: `radial-gradient(circle, ${activeSkin.primaryColor}33 0%, transparent 70%)`,
-                  }}
-                />
-                <SoulCanvas
-                  soul={activeSkin}
-                  width={220}
-                  height={190}
-                  scale={1.85}
-                  mode={demoMode}
-                  expression={demoExpression}
-                  interactive={true}
-                />
-              </div>
+              <div style={web.monitorScreenBody}>
+                <div style={web.screenCodeHeader}>
+                  <span>ACTIVE SESSION · WIN32 UIA + GEMINI MULTIMODAL</span>
+                  <span style={{ color: '#10B981' }}>● ONLINE</span>
+                </div>
 
-              {/* State Switcher */}
-              <div style={styles.podControlsLabel}>SIMULATE TELEMETRY STATE</div>
-              <div style={styles.stateBtnRow}>
-                {(
-                  [
-                    { label: 'IDLE', mode: 'LISTENING', expr: 'NORMAL' },
-                    { label: 'SPEAKING', mode: 'TALKING', expr: 'NORMAL' },
-                    { label: 'RADAR SCAN', mode: 'THINKING', expr: 'NORMAL' },
-                    { label: 'BOOT STRETCH', mode: 'YAWNING', expr: 'HAPPY' },
-                  ] as const
-                ).map((st) => (
-                  <button
-                    key={st.label}
-                    onClick={() => {
-                      setDemoMode(st.mode);
-                      setDemoExpression(st.expr as any);
-                    }}
-                    style={{
-                      ...styles.stateBtn,
-                      borderColor:
-                        demoMode === st.mode
-                          ? activeSkin.primaryColor
-                          : 'rgba(255,255,255,0.1)',
-                      color: demoMode === st.mode ? '#FFFFFF' : '#94A3B8',
-                      background:
-                        demoMode === st.mode
-                          ? 'rgba(56, 189, 248, 0.14)'
-                          : 'rgba(255,255,255,0.03)',
-                    }}
-                  >
-                    {st.label}
-                  </button>
-                ))}
-              </div>
+                <div style={web.transcriptRowUser}>
+                  <span style={web.transcriptLabel}>HOLD WIN + ALT</span>
+                  <span style={web.transcriptQuote}>
+                    “Clone the layout and CSS variables from this website and save the summary to Notion.”
+                  </span>
+                </div>
 
-              {/* Chassis Selector */}
-              <div style={styles.podControlsLabel}>SELECT DROID CHASSIS</div>
-              <div style={styles.skinGrid}>
-                {SOUL_SKINS.map((skin, idx) => (
-                  <button
-                    key={skin.key}
-                    onClick={() => setSelectedSkinIdx(idx)}
-                    style={{
-                      ...styles.skinPill,
-                      borderColor:
-                        selectedSkinIdx === idx
-                          ? skin.primaryColor
-                          : 'rgba(255,255,255,0.08)',
-                      background:
-                        selectedSkinIdx === idx
-                          ? 'rgba(255,255,255,0.08)'
-                          : 'rgba(255,255,255,0.02)',
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: '50%',
-                        background: skin.primaryColor,
-                        boxShadow: `0 0 8px ${skin.primaryColor}`,
-                      }}
-                    />
-                    <span>{skin.name}</span>
-                  </button>
-                ))}
+                <div style={web.transcriptRowKibo}>
+                  <span style={web.transcriptLabelAccent}>KIBO FORGE</span>
+                  <span style={web.transcriptReply}>
+                    Extracted 18 :root tokens & font families. Standalone HTML replica opened in browser and synced to Notion.
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* 4 Core Hardware Modules Bento Grid */}
-        <section id="modules" style={styles.section}>
-          <div style={styles.sectionHeader}>
-            <span style={styles.monoOverline}>01 // CORE ARCHITECTURE</span>
-            <h2 style={styles.sectionTitle}>Four Tactile Subsystems. Zero Bloat.</h2>
+        {/* 3-Column Editorial Feature Breakdown */}
+        <section id="workflow" style={web.editorialSection}>
+          <div style={web.sectionDivider}>
+            <span>01 / CORE MECHANICS</span>
+            <span>NATIVE WINDOWS INTEGRATION</span>
           </div>
 
-          <div style={styles.bentoGrid}>
-            <div style={styles.bentoCard}>
-              <div style={styles.cardIndex}>SUBSYSTEM 01</div>
-              <h3 style={styles.cardTitle}>Target Lock & Native OS Control</h3>
-              <p style={styles.cardDesc}>
-                Powered by a persistent C# Win32 UIAutomation worker and GSMTC media
-                transport bridge. Ask Kibo to click buttons, launch any installed
-                desktop software, or sync live playback timelines across Netflix,
-                Spotify, and browsers.
+          <div style={web.threeCol}>
+            <article style={web.featureCol}>
+              <div style={web.keyBadgeRow}>
+                <kbd style={web.keycap}>Win</kbd>
+                <span>+</span>
+                <kbd style={web.keycap}>Alt</kbd>
+              </div>
+              <h3 style={web.h3}>Voice-to-OS Execution</h3>
+              <p style={web.p}>
+                Backed by an in-memory C# Win32 UIAutomation worker and GSMTC
+                media bridge. Click on-screen controls, launch local desktop
+                software, or scrub live Netflix and Spotify timelines without
+                leaving your active window.
               </p>
-            </div>
+            </article>
 
-            <div style={styles.bentoCard}>
-              <div style={styles.cardIndex}>SUBSYSTEM 02</div>
-              <h3 style={styles.cardTitle}>Optical Laser Scan</h3>
-              <p style={styles.cardDesc}>
-                Hold <code style={styles.inlineCode}>Ctrl + Shift</code> and draw around
-                any UI component, chart, or error log on your monitor. Kibo crops the
-                high-DPI frame buffer and pipes it directly to Gemini Vision for
-                immediate technical answers.
+            <article style={web.featureCol}>
+              <div style={web.keyBadgeRow}>
+                <kbd style={web.keycap}>Ctrl</kbd>
+                <span>+</span>
+                <kbd style={web.keycap}>Shift</kbd>
+              </div>
+              <h3 style={web.h3}>Optical Screen Lasso</h3>
+              <p style={web.p}>
+                Circle any chart, error trace, or UI element on your monitor and
+                ask a question out loud. Kibo crops the exact region and answers
+                in real time.
               </p>
-            </div>
+            </article>
 
-            <div style={styles.bentoCard}>
-              <div style={styles.cardIndex}>SUBSYSTEM 03</div>
-              <h3 style={styles.cardTitle}>GhostType Neural Dictation</h3>
-              <p style={styles.cardDesc}>
-                Hold <code style={styles.inlineCode}>Ctrl + Win</code> inside VS Code,
-                Notion, or Discord. Speak with mid-sentence corrections or rough notes—Kibo
-                strips filler words and injects formatted text directly into your cursor.
+            <article style={web.featureCol}>
+              <div style={web.keyBadgeRow}>
+                <kbd style={web.keycap}>Ctrl</kbd>
+                <span>+</span>
+                <kbd style={web.keycap}>Win</kbd>
+              </div>
+              <h3 style={web.h3}>GhostType Dictation</h3>
+              <p style={web.p}>
+                Speak naturally with false starts or mid-sentence changes. Kibo
+                strips filler words and types clean, structured prose or code
+                directly into your active cursor.
               </p>
-            </div>
-
-            <div style={styles.bentoCard}>
-              <div style={styles.cardIndex}>SUBSYSTEM 04</div>
-              <h3 style={styles.cardTitle}>Autonomous Forge & Design MCP</h3>
-              <p style={styles.cardDesc}>
-                Point Kibo at any live website to extract its <code style={styles.inlineCode}>:root</code> CSS
-                variables, font stacks, hex tokens, and DOM hierarchy. Generate full
-                Tailwind replicas, iterate on local HTML files in place, or curate
-                Notion databases via Tavily search.
-              </p>
-            </div>
+            </article>
           </div>
         </section>
 
-        {/* Technical Specification Table */}
-        <section id="architecture" style={styles.section}>
-          <div style={styles.specBox}>
-            <div style={styles.specRow}>
-              <span style={styles.specKey}>RUNTIME ARCHITECTURE</span>
-              <span style={styles.specVal}>Electron + Persistent PowerShell / Win32 UIA Worker</span>
-            </div>
-            <div style={styles.specRow}>
-              <span style={styles.specKey}>VISION & SYNTHESIS</span>
-              <span style={styles.specVal}>Gemini 2.5 / 3 Flash Multimodal + Design MCP DOM Scraper</span>
-            </div>
-            <div style={styles.specRow}>
-              <span style={styles.specKey}>LIVE WEB ENGINE</span>
-              <span style={styles.specVal}>Tavily Deep Search & URL Content Extractor</span>
-            </div>
-            <div style={styles.specRow}>
-              <span style={styles.specKey}>PROGRESSION CURRENCY</span>
-              <span style={styles.specVal}>Passive Watts (W) Earned via Tasks, Focus & Commands</span>
-            </div>
+        {/* Technical Specification Sheet */}
+        <section id="specs" style={web.editorialSection}>
+          <div style={web.sectionDivider}>
+            <span>02 / TECHNICAL DATASHEET</span>
+            <span>SYSTEM REQUIREMENTS</span>
+          </div>
+
+          <div style={web.specTable}>
+            {[
+              ['Operating System', 'Windows 10 / Windows 11 (64-bit) with DWM MPO Bypass'],
+              ['Console Modules', '01 Deck · 02 Ops · 03 Forge · 04 Buffer · 05 Launcher · 06 Radar · 07 Studio · 08 Pwr'],
+              ['AI & Search Providers', 'Bring-your-own Google Gemini API Key + Tavily Live Search Key'],
+              ['Local Storage', '100% on-device key storage and clipboard history'],
+            ].map(([k, v]) => (
+              <div key={k} style={web.specRow}>
+                <span style={web.specKey}>{k}</span>
+                <span style={web.specVal}>{v}</span>
+              </div>
+            ))}
           </div>
         </section>
       </main>
 
-      <footer style={styles.footer}>
-        <span>KIBO // DESKTOP CYBER-DROID SYSTEM</span>
-        <span>BUILT FOR WINDOWS 11 · ORIGINAL ARCHITECTURE</span>
+      <footer style={web.footer}>
+        <span>KIBO FIELD-OS · WINDOWS DESKTOP COMPANION</span>
+        <span>RUN VIA `NPM RUN APP`</span>
       </footer>
     </div>
   );
 }
 
-const styles: Record<string, React.CSSProperties> = {
+const web: Record<string, React.CSSProperties> = {
   page: {
     minHeight: '100vh',
-    backgroundColor: '#090B10',
-    color: '#F8FAFC',
-    position: 'relative',
-    overflowX: 'hidden',
+    backgroundColor: '#F4F3EF',
+    color: '#111215',
+    fontFamily: "'Inter', -apple-system, sans-serif",
   },
-  gridBackdrop: {
-    position: 'fixed',
-    inset: 0,
-    backgroundImage:
-      'radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px)',
-    backgroundSize: '28px 28px',
-    pointerEvents: 'none',
-    zIndex: 0,
-  },
-  navbar: {
+  header: {
+    borderBottom: '1px solid #DCDAD3',
+    backgroundColor: '#F4F3EF',
     position: 'sticky',
     top: 0,
     zIndex: 20,
-    borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-    backgroundColor: 'rgba(9, 11, 16, 0.85)',
-    backdropFilter: 'blur(14px)',
   },
-  navInner: {
-    maxWidth: 1180,
+  headerInner: {
+    maxWidth: 1160,
     margin: '0 auto',
-    padding: '16px 24px',
+    padding: '16px 28px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  brandGroup: {
+  brandRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
-  brandDot: {
-    width: 10,
-    height: 10,
-    borderRadius: '50%',
-    backgroundColor: '#38BDF8',
-    boxShadow: '0 0 12px #38BDF8',
+  orangeSquare: {
+    width: 11,
+    height: 11,
+    backgroundColor: '#FF5722',
+    display: 'inline-block',
   },
-  brandName: {
-    fontFamily: "'JetBrains Mono', monospace",
+  brandCode: {
+    fontFamily: "'Space Grotesk', sans-serif",
     fontWeight: 700,
-    fontSize: 15,
-    letterSpacing: '0.06em',
+    fontSize: 16,
+    letterSpacing: '-0.02em',
   },
-  brandTag: {
+  brandModel: {
     fontFamily: "'JetBrains Mono', monospace",
     fontSize: 11,
-    color: '#64748B',
-    paddingLeft: 10,
-    borderLeft: '1px solid rgba(255,255,255,0.12)',
+    color: '#6E6D68',
+    paddingLeft: 8,
+    borderLeft: '1px solid #CFCBC2',
   },
-  navLinks: {
+  nav: {
     display: 'flex',
-    alignItems: 'center',
-    gap: 24,
+    gap: 28,
   },
-  navLink: {
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: 12,
-    color: '#94A3B8',
+  navItem: {
+    fontSize: 13,
+    fontWeight: 500,
+    color: '#3F3E3A',
     textDecoration: 'none',
-    letterSpacing: '0.05em',
   },
-  launchOverlayBtn: {
+  downloadPill: {
     fontFamily: "'JetBrains Mono', monospace",
     fontSize: 11.5,
-    fontWeight: 700,
-    color: '#090B10',
-    backgroundColor: '#38BDF8',
-    border: 'none',
-    borderRadius: 999,
-    padding: '8px 16px',
-    cursor: 'pointer',
+    fontWeight: 600,
+    color: '#F4F3EF',
+    backgroundColor: '#111215',
+    padding: '8px 14px',
+    borderRadius: 6,
+    textDecoration: 'none',
   },
   main: {
-    position: 'relative',
-    zIndex: 1,
-    maxWidth: 1180,
+    maxWidth: 1160,
     margin: '0 auto',
-    padding: '64px 24px 96px',
+    padding: '64px 28px 96px',
   },
-  heroSection: {
+  heroGrid: {
     display: 'grid',
-    gridTemplateColumns: '1.15fr 0.85fr',
-    gap: 48,
+    gridTemplateColumns: '1.05fr 0.95fr',
+    gap: 56,
     alignItems: 'center',
   },
-  heroLeft: {
+  heroCopyCol: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 22,
+    gap: 20,
   },
-  statusPill: {
+  serialTag: {
+    fontFamily: "'JetBrains Mono', monospace",
+    fontSize: 11,
+    fontWeight: 600,
+    color: '#FF5722',
+    letterSpacing: '0.06em',
+  },
+  h1: {
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontSize: 50,
+    lineHeight: 1.06,
+    fontWeight: 700,
+    letterSpacing: '-0.035em',
+    margin: 0,
+    color: '#111215',
+  },
+  lead: {
+    fontSize: 16.5,
+    lineHeight: 1.6,
+    color: '#4A4945',
+    margin: 0,
+  },
+  ctaRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 16,
+    marginTop: 8,
+  },
+  cmdBox: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: 8,
-    alignSelf: 'flex-start',
-    padding: '6px 12px',
-    borderRadius: 999,
-    backgroundColor: 'rgba(56, 189, 248, 0.08)',
-    border: '1px solid rgba(56, 189, 248, 0.25)',
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: 11,
-    color: '#BAE6FD',
-  },
-  statusPulse: {
-    width: 7,
-    height: 7,
-    borderRadius: '50%',
-    backgroundColor: '#38BDF8',
-  },
-  heroTitle: {
-    fontFamily: "'Space Grotesk', sans-serif",
-    fontSize: 52,
-    lineHeight: 1.08,
-    fontWeight: 700,
-    letterSpacing: '-0.03em',
-    margin: 0,
-  },
-  heroSubtitle: {
-    fontSize: 16.5,
-    lineHeight: 1.65,
-    color: '#94A3B8',
-    margin: 0,
-    maxWidth: 580,
-  },
-  heroActions: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 14,
-    marginTop: 6,
-  },
-  primaryCta: {
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: 13,
-    fontWeight: 700,
-    color: '#090B10',
-    background: 'linear-gradient(135deg, #38BDF8 0%, #0284C7 100%)',
-    border: 'none',
-    borderRadius: 12,
-    padding: '14px 24px',
-    cursor: 'pointer',
-    boxShadow: '0 10px 30px rgba(56, 189, 248, 0.3)',
-  },
-  secondaryCta: {
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: 13,
-    fontWeight: 600,
-    color: '#E2E8F0',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    border: '1px solid rgba(255, 255, 255, 0.14)',
-    borderRadius: 12,
-    padding: '14px 22px',
-    textDecoration: 'none',
-  },
-  hotkeyStrip: {
-    display: 'flex',
-    gap: 20,
-    marginTop: 14,
-    paddingTop: 20,
-    borderTop: '1px solid rgba(255,255,255,0.08)',
-  },
-  hotkeyItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: 11,
-    color: '#94A3B8',
-  },
-  kbd: {
-    padding: '4px 8px',
-    borderRadius: 6,
-    backgroundColor: '#141821',
-    border: '1px solid rgba(255,255,255,0.16)',
+    gap: 10,
+    backgroundColor: '#111215',
     color: '#F8FAFC',
-    fontWeight: 700,
+    padding: '12px 20px',
+    borderRadius: 8,
+    fontFamily: "'JetBrains Mono', monospace",
+    fontSize: 13.5,
+    fontWeight: 600,
   },
-  heroRight: {
+  cmdPrompt: {
+    color: '#FF5722',
+  },
+  cmdText: {
+    fontFamily: "'JetBrains Mono', monospace",
+  },
+  ctaHint: {
+    fontFamily: "'JetBrains Mono', monospace",
+    fontSize: 11.5,
+    color: '#6E6D68',
+  },
+  heroVisualCol: {
     display: 'flex',
     justifyContent: 'center',
   },
-  droidPod: {
+  monitorFrame: {
     width: '100%',
-    backgroundColor: 'rgba(17, 20, 28, 0.9)',
-    border: '1px solid rgba(255, 255, 255, 0.12)',
-    borderRadius: 24,
-    padding: 24,
-    boxShadow: '0 24px 60px rgba(0, 0, 0, 0.65)',
+    backgroundColor: '#14171F',
+    borderRadius: 18,
+    border: '1px solid #262B38',
+    overflow: 'hidden',
+    boxShadow: '0 28px 60px rgba(17, 18, 21, 0.16)',
   },
-  podHeader: {
+  monitorTopBezel: {
+    height: 64,
+    backgroundColor: '#1B202C',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    borderBottom: '1px solid rgba(255,255,255,0.06)',
+  },
+  notchCutout: {
+    width: 176,
+    height: 54,
+    backgroundColor: '#090B10',
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 18,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    border: '1px solid rgba(56, 189, 248, 0.25)',
+    borderTop: 'none',
+  },
+  monitorScreenBody: {
+    padding: 24,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 14,
+  },
+  screenCodeHeader: {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  podLabel: {
     fontFamily: "'JetBrains Mono', monospace",
-    fontSize: 11,
+    fontSize: 10.5,
     color: '#64748B',
-    letterSpacing: '0.08em',
+    paddingBottom: 10,
+    borderBottom: '1px solid rgba(255,255,255,0.06)',
   },
-  podBadge: {
+  transcriptRowUser: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: 10,
+    padding: 14,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+  },
+  transcriptRowKibo: {
+    backgroundColor: 'rgba(56, 189, 248, 0.08)',
+    border: '1px solid rgba(56, 189, 248, 0.24)',
+    borderRadius: 10,
+    padding: 14,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+  },
+  transcriptLabel: {
     fontFamily: "'JetBrains Mono', monospace",
-    fontSize: 12,
+    fontSize: 10,
+    color: '#94A3B8',
+  },
+  transcriptLabelAccent: {
+    fontFamily: "'JetBrains Mono', monospace",
+    fontSize: 10,
+    color: '#38BDF8',
     fontWeight: 700,
   },
-  droidStage: {
-    position: 'relative',
-    height: 200,
+  transcriptQuote: {
+    fontSize: 13.5,
+    color: '#F1F5F9',
+    lineHeight: 1.45,
+  },
+  transcriptReply: {
+    fontSize: 13,
+    color: '#BAE6FD',
+    lineHeight: 1.45,
+  },
+  editorialSection: {
+    marginTop: 88,
+  },
+  sectionDivider: {
     display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#07090E',
-    borderRadius: 16,
-    border: '1px solid rgba(255,255,255,0.06)',
-    marginBottom: 18,
-    overflow: 'hidden',
-  },
-  droidGlow: {
-    position: 'absolute',
-    width: 220,
-    height: 220,
-    borderRadius: '50%',
-    pointerEvents: 'none',
-  },
-  podControlsLabel: {
+    justifyContent: 'space-between',
     fontFamily: "'JetBrains Mono', monospace",
-    fontSize: 10.5,
-    color: '#64748B',
-    letterSpacing: '0.08em',
-    marginBottom: 8,
-  },
-  stateBtnRow: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: 6,
-    marginBottom: 16,
-  },
-  stateBtn: {
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: 10.5,
-    fontWeight: 600,
-    padding: '7px 6px',
-    borderRadius: 8,
-    border: '1px solid',
-    cursor: 'pointer',
-  },
-  skinGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: 8,
-  },
-  skinPill: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    padding: '8px 10px',
-    borderRadius: 10,
-    border: '1px solid',
-    color: '#E2E8F0',
-    fontSize: 11.5,
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  section: {
-    marginTop: 96,
-  },
-  sectionHeader: {
+    fontSize: 11,
+    color: '#6E6D68',
+    paddingBottom: 12,
+    borderBottom: '1px solid #CFCBC2',
     marginBottom: 32,
   },
-  monoOverline: {
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: 12,
-    color: '#38BDF8',
-    letterSpacing: '0.08em',
-  },
-  sectionTitle: {
-    fontFamily: "'Space Grotesk', sans-serif",
-    fontSize: 34,
-    margin: '8px 0 0',
-  },
-  bentoGrid: {
+  threeCol: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
-    gap: 20,
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: 28,
   },
-  bentoCard: {
-    backgroundColor: 'rgba(17, 20, 28, 0.78)',
-    border: '1px solid rgba(255, 255, 255, 0.09)',
-    borderRadius: 20,
-    padding: 28,
+  featureCol: {
+    backgroundColor: '#EAE8E1',
+    border: '1px solid #D8D5CC',
+    borderRadius: 12,
+    padding: 24,
   },
-  cardIndex: {
+  keyBadgeRow: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
     fontFamily: "'JetBrains Mono', monospace",
     fontSize: 11,
-    color: '#F59E0B',
-    marginBottom: 10,
+    marginBottom: 14,
   },
-  cardTitle: {
+  keycap: {
+    backgroundColor: '#111215',
+    color: '#F4F3EF',
+    padding: '3px 8px',
+    borderRadius: 5,
+    fontWeight: 600,
+  },
+  h3: {
     fontFamily: "'Space Grotesk', sans-serif",
-    fontSize: 22,
-    margin: '0 0 10px',
+    fontSize: 20,
+    margin: '0 0 8px',
   },
-  cardDesc: {
-    fontSize: 14.5,
+  p: {
+    fontSize: 14,
     lineHeight: 1.6,
-    color: '#94A3B8',
+    color: '#4A4945',
     margin: 0,
   },
-  inlineCode: {
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: 12.5,
-    padding: '2px 6px',
-    borderRadius: 5,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    color: '#BAE6FD',
-  },
-  specBox: {
-    border: '1px solid rgba(255,255,255,0.1)',
-    borderRadius: 16,
-    overflow: 'hidden',
+  specTable: {
+    borderTop: '1px solid #CFCBC2',
   },
   specRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    padding: '16px 24px',
-    borderBottom: '1px solid rgba(255,255,255,0.06)',
-    backgroundColor: 'rgba(15, 18, 25, 0.7)',
+    display: 'grid',
+    gridTemplateColumns: '280px 1fr',
+    padding: '14px 0',
+    borderBottom: '1px solid #DCDAD3',
+    fontSize: 13.5,
   },
   specKey: {
     fontFamily: "'JetBrains Mono', monospace",
+    color: '#6E6D68',
     fontSize: 12,
-    color: '#64748B',
   },
   specVal: {
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: 12.5,
-    color: '#E2E8F0',
+    color: '#111215',
+    fontWeight: 500,
   },
   footer: {
-    maxWidth: 1180,
+    maxWidth: 1160,
     margin: '0 auto',
-    padding: '32px 24px',
-    borderTop: '1px solid rgba(255,255,255,0.08)',
+    padding: '28px',
+    borderTop: '1px solid #DCDAD3',
     display: 'flex',
     justifyContent: 'space-between',
     fontFamily: "'JetBrains Mono', monospace",
-    fontSize: 11.5,
-    color: '#64748B',
+    fontSize: 11,
+    color: '#6E6D68',
   },
 };
 

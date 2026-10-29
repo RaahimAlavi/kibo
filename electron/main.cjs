@@ -1772,30 +1772,46 @@ ipcMain.handle('sync-to-notion', async (event, { apiKey, databaseId, pageData })
   });
 });
 
-// Uses an exact signature stamp file so `dist/` is NEVER out of sync with `src/`!
+function getNewestMtimeInDir(dirPath) {
+  let newest = 0;
+  if (!fs.existsSync(dirPath)) return 0;
+  for (const entry of fs.readdirSync(dirPath, { withFileTypes: true })) {
+    const full = path.join(dirPath, entry.name);
+    if (entry.isDirectory()) {
+      newest = Math.max(newest, getNewestMtimeInDir(full));
+    } else {
+      newest = Math.max(newest, Math.floor(fs.statSync(full).mtimeMs));
+    }
+  }
+  return newest;
+}
+
 function ensureLatestFrontendBuild() {
   try {
     const rootDir = path.join(__dirname, '..');
     const distDir = path.join(rootDir, 'dist');
     const stampFile = path.join(distDir, '.build_stamp');
-    const tsxFile = path.join(rootDir, 'src', 'desktop', 'KiboApp.tsx');
-    const cssFile = path.join(rootDir, 'src', 'desktop', 'desktop-companion.css');
-    const geminiFile = path.join(rootDir, 'src', 'lib', 'gemini.ts');
+    const srcNewest = getNewestMtimeInDir(path.join(rootDir, 'src'));
+    const htmlMtime = fs.existsSync(path.join(rootDir, 'index.html'))
+      ? Math.floor(fs.statSync(path.join(rootDir, 'index.html')).mtimeMs)
+      : 0;
 
-    const tsxMtime = fs.existsSync(tsxFile) ? Math.floor(fs.statSync(tsxFile).mtimeMs) : 0;
-    const cssMtime = fs.existsSync(cssFile) ? Math.floor(fs.statSync(cssFile).mtimeMs) : 0;
-    const geminiMtime = fs.existsSync(geminiFile) ? Math.floor(fs.statSync(geminiFile).mtimeMs) : 0;
-    const currentSignature = `${tsxMtime}_${cssMtime}_${geminiMtime}`;
-    const lastSignature = fs.existsSync(stampFile) ? fs.readFileSync(stampFile, 'utf8').trim() : '';
+    const currentSignature = `${srcNewest}_${htmlMtime}`;
+    const lastSignature = fs.existsSync(stampFile)
+      ? fs.readFileSync(stampFile, 'utf8').trim()
+      : '';
 
-    if (currentSignature !== lastSignature || !fs.existsSync(path.join(distDir, 'index.html'))) {
-      console.log('[Hito] Compiling latest UI changes into dist/...');
+    if (
+      currentSignature !== lastSignature ||
+      !fs.existsSync(path.join(distDir, 'index.html'))
+    ) {
+      console.log('[Kibo] Compiling latest UI changes into dist/...');
       execSync('npx vite build', { cwd: rootDir, stdio: 'inherit' });
       if (!fs.existsSync(distDir)) fs.mkdirSync(distDir, { recursive: true });
       fs.writeFileSync(stampFile, currentSignature, 'utf8');
     }
   } catch (err) {
-    console.error('[Hito] Auto-build warning:', err.message);
+    console.error('[Kibo] Auto-build warning:', err.message);
   }
 }
 

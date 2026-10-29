@@ -849,15 +849,20 @@ const LOADOUT_CARDS: LoadoutCardItem[] = [
   },
 ];
 
-const NAV_TABS: ReadonlyArray<{ id: NavTab; width: number }> = [
-  { id: 'Controls', width: 64 },
-  { id: 'Today', width: 50 },
-  { id: 'Stats', width: 48 },
-  { id: 'Clipboard', width: 70 },
-  { id: 'Apps', width: 48 },
-  { id: 'Agents', width: 56 },
-  { id: 'Wallpaper', width: 72 },
-  { id: 'Power', width: 50 },
+const NAV_TABS: ReadonlyArray<{
+  id: NavTab;
+  code: string;
+  label: string;
+  width: number;
+}> = [
+  { id: 'Controls', code: '01', label: 'DECK', width: 68 },
+  { id: 'Today', code: '02', label: 'OPS', width: 62 },
+  { id: 'Agents', code: '03', label: 'FORGE', width: 72 },
+  { id: 'Clipboard', code: '04', label: 'BUFFER', width: 76 },
+  { id: 'Apps', code: '05', label: 'LAUNCHER', width: 86 },
+  { id: 'Stats', code: '06', label: 'RADAR', width: 72 },
+  { id: 'Wallpaper', code: '07', label: 'STUDIO', width: 74 },
+  { id: 'Power', code: '08', label: 'PWR', width: 58 },
 ];
 
 const APP_WIN_W = 880;
@@ -1076,7 +1081,7 @@ export const KiboApp: React.FC = () => {
     () => localStorage.getItem('kibo_chassis') || (SOUL_SKINS[0]?.key ?? 'flame_hitodama')
   );
 
-  const [isTucked, setIsTucked] = useState<boolean>(!initialExpanded);
+  const [isTucked, setIsTucked] = useState<boolean>(false);
   const [isExpanded, setIsExpanded] = useState<boolean>(initialExpanded);
   const [isHovered, setIsHovered] = useState<boolean>(false);
   const [showMediaNotch, setShowMediaNotch] = useState<boolean>(false);
@@ -1443,6 +1448,7 @@ export const KiboApp: React.FC = () => {
 
   const handleIslandMouseEnter = useCallback(() => {
     setIsHovered(true);
+    setIsTucked(false);
     if (leaveCollapseTimerRef.current) clearTimeout(leaveCollapseTimerRef.current);
   }, []);
 
@@ -4980,61 +4986,74 @@ export const KiboApp: React.FC = () => {
           {/* STATE 4: FULL EXPANDED DYNAMIC ISLAND */}
           {isExpanded && (
             <div className="hitodama-expanded-inner">
-              <div className="companion-nav-header">
-                <div className="companion-nav-track">
-                  <div
-                    className="companion-nav-glider"
-                    style={{
-                      width: `${activeNavMetrics.width}px`,
-                      transform: `translate3d(${activeNavMetrics.left}px, 0, 0)`,
-                    }}
-                  />
-                  {NAV_TABS.map(({ id: tab, width }) => {
+              <div className="kibo-console-header">
+                {/* Left: Live Mini Kibo Droid +Watts Status */}
+                <div
+                  className="kibo-console-brand"
+                  onClick={() => openCompanionApp('soul', false)}
+                  title="Open Kibo Chassis Bay"
+                >
+                  <div className="kibo-console-mini-droid">
+                    <SoulCanvas
+                      soul={currentSoul}
+                      width={34}
+                      height={28}
+                      scale={0.62}
+                      mode={soulMode}
+                      interactive={false}
+                    />
+                  </div>
+                  <div className="kibo-console-id">
+                    <span className="kibo-id-name">KIBO</span>
+                    <span className="kibo-id-watts">{embers}W</span>
+                  </div>
+                </div>
+
+                {/* Center: Tactile Numbered Hardware Module Switches */}
+                <div className="kibo-module-rail">
+                  {NAV_TABS.map(({ id: tab, code, label }) => {
                     const isActive = activeTab === tab;
                     return (
                       <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
-                        className={`companion-nav-btn ${isActive ? 'active' : ''}`}
-                        style={{ width: `${width}px` }}
+                        className={`kibo-module-switch ${isActive ? 'active' : ''}`}
                       >
-                        {tab}
+                        <span className="kibo-switch-code">{code}</span>
+                        <span className="kibo-switch-label">{label}</span>
                       </button>
                     );
                   })}
                 </div>
-                <div className="companion-header-actions">
+
+                {/* Right: Utility Triggers */}
+                <div className="kibo-console-actions">
                   {activeTab === 'Wallpaper' && (
                     <button
                       onClick={handlePickLocalWallpapers}
                       className="companion-header-circle"
-                      title="Pick wallpapers from folder"
+                      title="Pick local wallpapers"
                     >
-                      <SvgIcon name="folder" size={13} />
+                      <SvgIcon name="folder" size={12} />
                     </button>
                   )}
+                  <button
+                    onClick={() => openCompanionApp('settings', false)}
+                    className="companion-header-circle"
+                    title="Kibo Settings & API Keys"
+                  >
+                    <SvgIcon name="gear" size={12} />
+                  </button>
                   <button
                     onClick={() => {
                       const next = !sfxEnabled;
                       setSfxEnabled(next);
                       soundFX.setEnabled(next);
                     }}
-                    title={sfxEnabled ? 'UI Sounds: On' : 'UI Sounds: Muted'}
+                    title={sfxEnabled ? 'Synth SFX: On' : 'Synth SFX: Muted'}
                     className="companion-header-circle"
                   >
-                    {sfxEnabled ? (
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-                      </svg>
-                    ) : (
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                        <line x1="23" y1="9" x2="17" y2="15" />
-                        <line x1="17" y1="9" x2="23" y2="15" />
-                      </svg>
-                    )}
+                    <SvgIcon name={sfxEnabled ? 'speaker' : 'mute'} size={12} />
                   </button>
                 </div>
               </div>
