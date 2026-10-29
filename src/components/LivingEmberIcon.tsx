@@ -24,79 +24,47 @@ export const LivingEmberIcon: React.FC<LivingEmberIconProps> = ({
     ctx.scale(dpr, dpr);
 
     let animId: number;
-    let t = Math.random() * 50;
+    let angle = 0;
 
     const render = () => {
-      t += isDull ? 0.025 : 0.055;
+      angle += isDull ? 0.02 : 0.055;
       ctx.clearRect(0, 0, size, size);
 
-      const cx = size * 0.5;
-      const cy = size * 0.62 + Math.sin(t * 1.4) * (size * 0.04);
-      const r = size * 0.25;
-      const flameH = r * (isDull ? 1.4 : 1.75 + Math.sin(t * 2.3) * 0.14);
-      const sway = Math.sin(t * 1.8) * (size * 0.08);
+      const cx = size / 2;
+      const cy = size / 2;
+      const r = size * 0.36;
 
-      const outerColor = isDull ? '#64748B' : '#F59E0B';
-      const midColor = isDull ? '#94A3B8' : '#FBBF24';
-      const coreColor = isDull ? '#CBD5E1' : '#FFFBEB';
+      const ringColor = isDull ? '#64748B' : '#F59E0B';
+      const coreColor = isDull ? '#94A3B8' : '#FEF3C7';
 
-      // Soft ambient aura
-      const aura = ctx.createRadialGradient(cx, cy - r * 0.2, 0.5, cx, cy - r * 0.2, r * 1.8);
-      aura.addColorStop(0, isDull ? 'rgba(148, 163, 184, 0.22)' : 'rgba(245, 158, 11, 0.38)');
-      aura.addColorStop(1, 'rgba(245, 158, 11, 0)');
-      ctx.fillStyle = aura;
+      // Outer Tilted Gyro Ring 1
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(angle);
+      ctx.strokeStyle = ringColor;
+      ctx.lineWidth = 1.35;
       ctx.beginPath();
-      ctx.arc(cx, cy - r * 0.2, r * 1.8, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.ellipse(0, 0, r, r * 0.48, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
 
-      // Outer swaying Hitodama ember teardrop
-      ctx.fillStyle = outerColor;
+      // Outer Tilted Gyro Ring 2 (Counter-rotating)
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(-angle * 0.8 + Math.PI / 3);
+      ctx.strokeStyle = isDull
+        ? 'rgba(100, 116, 139, 0.5)'
+        : 'rgba(251, 191, 36, 0.65)';
+      ctx.lineWidth = 1.15;
       ctx.beginPath();
-      ctx.moveTo(cx + sway, cy - flameH);
-      ctx.bezierCurveTo(
-        cx + r * 1.35 + sway * 0.4,
-        cy - flameH * 0.3,
-        cx + r * 1.25,
-        cy + r * 0.95,
-        cx,
-        cy + r
-      );
-      ctx.bezierCurveTo(
-        cx - r * 1.25,
-        cy + r * 0.95,
-        cx - r * 1.35 + sway * 0.4,
-        cy - flameH * 0.3,
-        cx + sway,
-        cy - flameH
-      );
-      ctx.fill();
+      ctx.ellipse(0, 0, r * 0.9, r * 0.42, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
 
-      // Mid golden-amber tongue
-      ctx.fillStyle = midColor;
-      ctx.beginPath();
-      ctx.moveTo(cx + sway * 0.7, cy - flameH * 0.72);
-      ctx.bezierCurveTo(
-        cx + r * 0.9 + sway * 0.3,
-        cy - flameH * 0.2,
-        cx + r * 0.85,
-        cy + r * 0.75,
-        cx,
-        cy + r * 0.8
-      );
-      ctx.bezierCurveTo(
-        cx - r * 0.85,
-        cy + r * 0.75,
-        cx - r * 0.9 + sway * 0.3,
-        cy - flameH * 0.2,
-        cx + sway * 0.7,
-        cy - flameH * 0.72
-      );
-      ctx.fill();
-
-      // White-hot inner ember heart
+      // Glowing Energy Core
       ctx.fillStyle = coreColor;
       ctx.beginPath();
-      ctx.arc(cx, cy + r * 0.15, r * 0.42, 0, Math.PI * 2);
+      ctx.arc(cx, cy, r * 0.34, 0, Math.PI * 2);
       ctx.fill();
 
       animId = requestAnimationFrame(render);

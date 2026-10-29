@@ -1,3 +1,4 @@
+import { SoulCanvas } from './SoulCanvas';
 import React from 'react';
 
 interface FooterProps {
@@ -48,7 +49,7 @@ export const Footer: React.FC<FooterProps> = ({ onBuyClick, currency = 'INTL' })
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '40px', marginBottom: '60px' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-              <img src="/hitodama-logo.png" alt="" width="28" height="28" />
+              <SoulCanvas width={28} height={24} scale={0.6} interactive={false} />
               <strong style={{ fontSize: '16px', letterSpacing: '1px' }}>HITODAMA</strong>
               <span style={{ fontSize: '12px', color: '#8ED92F', fontFamily: 'var(--font-jp)' }}>人魂</span>
             </div>

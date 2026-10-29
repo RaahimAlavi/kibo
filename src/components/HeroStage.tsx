@@ -6,11 +6,11 @@ interface HeroStageProps {
 }
 
 const WALLPAPERS = [
-  '/images/wallpapers/wallpaper0.jpg',
-  '/images/wallpapers/wallpaper1.jpg',
-  '/images/wallpapers/wallpaper2.jpg',
-  '/images/wallpapers/wallpaper3.jpg',
-  '/images/wallpapers/wallpaper4.jpg',
+  'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1920&q=85',
+  'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1920&q=85',
+  'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=85',
+  'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1920&q=85',
+  'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1920&q=85',
 ];
 
 interface Scenario {

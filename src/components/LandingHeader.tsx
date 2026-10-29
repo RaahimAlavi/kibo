@@ -1,3 +1,4 @@
+import { SoulCanvas } from './SoulCanvas';
 import React, { useState } from 'react';
 
 interface LandingHeaderProps {
@@ -32,7 +33,7 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({
           onClick={(e) => handleNav('/', e)}
           aria-label="Hito home"
         >
-          <img src="/hitodama-logo.png" alt="Hito" width="32" height="32" />
+          <SoulCanvas width={32} height={28} scale={0.7} interactive={false} />
           <span>
             <b>HITODAMA</b>
             <small>人魂</small>

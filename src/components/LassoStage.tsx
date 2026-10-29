@@ -180,7 +180,7 @@ export const LassoStage: React.FC = () => {
 
               {/* Game 1: Ashfall (Target) */}
               <div style={{ display: 'flex', gap: '18px', marginBottom: '24px', alignItems: 'flex-start' }}>
-                <img src="/images/lasso/ashfall-poster.jpg" alt="Ashfall" width="76" height="110" style={{ borderRadius: '6px', objectFit: 'cover' }} />
+                <div style={{ width: '76px', height: '110px', borderRadius: '6px', background: 'linear-gradient(135deg, #1e293b, #0f172a)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '11px', fontWeight: 700 }}>GAME</div>
                 <div style={{ flex: 1 }}>
                   <h3 style={{ margin: '0 0 4px 0', fontSize: '17px', fontWeight: 700 }}>1. Ashfall</h3>
                   <p style={{ margin: '0 0 6px 0', fontSize: '12px', color: '#888' }}>2018 · 16+ · Video Game</p>
@@ -192,7 +192,7 @@ export const LassoStage: React.FC = () => {
 
               {/* Game 2: Neon Tide */}
               <div style={{ display: 'flex', gap: '18px', marginBottom: '24px', alignItems: 'flex-start' }}>
-                <img src="/images/lasso/neon-tide-poster.jpg" alt="Neon Tide" width="76" height="110" style={{ borderRadius: '6px', objectFit: 'cover' }} />
+                <div style={{ width: '76px', height: '110px', borderRadius: '6px', background: 'linear-gradient(135deg, #1e293b, #0f172a)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '11px', fontWeight: 700 }}>GAME</div>
                 <div style={{ flex: 1 }}>
                   <h3 style={{ margin: '0 0 4px 0', fontSize: '17px', fontWeight: 700 }}>2. Neon Tide</h3>
                   <p style={{ margin: '0 0 6px 0', fontSize: '12px', color: '#888' }}>2013 · 16+ · Video Game</p>
@@ -204,7 +204,7 @@ export const LassoStage: React.FC = () => {
 
               {/* Game 3: The Long Hollow */}
               <div style={{ display: 'flex', gap: '18px', alignItems: 'flex-start' }}>
-                <img src="/images/lasso/long-hollow-poster.jpg" alt="The Long Hollow" width="76" height="110" style={{ borderRadius: '6px', objectFit: 'cover' }} />
+                <div style={{ width: '76px', height: '110px', borderRadius: '6px', background: 'linear-gradient(135deg, #1e293b, #0f172a)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '11px', fontWeight: 700 }}>GAME</div>
                 <div style={{ flex: 1 }}>
                   <h3 style={{ margin: '0 0 4px 0', fontSize: '17px', fontWeight: 700 }}>3. The Long Hollow</h3>
                   <p style={{ margin: '0 0 6px 0', fontSize: '12px', color: '#888' }}>2013 · 16+ · Video Game</p>

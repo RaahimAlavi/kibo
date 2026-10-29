@@ -175,58 +175,55 @@ function startHitTestLoop() {
 }
 
 function createHitodamaTrayIcon() {
-  const trayIconPath = path.join(__dirname, '../public/hitodama-tray.png');
-  if (fs.existsSync(trayIconPath)) {
-    const loaded = nativeImage.createFromPath(trayIconPath);
-    if (!loaded.isEmpty()) {
-      return loaded.resize({ width: 32, height: 32, quality: 'best' });
-    }
-  }
-
-  const logoPath = path.join(__dirname, '../public/hitodama-logo.png');
-  if (fs.existsSync(logoPath)) {
-    const loaded = nativeImage.createFromPath(logoPath);
-    if (!loaded.isEmpty()) {
-      return loaded.resize({ width: 32, height: 32, quality: 'best' });
-    }
-  }
-
   const size = 32;
   const buf = Buffer.alloc(size * size * 4, 0);
 
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      const ny = (y - 18.5) / 10.5;
-      const taper = y < 18 ? Math.max(0.18, ((y - 2) / 16) * 0.95) : 1.0 - (y - 18) * 0.015;
-      const nx = (x - 15.5) / (9.5 * taper);
-      const dist = Math.sqrt(nx * nx + ny * ny);
+      const dx = (x - 15.5) / 11.5;
+      const dy = (y - 16.5) / 11.5;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const idx = (y * size + x) * 4;
 
-      if (y >= 2 && y <= 29 && dist <= 1.25) {
-        const idx = (y * size + x) * 4;
-        const isLeftEye = y >= 17 && y <= 21 && x >= 11 && x <= 13;
-        const isRightEye = y >= 17 && y <= 21 && x >= 18 && x <= 20;
+      // Top antenna tip
+      if (y >= 2 && y <= 5 && x >= 14 && x <= 17) {
+        buf[idx] = 255;     // B
+        buf[idx + 1] = 210; // G
+        buf[idx + 2] = 92;  // R
+        buf[idx + 3] = 255;
+        continue;
+      }
+
+      // Spherical Droid Shell
+      if (dist <= 1.0) {
+        const inVisor = y >= 12 && y <= 21 && x >= 7 && x <= 24;
+        const isLeftEye = y >= 14 && y <= 19 && x >= 10 && x <= 13;
+        const isRightEye = y >= 14 && y <= 19 && x >= 18 && x <= 21;
 
         if (isLeftEye || isRightEye) {
-          buf[idx] = 7;
-          buf[idx + 1] = 11;
-          buf[idx + 2] = 20;
+          // Bright Cyan LED Eyes
+          buf[idx] = 255;     // B
+          buf[idx + 1] = 230; // G
+          buf[idx + 2] = 180; // R
           buf[idx + 3] = 255;
-        } else if (dist <= 0.55) {
-          buf[idx] = 224;
-          buf[idx + 1] = 247;
-          buf[idx + 2] = 255;
+        } else if (inVisor) {
+          // Dark Glass Visor
+          buf[idx] = 16;
+          buf[idx + 1] = 10;
+          buf[idx + 2] = 8;
           buf[idx + 3] = 255;
-        } else if (dist <= 0.95) {
-          buf[idx] = 92;
-          buf[idx + 1] = 184;
-          buf[idx + 2] = 255;
+        } else if (dist >= 0.86) {
+          // Cyan Rim Border
+          buf[idx] = 248;
+          buf[idx + 1] = 189;
+          buf[idx + 2] = 56;
           buf[idx + 3] = 255;
         } else {
-          const alpha = Math.max(0, Math.min(255, Math.round((1.25 - dist) * 4 * 220)));
-          buf[idx] = 2;
-          buf[idx + 1] = 132;
-          buf[idx + 2] = 199;
-          buf[idx + 3] = alpha;
+          // Matte Titanium Chassis
+          buf[idx] = 44;
+          buf[idx + 1] = 34;
+          buf[idx + 2] = 28;
+          buf[idx + 3] = 255;
         }
       }
     }
