@@ -218,14 +218,14 @@ class MultitaskAgentManager {
   constructor() {
     if (typeof window !== 'undefined') {
       try {
-        const savedApps = JSON.parse(localStorage.getItem('hitodama_connected_apps') || '[]');
+        const savedApps = JSON.parse(localStorage.getItem('kibo_connected_apps') || '[]');
         if (Array.isArray(savedApps)) {
           savedApps.forEach((id: string) => this.connectedApps.add(id));
         }
       } catch (_) {}
 
       try {
-        const savedTasks = JSON.parse(localStorage.getItem('hitodama_agent_tasks') || '[]');
+        const savedTasks = JSON.parse(localStorage.getItem('kibo_agent_tasks') || '[]');
         if (Array.isArray(savedTasks)) {
           const realTasks = savedTasks.filter(
             (t: any) =>
@@ -236,14 +236,14 @@ class MultitaskAgentManager {
               t.status === 'COMPLETED'
           );
           this.tasks = realTasks.slice(0, 8);
-          localStorage.setItem('hitodama_agent_tasks', JSON.stringify(this.tasks));
+          localStorage.setItem('kibo_agent_tasks', JSON.stringify(this.tasks));
         }
       } catch (_) {
         this.tasks = [];
       }
 
       try {
-        const savedInspo = JSON.parse(localStorage.getItem('hitodama_inspirations') || '[]');
+        const savedInspo = JSON.parse(localStorage.getItem('kibo_inspirations') || '[]');
         if (Array.isArray(savedInspo)) {
           this.inspirations = savedInspo;
         }
@@ -267,7 +267,7 @@ class MultitaskAgentManager {
     const snapshot = [...this.tasks];
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem('hitodama_agent_tasks', JSON.stringify(snapshot.slice(0, 10)));
+        localStorage.setItem('kibo_agent_tasks', JSON.stringify(snapshot.slice(0, 10)));
       } catch (_) {}
     }
     this.listeners.forEach((cb) => cb(snapshot));
@@ -277,7 +277,7 @@ class MultitaskAgentManager {
     const snapshot = [...this.inspirations];
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem('hitodama_inspirations', JSON.stringify(snapshot.slice(0, 30)));
+        localStorage.setItem('kibo_inspirations', JSON.stringify(snapshot.slice(0, 30)));
       } catch (_) {}
     }
     this.inspoListeners.forEach((cb) => cb(snapshot));
@@ -305,7 +305,7 @@ class MultitaskAgentManager {
     this.dismissedApps.delete(appId);
     if (typeof window !== 'undefined') {
       localStorage.setItem(
-        'hitodama_connected_apps',
+        'kibo_connected_apps',
         JSON.stringify(Array.from(this.connectedApps))
       );
     }
@@ -317,7 +317,7 @@ class MultitaskAgentManager {
     this.connectedApps.delete(appId);
     if (typeof window !== 'undefined') {
       localStorage.setItem(
-        'hitodama_connected_apps',
+        'kibo_connected_apps',
         JSON.stringify(Array.from(this.connectedApps))
       );
     }
@@ -491,8 +491,8 @@ class MultitaskAgentManager {
   }
 
   private async runWorkerFiber(task: AgentTask, preCapturedScreenshot?: string) {
-    const apiKey = localStorage.getItem('hitodama_gemini_key') || '';
-    const api = (window as any).hitodamaAPI;
+    const apiKey = localStorage.getItem('kibo_gemini_key') || '';
+    const api = ((window as any).kiboAPI || (window as any).hitodamaAPI);
 
     try {
       // ======================================================================
@@ -598,7 +598,7 @@ Return ONLY valid JSON in this exact format:
           stepText: `Saving ${parsedEntries.length} curated websites to Inspiration DB & Notion...`,
         });
 
-        // 1. Add all curated entries into Hitodama's Inspiration Database (`Inspo DB`)
+        // 1. Add all curated entries into Kibo's Inspiration Database (`Inspo DB`)
         const newInspoItems: InspirationItem[] = parsedEntries.map((entry, idx) => ({
           id: `inspo_${Date.now()}_${idx}`,
           title: entry.title,
@@ -613,8 +613,8 @@ Return ONLY valid JSON in this exact format:
         this.notifyInspo();
 
         // 2. Sync to Notion API if credentials are set
-        const notionKey = localStorage.getItem('hitodama_notion_key') || '';
-        const notionDb = localStorage.getItem('hitodama_notion_db') || '';
+        const notionKey = localStorage.getItem('kibo_notion_key') || '';
+        const notionDb = localStorage.getItem('kibo_notion_db') || '';
         let syncedCount = 0;
 
         if (notionKey && notionDb && api?.syncToNotion) {

@@ -1,10 +1,11 @@
 // src/lib/voiceEngine.ts
 
-export type HitodamaVoiceName = 'Charon' | 'Aoede' | 'Fenrir' | 'Puck';
+export type KiboVoiceName = 'Charon' | 'Aoede' | 'Fenrir' | 'Puck';
+export type HitodamaVoiceName = KiboVoiceName;
 
 export interface SpeakOptions {
   apiKey?: string;
-  voice?: HitodamaVoiceName;
+  voice?: KiboVoiceName;
   personality?: string;
   onStart?: () => void;
   onEnd?: () => void;
@@ -23,7 +24,7 @@ const REST_TTS_MODELS = [
   'gemini-2.5-flash-tts',
 ];
 
-class HitodamaVoiceEngine {
+class KiboVoiceEngine {
   private audioCtx: AudioContext | null = null;
   private nextStartTime: number = 0;
   private activeSources: AudioBufferSourceNode[] = [];
@@ -121,11 +122,11 @@ class HitodamaVoiceEngine {
     mode: 'SAY_EXACT' | 'CONVERSE',
     options: SpeakOptions = {}
   ): Promise<boolean> {
-    const apiKey = options.apiKey || localStorage.getItem('hitodama_gemini_key') || '';
+    const apiKey = options.apiKey || (localStorage.getItem('kibo_gemini_key') || localStorage.getItem('kibo_gemini_key')) || '';
     if (!apiKey) return false;
 
-    const voice: HitodamaVoiceName = options.voice || 'Charon';
-    const personality = options.personality || 'True Chad';
+    const voice: KiboVoiceName = options.voice || 'Charon';
+    const personality = options.personality || 'Prime Operator';
 
     for (const model of LIVE_AUDIO_MODELS) {
       const success = await new Promise<boolean>((resolve) => {
@@ -152,7 +153,7 @@ class HitodamaVoiceEngine {
           const systemText =
             mode === 'SAY_EXACT'
               ? 'Read the user message aloud verbatim with natural human expression. Do not add extra words.'
-              : `You are Hito, a desktop soul companion with a "${personality}" personality. Keep spoken replies under 2 short sentences, witty, and direct.`;
+              : `You are Kibo, a tactile desktop cyber-droid with a "${personality}" personality. Keep spoken replies under 2 short sentences, crisp, and direct.`;
 
           // 1. Send Live session setup with prebuilt voice (Charon, Aoede, Fenrir, Puck)
           try {
@@ -258,10 +259,10 @@ class HitodamaVoiceEngine {
 
   // Tier 2: Fallback to REST TTS Models
   private async speakViaRestTTS(text: string, options: SpeakOptions = {}): Promise<boolean> {
-    const apiKey = options.apiKey || localStorage.getItem('hitodama_gemini_key') || '';
+    const apiKey = options.apiKey || (localStorage.getItem('kibo_gemini_key') || localStorage.getItem('kibo_gemini_key')) || '';
     if (!apiKey) return false;
 
-    const voice: HitodamaVoiceName = options.voice || 'Charon';
+    const voice: KiboVoiceName = options.voice || 'Charon';
 
     for (const model of REST_TTS_MODELS) {
       try {
@@ -318,7 +319,7 @@ class HitodamaVoiceEngine {
     );
     if (preferred) utterance.voice = preferred;
 
-    // Match pitch subtly to selected Hitodama voice profile
+    // Match pitch subtly to selected Kibo voice profile
     const voiceProfile = options.voice || 'Charon';
     utterance.pitch =
       voiceProfile === 'Charon' ? 0.92 : voiceProfile === 'Fenrir' ? 0.85 : voiceProfile === 'Aoede' ? 1.08 : 1.02;
@@ -366,4 +367,4 @@ class HitodamaVoiceEngine {
   }
 }
 
-export const voiceEngine = new HitodamaVoiceEngine();
+export const voiceEngine = new KiboVoiceEngine();

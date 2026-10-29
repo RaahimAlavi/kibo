@@ -15,7 +15,7 @@ export interface TavilyResponse {
 
 export function getSavedTavilyKey(): string {
   if (typeof window === 'undefined') return '';
-  return (localStorage.getItem('hitodama_tavily_key') || '').trim();
+  return (localStorage.getItem('kibo_tavily_key') || '').trim();
 }
 
 /**

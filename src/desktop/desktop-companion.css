@@ -1,5 +1,5 @@
 /* ==========================================================================
-   HITODAMA DESKTOP COMPANION - COMPLETE ADAPTIVE ISLAND, ASK HUD & LOADOUT CSS
+   KIBO DESKTOP COMPANION - COMPLETE ADAPTIVE ISLAND, ASK HUD & LOADOUT CSS
    ========================================================================== */
 
 :root {
@@ -7,7 +7,7 @@
   --companion-font-body: 'Figtree', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --companion-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
   --font-body: var(--companion-font-body);
-  --hitodama-font-mono: var(--companion-font-mono);
+  --kibo-font-mono: var(--companion-font-mono);
 
   --adaptive-accent: #F68C58;
   --adaptive-secondary: #EE9B27;
@@ -37,7 +37,7 @@
   height: 0 !important;
 }
 
-.hitodama-companion-root {
+.kibo-companion-root, .hitodama-companion-root {
   position: relative;
   width: 100vw !important;
   height: 100vh !important;
@@ -98,7 +98,7 @@
    TOP HARDWARE NOTCH SHELL & VECTOR SVG TOP-BEZEL ARCHES
    ========================================================================== */
 
-.hitodama-bezel-shell {
+.kibo-bezel-shell, .hitodama-bezel-shell {
   position: relative;
   background: var(--notch-black);
   border: none;
@@ -110,7 +110,7 @@
   z-index: 10;
 }
 
-.hitodama-svg-arch {
+.kibo-svg-arch, .hitodama-svg-arch {
   position: absolute;
   top: 0;
   pointer-events: none;
@@ -124,7 +124,7 @@
   will-change: width, height, left, right;
 }
 
-.hitodama-bezel-inner {
+.kibo-bezel-inner, .hitodama-bezel-inner {
   position: relative;
   width: 100%;
   height: 100%;
@@ -137,7 +137,7 @@
    NOTCH STATES: AWAKE SOUL, COMPACT ASK BAR, TIMER COUNTDOWN & ALARM
    ========================================================================== */
 
-.hitodama-notch-soul {
+.kibo-notch-soul, .hitodama-notch-soul {
   position: relative;
   width: 100%;
   height: 100%;
@@ -147,7 +147,7 @@
   cursor: pointer;
 }
 
-.hitodama-soul-underglow {
+.kibo-soul-underglow, .hitodama-soul-underglow {
   position: absolute;
   bottom: -6px;
   left: 50%;
@@ -159,7 +159,7 @@
   pointer-events: none;
 }
 
-.hitodama-idle-soul-wrap {
+.kibo-idle-soul-wrap, .hitodama-idle-soul-wrap {
   position: relative;
   z-index: 2;
   width: 84px;
@@ -170,7 +170,7 @@
   transition: transform 0.28s var(--ease-hitodama), opacity 0.24s ease;
 }
 
-@keyframes hitodamaPokeBounce {
+@keyframes kiboPokeBounce {
   0% { transform: scale(1); }
   28% { transform: scale(0.84, 1.2) translateY(3px); }
   62% { transform: scale(1.12, 0.9) translateY(-2px); }
@@ -178,12 +178,12 @@
   100% { transform: scale(1); }
 }
 
-.hitodama-notch-soul.is-hit .hitodama-idle-soul-wrap {
-  animation: hitodamaPokeBounce 0.34s cubic-bezier(0.34, 1.56, 0.64, 1);
+.kibo-notch-soul, .hitodama-notch-soul.is-hit .kibo-idle-soul-wrap, .hitodama-idle-soul-wrap {
+  animation: kiboPokeBounce 0.34s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* Compact Ask Bar (Soul on Left + Waveform/Dots on Right) */
-.hitodama-notch-ask-compact {
+.kibo-notch-ask-compact, .hitodama-notch-ask-compact {
   width: 100%;
   height: 100%;
   display: flex;
@@ -235,7 +235,7 @@
 }
 
 /* Live Focus Timer Countdown & Ringing Alarm Celebration in Notch */
-.hitodama-notch-timer-bar {
+.kibo-notch-timer-bar, .hitodama-notch-timer-bar {
   width: 100%;
   height: 100%;
   display: flex;
@@ -245,7 +245,7 @@
   cursor: pointer;
 }
 
-.hitodama-notch-timer-bar.is-ringing {
+.kibo-notch-timer-bar, .hitodama-notch-timer-bar.is-ringing {
   background: radial-gradient(circle at 30% 50%, rgba(238, 155, 39, 0.24) 0%, transparent 75%);
   padding: 0 18px 0 12px;
 }
@@ -293,7 +293,7 @@
 }
 
 /* Compact Media Player Notch */
-.hitodama-notch-media-v2 {
+.kibo-notch-media-v2, .hitodama-notch-media-v2 {
   width: 100%;
   height: 100%;
   display: flex;
@@ -327,7 +327,7 @@
    EXPANDED ISLAND LAYOUT & CENTERED ADAPTIVE NAVIGATION BAR
    ========================================================================== */
 
-.hitodama-expanded-inner {
+.kibo-expanded-inner, .hitodama-expanded-inner {
   position: relative;
   width: 100%;
   height: 100%;
@@ -1394,8 +1394,8 @@
    FIRST-TIME INSTALL ONBOARDING TUTORIAL CARD (With API Key Setup & Gamified Quest)
    ========================================================================== */
 
-.hitodama-onboarding-card,
-.hitodama-onboarding-experience {
+.kibo-onboarding-card, .hitodama-onboarding-card,
+.kibo-onboarding-experience, .hitodama-onboarding-experience {
   margin-top: 14px;
   width: 480px;
   max-width: 92vw;
@@ -1804,10 +1804,10 @@
 }
 
 /* ==========================================================================
-   DRAGGABLE HITODAMA APP, ORBITING LASSO LOADOUT & COLLECTIBLE CARD DECK
+   DRAGGABLE KIBO APP, ORBITING LASSO LOADOUT & COLLECTIBLE CARD DECK
    ========================================================================== */
 
-.hitodama-config-app-window {
+.kibo-config-app-window, .hitodama-config-app-window {
   width: 880px;
   height: 550px;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -1821,11 +1821,11 @@
   background: #0D111A;
 }
 
-.hitodama-config-app-window.loadout-theme {
+.kibo-config-app-window, .hitodama-config-app-window.loadout-theme {
   background: radial-gradient(circle at 50% 30%, #182232 0%, #0B0E14 85%) !important;
 }
 
-.hitodama-config-app-window.settings-theme {
+.kibo-config-app-window, .hitodama-config-app-window.settings-theme {
   background: radial-gradient(ellipse at 65% 20%, #151D2A 0%, #090B10 85%) !important;
 }
 
@@ -2589,7 +2589,7 @@
    `Win + Alt` ASK STAGE, CONTEXT DROP CARD, DICTATION & LASSO OVERLAYS
    ========================================================================== */
 
-.hitodama-ask-stage-hud {
+.kibo-ask-stage-hud, .hitodama-ask-stage-hud {
   position: absolute;
   bottom: 115px;
   left: 50%;
@@ -2606,7 +2606,7 @@
   justify-content: flex-start;
 }
 
-.hitodama-context-drop-card {
+.kibo-context-drop-card, .hitodama-context-drop-card {
   margin-top: 10px;
   min-width: 234px;
   max-width: 276px;
@@ -2627,10 +2627,10 @@
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.hitodama-context-header { font-size: 10px; color: #8A8F9E; font-weight: 500; }
-.hitodama-context-main { display: flex; align-items: center; gap: 10px; }
+.kibo-context-header, .hitodama-context-header { font-size: 10px; color: #8A8F9E; font-weight: 500; }
+.kibo-context-main, .hitodama-context-main { display: flex; align-items: center; gap: 10px; }
 
-.hitodama-badge-icon {
+.kibo-badge-icon, .hitodama-badge-icon {
   width: 26px;
   height: 26px;
   border-radius: 7px;
@@ -2642,8 +2642,8 @@
   flex-shrink: 0;
 }
 
-.hitodama-badge-icon.youtube { background: #ffffff; color: #EF4444; }
-.hitodama-badge-icon.youtube span {
+.kibo-badge-icon, .hitodama-badge-icon.youtube { background: #ffffff; color: #EF4444; }
+.kibo-badge-icon, .hitodama-badge-icon.youtube span {
   background: #EF4444;
   color: #ffffff;
   width: 18px;
@@ -2655,15 +2655,15 @@
   font-size: 8px;
 }
 
-.hitodama-badge-icon.gmail { background: #ffffff; color: #EA4335; font-size: 14px; }
-.hitodama-badge-icon.google { background: #ffffff; color: #4285F4; font-size: 14px; }
-.hitodama-badge-icon.amazon { background: #ffffff; color: #18181B; font-size: 14px; }
-.hitodama-badge-icon.app { background: rgba(92, 184, 255, 0.15); color: #5CB8FF; }
+.kibo-badge-icon, .hitodama-badge-icon.gmail { background: #ffffff; color: #EA4335; font-size: 14px; }
+.kibo-badge-icon, .hitodama-badge-icon.google { background: #ffffff; color: #4285F4; font-size: 14px; }
+.kibo-badge-icon, .hitodama-badge-icon.amazon { background: #ffffff; color: #18181B; font-size: 14px; }
+.kibo-badge-icon, .hitodama-badge-icon.app { background: rgba(92, 184, 255, 0.15); color: #5CB8FF; }
 
-.hitodama-context-title { font-size: 12.5px; font-weight: 700; color: #ffffff; line-height: 1.25; }
-.hitodama-context-sub { font-size: 10px; color: #71717A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kibo-context-title, .hitodama-context-title { font-size: 12.5px; font-weight: 700; color: #ffffff; line-height: 1.25; }
+.kibo-context-sub, .hitodama-context-sub { font-size: 10px; color: #71717A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.hitodama-floating-hud-stack {
+.kibo-floating-hud-stack, .hitodama-floating-hud-stack {
   position: absolute;
   bottom: 110px;
   left: 50%;
@@ -2676,7 +2676,7 @@
   pointer-events: none;
 }
 
-.hitodama-voice-pill {
+.kibo-voice-pill, .hitodama-voice-pill {
   border-radius: 999px;
   padding: 11px 22px;
   display: inline-flex;
@@ -2691,27 +2691,27 @@
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.hitodama-voice-pill.user-white {
+.kibo-voice-pill, .hitodama-voice-pill.user-white {
   background: #ffffff;
   color: #18181B;
   border: 1px solid rgba(0, 0, 0, 0.08);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
 }
 
-.hitodama-voice-pill.user-white .pill-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: #A1A1AA; }
-.hitodama-voice-pill.user-white .pill-text { font-weight: 600; color: #18181B; }
+.kibo-voice-pill, .hitodama-voice-pill.user-white .pill-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: #A1A1AA; }
+.kibo-voice-pill, .hitodama-voice-pill.user-white .pill-text { font-weight: 600; color: #18181B; }
 
-.hitodama-voice-pill.hitodama-dark {
+.kibo-voice-pill, .hitodama-voice-pill.kibo-dark, .hitodama-dark {
   background: #0A0B0E;
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.hitodama-voice-pill.hitodama-dark .pill-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: #71717A; }
-.hitodama-voice-pill.hitodama-dark .pill-text strong { color: #ffffff; font-weight: 700; }
-.hitodama-voice-pill.hitodama-dark .pill-text .muted { color: #71717A; font-weight: 600; }
+.kibo-voice-pill, .hitodama-voice-pill.kibo-dark, .hitodama-dark .pill-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: #71717A; }
+.kibo-voice-pill, .hitodama-voice-pill.kibo-dark, .hitodama-dark .pill-text strong { color: #ffffff; font-weight: 700; }
+.kibo-voice-pill, .hitodama-voice-pill.kibo-dark, .hitodama-dark .pill-text .muted { color: #71717A; font-weight: 600; }
 
-.hitodama-dictation-stage {
+.kibo-dictation-stage, .hitodama-dictation-stage {
   position: absolute;
   bottom: 85px;
   left: 50%;
@@ -2723,9 +2723,9 @@
   z-index: 25;
 }
 
-.hitodama-keycap-row { display: flex; align-items: center; gap: 8px; }
+.kibo-keycap-row, .hitodama-keycap-row { display: flex; align-items: center; gap: 8px; }
 
-.hitodama-keycap {
+.kibo-keycap, .hitodama-keycap {
   background: #141519;
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -2736,9 +2736,9 @@
   font-weight: 700;
 }
 
-.hitodama-keycap-plus { font-size: 12px; color: #71717A; font-weight: 700; }
+.kibo-keycap-plus, .hitodama-keycap-plus { font-size: 12px; color: #71717A; font-weight: 700; }
 
-.hitodama-dictation-card {
+.kibo-dictation-card, .hitodama-dictation-card {
   width: 580px;
   min-height: 76px;
   background: #ffffff;
@@ -2750,10 +2750,10 @@
   border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-.hitodama-dictation-card .pill-tag { font-size: 10px; font-weight: 700; color: #A1A1AA; margin-top: 3px; letter-spacing: 0.05em; }
+.kibo-dictation-card, .hitodama-dictation-card .pill-tag { font-size: 10px; font-weight: 700; color: #A1A1AA; margin-top: 3px; letter-spacing: 0.05em; }
 .dictation-live-copy { font-size: 14px; font-weight: 500; color: #18181B; line-height: 1.45; }
 
-.hitodama-dictation-status-pill {
+.kibo-dictation-status-pill, .hitodama-dictation-status-pill {
   width: 72px;
   height: 36px;
   border-radius: 999px;
@@ -2765,13 +2765,13 @@
   cursor: pointer;
 }
 
-.hitodama-blue-bars { display: flex; align-items: center; gap: 3.5px; height: 16px; }
-.hitodama-dictation-check { color: #5CB8FF; font-size: 15px; font-weight: 800; }
+.kibo-blue-bars, .hitodama-blue-bars { display: flex; align-items: center; gap: 3.5px; height: 16px; }
+.kibo-dictation-check, .hitodama-dictation-check { color: #5CB8FF; font-size: 15px; font-weight: 800; }
 
-.hitodama-lasso-overlay { position: fixed; inset: 0; z-index: 30; cursor: crosshair; }
-.hitodama-lasso-svg { position: absolute; inset: 0; pointer-events: none; }
+.kibo-lasso-overlay, .hitodama-lasso-overlay { position: fixed; inset: 0; z-index: 30; cursor: crosshair; }
+.kibo-lasso-svg, .hitodama-lasso-svg { position: absolute; inset: 0; pointer-events: none; }
 
-.hitodama-lasso-hud {
+.kibo-lasso-hud, .hitodama-lasso-hud {
   position: absolute;
   bottom: 130px;
   left: 50%;
@@ -2782,7 +2782,7 @@
   gap: 12px;
 }
 
-.hitodama-lasso-input {
+.kibo-lasso-input, .hitodama-lasso-input {
   border: none;
   outline: none;
   background: transparent;
@@ -2875,7 +2875,7 @@
    APPLE DYNAMIC ISLAND MINI MEDIA NOTCH & IN-NOTCH API ALERT
    ========================================================================== */
 
-.hitodama-notch-mini-media {
+.kibo-notch-mini-media, .hitodama-notch-mini-media {
   width: 100%;
   height: 100%;
   display: flex;
@@ -2910,7 +2910,7 @@
   animation: companion-wave-pulse 0.65s infinite ease-in-out alternate;
 }
 
-.hitodama-notch-api-alert {
+.kibo-notch-api-alert, .hitodama-notch-api-alert {
   width: 100%;
   height: 100%;
   display: flex;
@@ -3073,7 +3073,7 @@ button:focus-visible,
 /* ==========================================================================
    GLOWING BLUE DESKTOP PERIMETER AURA (Screenshot 2026-10-15 221354.jpg)
    ========================================================================== */
-.hitodama-screen-edge-glow {
+.kibo-screen-edge-glow, .hitodama-screen-edge-glow {
   display: none !important;
   opacity: 0 !important;
   box-shadow: none !important;
@@ -3081,14 +3081,14 @@ button:focus-visible,
   pointer-events: none !important;
 }
 
-.hitodama-screen-edge-glow.is-active {
+.kibo-screen-edge-glow, .hitodama-screen-edge-glow.is-active {
   display: none !important;
   opacity: 0 !important;
   box-shadow: none !important;
   animation: none !important;
 }
 
-@keyframes hitodama-border-breathe {
+@keyframes kibo-border-breathe {
   0% {
     box-shadow:
       inset 0 0 34px 5px rgba(92, 184, 255, 0.52),
@@ -3104,7 +3104,7 @@ button:focus-visible,
 }
 
 /* ==========================================================================
-   HITODAMA ROAMING SCREEN POINTER ("PEEK, FLY & POINT")
+   KIBO ROAMING SCREEN POINTER ("PEEK, FLY & POINT")
    ========================================================================== */
 
 .roaming-stage-overlay {
@@ -3124,7 +3124,7 @@ button:focus-visible,
   box-shadow:
     0 0 18px rgba(92, 184, 255, 0.65),
     inset 0 0 12px rgba(92, 184, 255, 0.35);
-  animation: hitodamaTargetPulse 1.6s infinite ease-in-out;
+  animation: kiboTargetPulse 1.6s infinite ease-in-out;
   cursor: pointer;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -3136,7 +3136,7 @@ button:focus-visible,
     inset 0 0 18px rgba(186, 230, 253, 0.5);
 }
 
-@keyframes hitodamaTargetPulse {
+@keyframes kiboTargetPulse {
   0% {
     transform: scale(0.98);
     opacity: 0.75;
@@ -3251,7 +3251,7 @@ button:focus-visible,
   transform: scale(1.1);
 }
 
-.hitodama-tasks-indicator {
+.kibo-tasks-indicator, .hitodama-tasks-indicator {
   position: absolute;
   right: 12px;
   top: 50%;
@@ -3271,7 +3271,7 @@ button:focus-visible,
   z-index: 5;
 }
 
-.hitodama-tasks-indicator:hover {
+.kibo-tasks-indicator, .hitodama-tasks-indicator:hover {
   background: rgba(92, 184, 255, 0.25);
   border-color: rgba(92, 184, 255, 0.55);
   color: #FFFFFF;
@@ -3282,7 +3282,7 @@ button:focus-visible,
    PROACTIVE SOUL-LINK NOTCH & INFINITE MARQUEE TICKER
    ========================================================================== */
 
-.hitodama-context-btn {
+.kibo-context-btn, .hitodama-context-btn {
   border-radius: 999px;
   padding: 5px 12px;
   font-family: var(--companion-font-body);
@@ -3296,30 +3296,30 @@ button:focus-visible,
   outline: none;
 }
 
-.hitodama-context-btn.muted {
+.kibo-context-btn, .hitodama-context-btn.muted {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #D4D4D8;
 }
 
-.hitodama-context-btn.muted:hover {
+.kibo-context-btn, .hitodama-context-btn.muted:hover {
   background: rgba(255, 255, 255, 0.12);
   color: #FFFFFF;
   transform: translateY(-1px);
 }
 
-.hitodama-context-btn.primary {
+.kibo-context-btn, .hitodama-context-btn.primary {
   border: 1px solid rgba(255, 255, 255, 0.28);
   color: #FFFFFF;
   font-weight: 700;
 }
 
-.hitodama-context-btn.primary:hover {
+.kibo-context-btn, .hitodama-context-btn.primary:hover {
   transform: translateY(-1px) scale(1.03);
   filter: brightness(1.1);
 }
 
-.hitodama-marquee-viewport {
+.kibo-marquee-viewport, .hitodama-marquee-viewport {
   position: relative;
   z-index: 2;
   width: 100%;
@@ -3329,21 +3329,21 @@ button:focus-visible,
   -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
 }
 
-.hitodama-marquee-track {
+.kibo-marquee-track, .hitodama-marquee-track {
   display: flex;
   align-items: center;
   gap: 8px;
   width: max-content;
-  animation: hitodamaMarqueeScroll 22s linear infinite;
+  animation: kiboMarqueeScroll 22s linear infinite;
   will-change: transform;
 }
 
 /* Pause marquee smoothly when user hovers to click a prompt */
-.hitodama-marquee-viewport:hover .hitodama-marquee-track {
+.kibo-marquee-viewport, .hitodama-marquee-viewport:hover .kibo-marquee-track, .hitodama-marquee-track {
   animation-play-state: paused;
 }
 
-@keyframes hitodamaMarqueeScroll {
+@keyframes kiboMarqueeScroll {
   0% {
     transform: translate3d(0, 0, 0);
   }
@@ -3352,7 +3352,7 @@ button:focus-visible,
   }
 }
 
-.hitodama-marquee-pill {
+.kibo-marquee-pill, .hitodama-marquee-pill {
   background: rgba(18, 20, 26, 0.78);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: #F4F4F5;
@@ -3371,7 +3371,7 @@ button:focus-visible,
   flex-shrink: 0;
 }
 
-.hitodama-marquee-pill:hover {
+.kibo-marquee-pill, .hitodama-marquee-pill:hover {
   background: rgba(255, 255, 255, 0.14);
   color: #FFFFFF;
   transform: translateY(-1px);
@@ -3444,7 +3444,7 @@ button:focus-visible,
 }
 
 /* ============================================================================
-   HITODAMA MULTITASK AGENTS & WORKING NOTCH STYLES
+   KIBO MULTITASK AGENTS & WORKING NOTCH STYLES
    ============================================================================ */
 @keyframes agentPulseDot {
   0%, 100% {
@@ -3479,7 +3479,7 @@ button:focus-visible,
   }
 }
 
-.hitodama-notch-agent-working {
+.kibo-notch-agent-working, .hitodama-notch-agent-working {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3513,7 +3513,7 @@ button:focus-visible,
   animation-delay: 0.4s;
 }
 
-@keyframes hitodamaSlowFloat {
+@keyframes kiboSlowFloat {
   0%, 100% {
     transform: translate3d(0, 0, 0);
   }
@@ -3535,7 +3535,7 @@ button:focus-visible,
    FULL-SCREEN SPATIAL ONBOARDING EXPERIENCE (NO MODAL BOX, ZERO CLIPPING)
    ========================================================================== */
 
-.hitodama-spatial-onboarding-overlay {
+.kibo-spatial-onboarding-overlay, .hitodama-spatial-onboarding-overlay {
   position: fixed;
   inset: 0;
   width: 100vw;
@@ -3729,7 +3729,7 @@ button:focus-visible,
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.08em;
-  animation: hitodamaSlowFloat 1.2s infinite ease-in-out;
+  animation: kiboSlowFloat 1.2s infinite ease-in-out;
   z-index: 9010;
 }
 

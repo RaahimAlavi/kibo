@@ -393,7 +393,7 @@ export const HeroStage: React.FC<HeroStageProps> = ({ onBuyClick }) => {
                     border: '1px solid rgba(255,255,255,0.1)',
                   }}
                 >
-                  <span style={{ fontSize: '11px', color: '#8ED92F', fontWeight: 700 }}>HITODAMA</span>
+                  <span style={{ fontSize: '11px', color: '#8ED92F', fontWeight: 700 }}>KIBO</span>
                   <span>
                     Done. Dark mode's on, easier on the <strong style={{ color: '#fff' }}>eyes.</strong>
                   </span>

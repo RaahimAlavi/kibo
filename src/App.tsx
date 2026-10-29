@@ -21,13 +21,13 @@ import { UnavailableGate } from './components/UnavailableGate';
 
 import { BuyPage } from './pages/BuyPage';
 import { AccountPage } from './pages/AccountPage';
-import { HitodamaApp } from './desktop/HitodamaApp';
+import { KiboApp } from './desktop/KiboApp';
 
 export const App: React.FC = () => {
   const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
   const isDesktopMode =
     urlParams?.get('mode') === 'desktop' ||
-    Boolean(typeof window !== 'undefined' && window.hitodamaAPI);
+    Boolean(typeof window !== 'undefined' && ((window as any).kiboAPI || (window as any).hitodamaAPI));
 
   const [route, setRoute] = useState<string>('/');
   const [currency, setCurrency] = useState<'IN' | 'INTL'>('INTL');
@@ -78,7 +78,7 @@ export const App: React.FC = () => {
 
   // Route handlers
   if (isDesktopMode) {
-    return <HitodamaApp />;
+    return <KiboApp />;
   }
 
   if (route.startsWith('/buy')) {
@@ -90,7 +90,7 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div className="hitodama-app" style={{ position: 'relative' }}>
+    <div className="kibo-app hitodama-app" style={{ position: 'relative' }}>
       {/* Ambient Grid Atmosphere */}
       <SolarpunkAtmosphere />
 

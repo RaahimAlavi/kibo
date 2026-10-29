@@ -426,7 +426,7 @@ export const YouTubeStage: React.FC = () => {
                 letterSpacing: '1px',
               }}
             >
-              HITODAMA
+              KIBO
             </span>
             <span style={{ fontSize: '13px', fontWeight: 600 }}>
               {stage === 'search' ? "Here's lo-fi beats on YouTube." : 'Playing it.'}

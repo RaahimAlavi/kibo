@@ -271,8 +271,8 @@ export const AgentsNotchView: React.FC<AgentsNotchViewProps> = ({
                           onClick={() => {
                             if (onOpenGeneratedPage) {
                               onOpenGeneratedPage(task.generatedHtml!, task.artifactFile);
-                            } else if (typeof window !== 'undefined' && (window as any).hitodamaAPI?.openGeneratedPage) {
-                              (window as any).hitodamaAPI.openGeneratedPage(task.generatedHtml!, task.artifactFile);
+                            } else if (typeof window !== 'undefined' && ((window as any).kiboAPI || (window as any).hitodamaAPI)?.openGeneratedPage) {
+                              ((window as any).kiboAPI || (window as any).hitodamaAPI).openGeneratedPage(task.generatedHtml!, task.artifactFile);
                             } else {
                               const blob = new Blob([task.generatedHtml!], { type: 'text/html' });
                               window.open(URL.createObjectURL(blob), '_blank');

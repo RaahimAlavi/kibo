@@ -174,7 +174,7 @@ function startHitTestLoop() {
   }, 16);
 }
 
-function createHitodamaTrayIcon() {
+function createKiboTrayIcon() {
   const size = 32;
   const buf = Buffer.alloc(size * size * 4, 0);
 
@@ -324,13 +324,13 @@ function refreshTrayIconAndTooltip() {
     currentTrayTheme === 'ember' ||
     (currentTrayTheme === 'auto' && emberState.isWaiting);
 
-  const icon = shouldUseEmber ? createEmberTrayIcon() : createHitodamaTrayIcon();
+  const icon = shouldUseEmber ? createEmberTrayIcon() : createKiboTrayIcon();
   tray.setImage(icon);
 
   if (emberState.isWaiting) {
-    tray.setToolTip(`Hito · Daily Ember Waiting! (${emberState.count.toLocaleString()} Embers)`);
+    tray.setToolTip(`Kibo · Daily Watt Waiting! (${emberState.count.toLocaleString()} Watts)`);
   } else {
-    tray.setToolTip(`Hito · ${emberState.count.toLocaleString()} Embers · Give your computer a soul`);
+    tray.setToolTip(`Kibo · ${emberState.count.toLocaleString()} Watts · Tactile Desktop Cyber-Droid`);
   }
 }
 
@@ -338,8 +338,8 @@ function updateTrayMenu() {
   if (!tray) return;
 
   const emberHeaderLabel = emberState.isWaiting
-    ? `Embers: ${emberState.count.toLocaleString()} · Daily Ember Waiting!`
-    : `Embers: ${emberState.count.toLocaleString()} Available`;
+    ? `Watts: ${emberState.count.toLocaleString()} · Daily Watt Waiting!`
+    : `Watts: ${emberState.count.toLocaleString()} Available`;
 
   const contextMenu = Menu.buildFromTemplate([
     {
@@ -347,8 +347,8 @@ function updateTrayMenu() {
       submenu: [
         {
           label: emberState.isWaiting
-            ? 'Claim Daily Waiting Ember (+15)'
-            : 'Daily Ember Claimed (Come back tomorrow)',
+            ? 'Claim Daily Waiting Watt (+15)'
+            : 'Daily Watt Claimed (Come back tomorrow)',
           enabled: emberState.isWaiting,
           click: () => {
             if (mainWindow) {
@@ -359,7 +359,7 @@ function updateTrayMenu() {
           },
         },
         {
-          label: 'Creator Mode: Stoke +5,000 Embers (Test)',
+          label: 'Creator Mode: Stoke +5,000 Watts (Test)',
           click: () => {
             if (mainWindow) {
               mainWindow.webContents.send('grant-creator-embers', 5000);
@@ -370,14 +370,14 @@ function updateTrayMenu() {
         {
           label: `Tray Design: ${
             currentTrayTheme === 'ember'
-              ? 'Ember Flame (Active)'
+              ? 'Reactor Core (Active)'
               : currentTrayTheme === 'hito'
-              ? 'Hito Soul (Active)'
-              : 'Auto (Hito / Ember on Waiting)'
+              ? 'Kibo Visor (Active)'
+              : 'Auto (Kibo / Reactor on Waiting)'
           }`,
           submenu: [
             {
-              label: 'Auto (Switches to Ember when waiting)',
+              label: 'Auto (Switches to Reactor when waiting)',
               type: 'radio',
               checked: currentTrayTheme === 'auto',
               click: () => {
@@ -387,7 +387,7 @@ function updateTrayMenu() {
               },
             },
             {
-              label: 'Ember Flame Design (Always Fire)',
+              label: 'Reactor Core Design (Always Active)',
               type: 'radio',
               checked: currentTrayTheme === 'ember',
               click: () => {
@@ -397,7 +397,7 @@ function updateTrayMenu() {
               },
             },
             {
-              label: 'Hito Soul Design (Original Blue)',
+              label: 'Kibo Visor Design (Original Titanium/Cyan)',
               type: 'radio',
               checked: currentTrayTheme === 'hito',
               click: () => {
@@ -409,7 +409,7 @@ function updateTrayMenu() {
           ],
         },
         {
-          label: 'View Soul Deck & Card Unlocks...',
+          label: 'View Chassis Bay & Module Unlocks...',
           click: () => {
             if (mainWindow) {
               mainWindow.show();
@@ -422,7 +422,7 @@ function updateTrayMenu() {
     },
     { type: 'separator' },
     {
-      label: 'Soul Loadout',
+      label: 'Chassis Bay',
       click: () => {
         if (mainWindow) {
           mainWindow.show();
@@ -435,7 +435,7 @@ function updateTrayMenu() {
       label: 'Shortcuts',
       submenu: [
         {
-          label: `Ask Hito: ${activeShortcuts.ask}`,
+          label: `Ask Kibo: ${activeShortcuts.ask}`,
           click: () => {
             if (mainWindow) {
               mainWindow.show();
@@ -499,7 +499,7 @@ function updateTrayMenu() {
     },
     { type: 'separator' },
     {
-      label: 'Quit Hito',
+      label: 'Quit Kibo',
       click: () => {
         app.quit();
       },
@@ -512,7 +512,7 @@ function updateTrayMenu() {
 function createSystemTray() {
   if (tray) return;
 
-  const icon = createHitodamaTrayIcon();
+  const icon = createKiboTrayIcon();
   tray = new Tray(icon);
   refreshTrayIconAndTooltip();
   updateTrayMenu();
@@ -588,7 +588,7 @@ function createWindow() {
       width: 0px !important;
       height: 0px !important;
     }
-    html, body, #root, .hitodama-companion-root {
+    html, body, #root, .kibo-companion-root, .hitodama-companion-root {
       background: transparent !important;
       background-color: transparent !important;
       background-image: none !important;
@@ -1012,7 +1012,7 @@ ipcMain.handle('capture-screen', async () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.setOpacity(0);
     }
-    // Small pause to allow the desktop compositor to composite without Hitodama
+    // Small pause to allow the desktop compositor to composite without Kibo
     await new Promise((r) => setTimeout(r, 60));
 
     const primaryDisplay = screen.getPrimaryDisplay();
@@ -1046,7 +1046,7 @@ ipcMain.handle('capture-screen', async () => {
 
   // Fallback to PowerShell
   return new Promise((resolve) => {
-    const tempFile = path.join(app.getPath('temp'), `hitodama_shot_${Date.now()}.png`);
+    const tempFile = path.join(app.getPath('temp'), `kibo_shot_${Date.now()}.png`);
     const psScript = `
       Add-Type -AssemblyName System.Windows.Forms
       Add-Type -AssemblyName System.Drawing
@@ -1086,7 +1086,7 @@ ipcMain.handle('set-lasso-active', async (_event, active) => {
 });
 
 // ============================================================================
-// HITODAMA "SYSTEM ONE" LOCAL PERCEPTION & CLICKER ENGINE (ZERO-PIXEL / ~40ms)
+// KIBO "SYSTEM ONE" LOCAL PERCEPTION & CLICKER ENGINE (ZERO-PIXEL / ~40ms)
 // Uses persistent in-memory C# (Win32 + UIAutomation) so there is zero cold-start lag
 // ============================================================================
 let uiWorker = null;
@@ -1282,7 +1282,7 @@ function sendUIWorkerCommand(payload) {
 
 // IPC endpoints for zero-screenshot computer use
 ipcMain.handle('scan-ui-elements', async () => {
-  // Blur Hitodama first so the user's active app is the foreground target
+  // Blur Kibo first so the user's active app is the foreground target
   if (mainWindow && mainWindow.isFocused()) {
     mainWindow.blur();
   }
@@ -1321,7 +1321,7 @@ function startActiveAppWatcher() {
       const title = rawTitle.toLowerCase();
       const proc = (info.proc || '').toLowerCase();
 
-      if (!title || proc.includes('electron') || title.includes('hitodama')) return;
+      if (!title || proc.includes('electron') || title.includes('hitodama') || title.includes('kibo')) return;
 
       // 1. NEVER trigger on Google Search, Bing Search, DuckDuckGo, or YouTube search results/videos!
       const isSearchEngineOrVideo =
@@ -1405,7 +1405,7 @@ ipcMain.handle('open-generated-page', async (_event, htmlContent, existingFilePa
     const filePath =
       existingFilePath && typeof existingFilePath === 'string' && existingFilePath.endsWith('.html')
         ? existingFilePath
-        : path.join(app.getPath('temp'), `hitodama_page_${Date.now()}.html`);
+        : path.join(app.getPath('temp'), `kibo_page_${Date.now()}.html`);
 
     fs.writeFileSync(filePath, htmlContent, 'utf-8');
     await shell.openExternal(`file://${filePath.replace(/\\/g, '/')}`);
@@ -1777,7 +1777,7 @@ function ensureLatestFrontendBuild() {
     const rootDir = path.join(__dirname, '..');
     const distDir = path.join(rootDir, 'dist');
     const stampFile = path.join(distDir, '.build_stamp');
-    const tsxFile = path.join(rootDir, 'src', 'desktop', 'HitodamaApp.tsx');
+    const tsxFile = path.join(rootDir, 'src', 'desktop', 'KiboApp.tsx');
     const cssFile = path.join(rootDir, 'src', 'desktop', 'desktop-companion.css');
     const geminiFile = path.join(rootDir, 'src', 'lib', 'gemini.ts');
 

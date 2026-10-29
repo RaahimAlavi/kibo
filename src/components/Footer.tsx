@@ -50,7 +50,7 @@ export const Footer: React.FC<FooterProps> = ({ onBuyClick, currency = 'INTL' })
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
               <SoulCanvas width={28} height={24} scale={0.6} interactive={false} />
-              <strong style={{ fontSize: '16px', letterSpacing: '1px' }}>HITODAMA</strong>
+              <strong style={{ fontSize: '16px', letterSpacing: '1px' }}>KIBO</strong>
               <span style={{ fontSize: '12px', color: '#8ED92F', fontFamily: 'var(--font-jp)' }}>人魂</span>
             </div>
             <p style={{ fontSize: '13px', color: '#888', lineHeight: 1.6 }}>
@@ -82,7 +82,7 @@ export const Footer: React.FC<FooterProps> = ({ onBuyClick, currency = 'INTL' })
             <h4 style={{ fontSize: '13px', textTransform: 'uppercase', color: '#666', fontFamily: 'var(--font-mono)', marginBottom: '16px' }}>Otism</h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '14px' }}>
               <li><span style={{ color: '#aaa' }}>Created by Mainak Deb Das</span></li>
-              <li><a href="mailto:support@hitodama.in" style={{ color: '#5CB8FF', textDecoration: 'none' }}>support@hitodama.in</a></li>
+              <li><a href="mailto:support@kibo.ai" style={{ color: '#5CB8FF', textDecoration: 'none' }}>support@kibo.ai</a></li>
               <li><a href="https://www.youtube.com/@Otism_dev/videos" target="_blank" rel="noreferrer" style={{ color: '#ff0033', textDecoration: 'none' }}>YouTube Channel ↗</a></li>
             </ul>
           </div>

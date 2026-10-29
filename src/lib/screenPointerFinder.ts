@@ -46,9 +46,9 @@ export async function findTargetOnScreen(
   if (!cleanQ) return null;
 
   // 1. FAST-PATH: Native Windows UIAutomation Hierarchy (<100ms)
-  if (typeof window !== 'undefined' && (window as any).hitodamaAPI?.scanUIElements) {
+  if (typeof window !== 'undefined' && ((window as any).kiboAPI || (window as any).hitodamaAPI)?.scanUIElements) {
     try {
-      const scanRes = await (window as any).hitodamaAPI.scanUIElements();
+      const scanRes = await ((window as any).kiboAPI || (window as any).hitodamaAPI).scanUIElements();
       const elements = scanRes?.elements || (Array.isArray(scanRes) ? scanRes : []);
       if (Array.isArray(elements) && elements.length > 0) {
         const qLower = cleanQ.toLowerCase();
@@ -103,9 +103,9 @@ export async function findTargetOnScreen(
   if (!apiKey || !apiKey.trim()) return null;
 
   let base64Img = screenshotBase64;
-  if (!base64Img && typeof window !== 'undefined' && (window as any).hitodamaAPI?.captureScreen) {
+  if (!base64Img && typeof window !== 'undefined' && ((window as any).kiboAPI || (window as any).hitodamaAPI)?.captureScreen) {
     try {
-      const cap = await (window as any).hitodamaAPI.captureScreen();
+      const cap = await ((window as any).kiboAPI || (window as any).hitodamaAPI).captureScreen();
       if (cap?.success && cap.image) {
         base64Img = cap.image;
       }

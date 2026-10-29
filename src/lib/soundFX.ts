@@ -1,6 +1,6 @@
 // src/lib/soundFX.ts
 
-class HitodamaSoundEngine {
+class KiboSoundEngine {
   private ctx: AudioContext | null = null;
   private enabled: boolean = true;
   private lastHoverTime: number = 0;
@@ -8,7 +8,7 @@ class HitodamaSoundEngine {
 
   constructor() {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('hitodama_sfx_enabled');
+      const saved = localStorage.getItem('kibo_sfx_enabled');
       this.enabled = saved !== null ? saved === 'true' : true;
     }
   }
@@ -32,7 +32,7 @@ class HitodamaSoundEngine {
   public setEnabled(val: boolean): void {
     this.enabled = val;
     if (typeof window !== 'undefined') {
-      localStorage.setItem('hitodama_sfx_enabled', String(val));
+      localStorage.setItem('kibo_sfx_enabled', String(val));
     }
     if (val) this.playToggle(true);
   }
@@ -267,7 +267,7 @@ class HitodamaSoundEngine {
     });
   }
 
-  // 8. Soul Loadout / Skin Morph (Mystical harmonic chord)
+  // 8. Chassis Bay / Skin Morph (Mystical harmonic chord)
   public playSoulPulse() {
     const ctx = this.getContext();
     if (!ctx) return;
@@ -484,4 +484,4 @@ class HitodamaSoundEngine {
   }
 }
 
-export const soundFX = new HitodamaSoundEngine();
+export const soundFX = new KiboSoundEngine();

@@ -1,6 +1,6 @@
 // src/components/AgentTopRightDock.tsx
 // Floating Top-Right Hito Agent Squircle & Choice Popover
-// 100% SVG Vector Graphics · Zero Emojis · Matches Hitodama Notch Hierarchy
+// 100% SVG Vector Graphics · Zero Emojis · Matches Kibo Notch Hierarchy
 
 import React, { useState } from 'react';
 import { AgentTask, multitaskAgent } from '../lib/multitaskAgent';
@@ -66,8 +66,8 @@ export const AgentTopRightDock: React.FC<AgentTopRightDockProps> = ({
   const handleOpenInBrowser = async (e: React.MouseEvent) => {
     e.stopPropagation();
     soundFX.playSuccessChime();
-    if (activeTask.generatedHtml && typeof window !== 'undefined' && (window as any).hitodamaAPI?.openGeneratedPage) {
-      await (window as any).hitodamaAPI.openGeneratedPage(activeTask.generatedHtml);
+    if (activeTask.generatedHtml && typeof window !== 'undefined' && ((window as any).kiboAPI || (window as any).hitodamaAPI)?.openGeneratedPage) {
+      await ((window as any).kiboAPI || (window as any).hitodamaAPI).openGeneratedPage(activeTask.generatedHtml);
     }
   };
 
@@ -141,7 +141,7 @@ export const AgentTopRightDock: React.FC<AgentTopRightDockProps> = ({
           />
         </div>
       ) : (
-        // Expanded Choice Card: Matches Hitodama Notch UI Hierarchy
+        // Expanded Choice Card: Matches Kibo Notch UI Hierarchy
         <div
           style={{
             width: '340px',

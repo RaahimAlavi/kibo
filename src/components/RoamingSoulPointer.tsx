@@ -54,7 +54,7 @@ export const RoamingSoulPointer: React.FC<RoamingSoulPointerProps> = ({
     window.addEventListener('keydown', handleKeyDown);
 
     // Global shortcut listener from Electron main process
-    const unbindGlobal = (window as any).hitodamaAPI?.onRoamingDismiss?.(() => {
+    const unbindGlobal = ((window as any).kiboAPI || (window as any).hitodamaAPI)?.onRoamingDismiss?.(() => {
       if (stage !== 'IDLE' && stage !== 'RETURNING') {
         onDismiss();
       }
@@ -69,10 +69,10 @@ export const RoamingSoulPointer: React.FC<RoamingSoulPointerProps> = ({
   // Tell Electron when roaming is active (for global shortcut & click-through management)
   useEffect(() => {
     if (stage !== 'IDLE') {
-      (window as any).hitodamaAPI?.setRoamingActive?.(true);
+      ((window as any).kiboAPI || (window as any).hitodamaAPI)?.setRoamingActive?.(true);
     } else {
-      (window as any).hitodamaAPI?.setRoamingActive?.(false);
-      (window as any).hitodamaAPI?.setRoamingTargetRect?.(null);
+      ((window as any).kiboAPI || (window as any).hitodamaAPI)?.setRoamingActive?.(false);
+      ((window as any).kiboAPI || (window as any).hitodamaAPI)?.setRoamingTargetRect?.(null);
     }
   }, [stage]);
 
@@ -92,13 +92,13 @@ export const RoamingSoulPointer: React.FC<RoamingSoulPointerProps> = ({
           ? Math.max(16, target.y - target.height / 2 - 42)
           : target.y + target.height / 2 + 14;
 
-      (window as any).hitodamaAPI?.setRoamingTargetRect?.([
+      ((window as any).kiboAPI || (window as any).hitodamaAPI)?.setRoamingTargetRect?.([
         { x: rx, y: ry, width: rw, height: rh },
         { x: pillX - 8, y: pillY - 8, width: pillW + 16, height: 48 },
         { x: spiritPos.x - 42, y: spiritPos.y - 34, width: 84, height: 68 },
       ]);
     } else {
-      (window as any).hitodamaAPI?.setRoamingTargetRect?.(null);
+      ((window as any).kiboAPI || (window as any).hitodamaAPI)?.setRoamingTargetRect?.(null);
     }
   }, [stage, target, spiritPos.x, spiritPos.y]);
 
@@ -288,15 +288,15 @@ export const RoamingSoulPointer: React.FC<RoamingSoulPointerProps> = ({
           } else {
             setSpiritPos({ x: notchX, y: -50 });
             setSpiritOpacity(0);
-            (window as any).hitodamaAPI?.setRoamingActive?.(false);
-            (window as any).hitodamaAPI?.setRoamingTargetRect?.(null);
+            ((window as any).kiboAPI || (window as any).hitodamaAPI)?.setRoamingActive?.(false);
+            ((window as any).kiboAPI || (window as any).hitodamaAPI)?.setRoamingTargetRect?.(null);
             onReturningDone();
           }
         } else {
           setSpiritPos({ x: notchX, y: -50 });
           setSpiritOpacity(0);
-          (window as any).hitodamaAPI?.setRoamingActive?.(false);
-          (window as any).hitodamaAPI?.setRoamingTargetRect?.(null);
+          ((window as any).kiboAPI || (window as any).hitodamaAPI)?.setRoamingActive?.(false);
+          ((window as any).kiboAPI || (window as any).hitodamaAPI)?.setRoamingTargetRect?.(null);
           onReturningDone();
         }
       };
@@ -346,7 +346,7 @@ export const RoamingSoulPointer: React.FC<RoamingSoulPointerProps> = ({
             <span className="roaming-target-corner br" />
           </div>
 
-          {/* Curved glowing pointer arc connecting Hitodama to target */}
+          {/* Curved glowing pointer arc connecting Kibo to target */}
           {stage === 'POINTING' && (
             <svg
               style={{
@@ -428,7 +428,7 @@ export const RoamingSoulPointer: React.FC<RoamingSoulPointerProps> = ({
         </>
       )}
 
-      {/* 3. ROAMING HITODAMA SPIRIT BODY */}
+      {/* 3. ROAMING KIBO SPIRIT BODY */}
       <div
         style={{
           position: 'fixed',

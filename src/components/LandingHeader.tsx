@@ -35,7 +35,7 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({
         >
           <SoulCanvas width={32} height={28} scale={0.7} interactive={false} />
           <span>
-            <b>HITODAMA</b>
+            <b>KIBO</b>
             <small>人魂</small>
           </span>
         </a>

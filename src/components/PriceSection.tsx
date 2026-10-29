@@ -32,7 +32,7 @@ export const PriceSection: React.FC<PriceSectionProps> = ({ onBuyClick, currency
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', alignItems: 'stretch' }}>
-        {/* Receipt 1: Hitodama Flat One-Line Receipt */}
+        {/* Receipt 1: Kibo Flat One-Line Receipt */}
         <div
           style={{
             background: '#fff',
@@ -45,7 +45,7 @@ export const PriceSection: React.FC<PriceSectionProps> = ({ onBuyClick, currency
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #ddd', paddingBottom: '16px', marginBottom: '20px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#888' }}>HITODAMA RECEIPT · ONE LINE</span>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: '#888' }}>KIBO RECEIPT · ONE LINE</span>
             <span style={{ fontSize: '12px', color: '#8ED92F', fontWeight: 700 }}>PAID IN FULL</span>
           </div>
 

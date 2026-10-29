@@ -13,7 +13,7 @@ export const CompanionShaderBackdrop: React.FC<CompanionShaderBackdropProps> = m
   className = '',
   opacity = 0.32,
   speed = 0.6,
-  hue = 205, // Hitodama Soul Cyan-Blue
+  hue = 205, // Kibo Soul Cyan-Blue
 }) => {
   const [isReady, setIsReady] = useState(false);
 

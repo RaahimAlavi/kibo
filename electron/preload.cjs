@@ -1,6 +1,6 @@
 const { contextBridge, ipcRenderer, clipboard, nativeImage } = require('electron');
 
-contextBridge.exposeInMainWorld('hitodamaAPI', {
+const kiboAPI = {
   // Window State & Multi-Zone Hitbox Control
   setWindowMode: (mode, height) => ipcRenderer.send('set-window-mode', { mode, height }),
   setWindowBounds: (width, height) => ipcRenderer.send('set-window-bounds', { width, height }),
@@ -185,4 +185,25 @@ contextBridge.exposeInMainWorld('hitodamaAPI', {
     ipcRenderer.on('grant-creator-embers', listener);
     return () => ipcRenderer.removeListener('grant-creator-embers', listener);
   },
-});
+  // Kibo Watts Economy Aliases
+  syncWattsState: (data) => ipcRenderer.invoke('update-embers-state', data),
+  setWattsCount: (count) => {
+    if (typeof count === 'number') {
+      ipcRenderer.send('set-embers-count', count);
+      ipcRenderer.invoke('update-embers-state', { count });
+    }
+  },
+  onClaimDailyWatt: (callback) => {
+    const listener = () => callback();
+    ipcRenderer.on('claim-daily-ember', listener);
+    return () => ipcRenderer.removeListener('claim-daily-ember', listener);
+  },
+  onGrantCreatorWatts: (callback) => {
+    const listener = (_event, amount) => callback(amount);
+    ipcRenderer.on('grant-creator-embers', listener);
+    return () => ipcRenderer.removeListener('grant-creator-embers', listener);
+  },
+};
+
+contextBridge.exposeInMainWorld('kiboAPI', kiboAPI);
+contextBridge.exposeInMainWorld('hitodamaAPI', kiboAPI);

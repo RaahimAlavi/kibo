@@ -1,6 +1,6 @@
 // src/components/ProactiveContextNotch.tsx
 // Proactive App Detection & Context Suggestion Banner ("Connect to Hito?")
-// Hitodama Soul-Link + Authentic App Logos + App-Matched Gradients + Infinite Marquee
+// Kibo Soul-Link + Authentic App Logos + App-Matched Gradients + Infinite Marquee
 
 import React from 'react';
 import {
@@ -124,7 +124,7 @@ export const ProactiveContextNotch: React.FC<ProactiveContextNotchProps> = ({
         }}
       />
 
-      {/* TOP ROW: Hitodama Flame + App Logo + Title + Action Pills */}
+      {/* TOP ROW: Kibo Flame + App Logo + Title + Action Pills */}
       <div
         style={{
           position: 'relative',
@@ -135,7 +135,7 @@ export const ProactiveContextNotch: React.FC<ProactiveContextNotchProps> = ({
           gap: '12px',
         }}
       >
-        {/* Left: Dual Squircle Badges (Hitodama + App) */}
+        {/* Left: Dual Squircle Badges (Kibo + App) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '11px', minWidth: 0 }}>
           <div
             style={{
@@ -150,7 +150,7 @@ export const ProactiveContextNotch: React.FC<ProactiveContextNotchProps> = ({
               flexShrink: 0,
             }}
           >
-            {/* Live Animated Hitodama Spirit - Enlarged & Distinct */}
+            {/* Live Animated Kibo Spirit - Enlarged & Distinct */}
             <div style={{ width: '38px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <SoulCanvas
                 soul={activeSoul}
@@ -179,7 +179,7 @@ export const ProactiveContextNotch: React.FC<ProactiveContextNotchProps> = ({
             </div>
           </div>
 
-          {/* Center-Left Hitodama Typography */}
+          {/* Center-Left Kibo Typography */}
           <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span
@@ -208,7 +208,7 @@ export const ProactiveContextNotch: React.FC<ProactiveContextNotchProps> = ({
           </div>
         </div>
 
-        {/* Right: Hitodama Glass Action Pills (Supports Connect + Connected Status + Unlink) */}
+        {/* Right: Kibo Glass Action Pills (Supports Connect + Connected Status + Unlink) */}
         {!isConnected ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
             <button

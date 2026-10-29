@@ -366,7 +366,7 @@ function downloadFileToCache(url, destPath) {
       url,
       {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Hitodama/1.0',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Kibo/1.0',
           Accept: 'image/jpeg,image/png,image/*;q=0.8',
         },
       },
@@ -524,7 +524,7 @@ function Await-WinRT($WinRtTask, $ResultType) {
   $netTask.Result
 }
 
-function Seek-HitodamaMedia([long]$seconds) {
+function Seek-KiboMedia([long]$seconds) {
   try {
     [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager,Windows.Media.Control,ContentType=WindowsRuntime] | Out-Null
     $mgr = Await-WinRT ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])
@@ -542,7 +542,7 @@ function Seek-HitodamaMedia([long]$seconds) {
   } catch { }
 }
 
-function Toggle-HitodamaMedia() {
+function Toggle-KiboMedia() {
   try {
     [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager,Windows.Media.Control,ContentType=WindowsRuntime] | Out-Null
     $mgr = Await-WinRT ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])
@@ -561,7 +561,7 @@ function Toggle-HitodamaMedia() {
   [Win32MediaKeys]::SendKey(0xb3)
 }
 
-function Next-HitodamaMedia() {
+function Next-KiboMedia() {
   try {
     [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager,Windows.Media.Control,ContentType=WindowsRuntime] | Out-Null
     $mgr = Await-WinRT ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])
@@ -580,7 +580,7 @@ function Next-HitodamaMedia() {
   [Win32MediaKeys]::SendKey(0xb0)
 }
 
-function Prev-HitodamaMedia() {
+function Prev-KiboMedia() {
   try {
     [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager,Windows.Media.Control,ContentType=WindowsRuntime] | Out-Null
     $mgr = Await-WinRT ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])
@@ -599,7 +599,7 @@ function Prev-HitodamaMedia() {
   [Win32MediaKeys]::SendKey(0xb1)
 }
 
-function Set-HitodamaCoverWallpaper([string]$srcPath, [string]$outPath) {
+function Set-KiboCoverWallpaper([string]$srcPath, [string]$outPath) {
   try {
     Set-ItemProperty -Path 'HKCU:\\Control Panel\\Desktop' -Name WallpaperStyle -Value '10' -ErrorAction SilentlyContinue
     Set-ItemProperty -Path 'HKCU:\\Control Panel\\Desktop' -Name TileWallpaper -Value '0' -ErrorAction SilentlyContinue
@@ -702,7 +702,7 @@ async function applyDesktopWallpaper(imagePath) {
     wallpaperToggleIdx = (wallpaperToggleIdx + 1) % 2;
     const fittedOutPath = path.join(
       app.getPath('userData'),
-      `hitodama_fitted_desktop_${wallpaperToggleIdx}.jpg`
+      `kibo_fitted_desktop_${wallpaperToggleIdx}.jpg`
     );
     const escapedSrc = localFilePath.replace(/'/g, "''");
     const escapedOut = fittedOutPath.replace(/'/g, "''");
@@ -711,7 +711,7 @@ async function applyDesktopWallpaper(imagePath) {
 
     if (wallpaperDaemon && wallpaperDaemon.stdin && wallpaperDaemon.stdin.writable) {
       wallpaperDaemon.stdin.write(
-        `Set-HitodamaCoverWallpaper '${escapedSrc}' '${escapedOut}'\n`
+        `Set-KiboCoverWallpaper '${escapedSrc}' '${escapedOut}'\n`
       );
       await new Promise((r) => setTimeout(r, 240));
       return { success: true, localPath: fittedOutPath };
@@ -939,11 +939,11 @@ function sendMediaKeyControl(action) {
   initSystemDaemon();
   if (wallpaperDaemon && wallpaperDaemon.stdin && wallpaperDaemon.stdin.writable) {
     if (action === 'next') {
-      wallpaperDaemon.stdin.write('Next-HitodamaMedia\n');
+      wallpaperDaemon.stdin.write('Next-KiboMedia\n');
     } else if (action === 'prev') {
-      wallpaperDaemon.stdin.write('Prev-HitodamaMedia\n');
+      wallpaperDaemon.stdin.write('Prev-KiboMedia\n');
     } else {
-      wallpaperDaemon.stdin.write('Toggle-HitodamaMedia\n');
+      wallpaperDaemon.stdin.write('Toggle-KiboMedia\n');
     }
     return { success: true };
   }
@@ -960,7 +960,7 @@ function seekMediaSession(targetSeconds) {
   initSystemDaemon();
   const sec = Math.max(0, Math.round(Number(targetSeconds) || 0));
   if (wallpaperDaemon && wallpaperDaemon.stdin && wallpaperDaemon.stdin.writable) {
-    wallpaperDaemon.stdin.write(`Seek-HitodamaMedia ${sec}\n`);
+    wallpaperDaemon.stdin.write(`Seek-KiboMedia ${sec}\n`);
     return { success: true, seconds: sec };
   }
   return { success: false };
@@ -1235,7 +1235,12 @@ async function getSystemClipboardContent() {
 }
 
 function getClipboardStorePath() {
-  return path.join(app.getPath('userData'), 'hitodama_clipboard_history.json');
+  const newPath = path.join(app.getPath('userData'), 'kibo_clipboard_history.json');
+  const legacyPath = path.join(app.getPath('userData'), 'kibo_clipboard_history.json');
+  if (!fs.existsSync(newPath) && fs.existsSync(legacyPath)) {
+    try { fs.copyFileSync(legacyPath, newPath); } catch (_) {}
+  }
+  return newPath;
 }
 
 function loadClipboardStoreFromDisk() {
@@ -1762,7 +1767,7 @@ async function runSpeedTest() {
 async function pickWallpaperFiles(mainWindow) {
   try {
     const result = await dialog.showOpenDialog(mainWindow, {
-      title: 'Select Wallpapers for Hitodama',
+      title: 'Select Wallpapers for Kibo',
       properties: ['openFile', 'multiSelections'],
       filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'bmp', 'webp'] }],
     });
@@ -1823,7 +1828,7 @@ function checkSpotifyDesktopInstalled() {
 
 async function playSpotifyMedia(rawQuery = '', targetType = 'track_or_artist') {
   const cleanQuery = String(rawQuery || '')
-    .replace(/^(can\s+you\s+|could\s+you\s+|please\s+|hitodama\s+|hey\s+hitodama\s+)+/i, '')
+    .replace(/^(can\s+you\s+|could\s+you\s+|please\s+|kibo\s+|hey\s+kibo\s+|hitodama\s+|hey\s+hitodama\s+)+/i, '')
     .replace(/^(play|put\s+on|listen\s+to|start|search\s+for|search|open)\s+/i, '')
     .replace(/\s+(on|in)\s+spotify.*$/i, '')
     .replace(/\s+for\s+me$/i, '')
