@@ -614,20 +614,16 @@ function createWindow() {
       .catch(() => {});
   });
 
-  const devUrl = 'http://localhost:5173/?mode=desktop';
   const prodPath = path.join(__dirname, '../dist/index.html');
+  mainWindow.loadFile(prodPath, { query: { mode: 'desktop' } }).catch((err) => {
+    console.error('[Kibo] loadFile error:', err);
+  });
 
-  const probe = http.get('http://localhost:5173', () => {
-    mainWindow.loadURL(devUrl).catch(() => {
-      mainWindow.loadFile(prodPath, { search: '?mode=desktop' });
-    });
+  mainWindow.webContents.on('did-finish-load', () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    mainWindow.showInactive();
+    mainWindow.setAlwaysOnTop(true, 'pop-up-menu');
   });
-  probe.on('error', () => {
-    mainWindow.loadFile(prodPath, { search: '?mode=desktop' });
-  });
-  probe.setTimeout(350, () => {
-    probe.destroy();
-    mainWindow.loadFile(prodPath, { search: '?mode=desktop' });
   });
 
   mainWindow.on('closed', () => {
@@ -1824,6 +1820,7 @@ app.whenReady().then(() => {
   startActiveAppWatcher();
 
   app.on('second-instance', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) { mainWindow.webContents.reloadIgnoringCache(); }
     if (mainWindow) {
       mainWindow.show();
       mainWindow.focus();

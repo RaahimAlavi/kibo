@@ -944,10 +944,7 @@ export const KiboApp: React.FC = () => {
   const [showConnectModal, setShowConnectModal] = useState<boolean>(false);
   const [notchApiAlert, setNotchApiAlert] = useState<{ type: 'missing_key' | 'rate_limit'; text: string } | null>(null);
 
-  const [onboardingStep, setOnboardingStep] = useState<number | null>(() => {
-    const done = localStorage.getItem('kibo_onboarded_v1');
-    return done === 'true' ? null : 0;
-  });
+  const [onboardingStep, setOnboardingStep] = useState<number | null>(null);
   const [lastHotkeyAction, setLastHotkeyAction] = useState<string | null>(null);
 
   const completeOnboarding = useCallback(() => {
@@ -964,7 +961,7 @@ export const KiboApp: React.FC = () => {
     setOnboardingStep(null);
   }, [geminiDraftKey, tavilyDraftKey]);
 
-  const [autoTuckEnabled, setAutoTuckEnabled] = useState<boolean>(() => localStorage.getItem('kibo_autotuck') !== 'false');
+  const [autoTuckEnabled, setAutoTuckEnabled] = useState<boolean>(() => localStorage.getItem('kibo_autotuck') === 'true');
   const [voiceFeedbackEnabled, setVoiceFeedbackEnabled] = useState<boolean>(() => localStorage.getItem('kibo_voice_tts') !== 'false');
   const [launchAtStartup, setLaunchAtStartup] = useState<boolean>(() => localStorage.getItem('kibo_startup') !== 'false');
 
@@ -4877,8 +4874,8 @@ export const KiboApp: React.FC = () => {
               <div
                 className="hitodama-idle-soul-wrap"
                 style={{
-                  opacity: isTucked ? 0 : 1,
-                  transform: isTucked ? 'translateY(-38px) scale(0.55)' : isHovered ? 'scale(1.04)' : 'scale(1)',
+                  opacity: 1,
+                  transform: isTucked ? 'translateY(-14px) scale(0.78)' : isHovered ? 'scale(1.06)' : 'scale(1)',
                 }}
               >
                 <SoulCanvas

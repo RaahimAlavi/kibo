@@ -7,7 +7,7 @@ export function App() {
   const isDesktopRuntime = (() => {
     if (typeof window === 'undefined') return false;
     const params = new URLSearchParams(window.location.search);
-    if (params.get('mode') === 'desktop' || params.get('view') === 'desktop') {
+    if (params.get('mode') === 'desktop' || params.get('view') === 'desktop' || window.location.hash === '#desktop' || window.location.protocol === 'file:') {
       return true;
     }
     return (
