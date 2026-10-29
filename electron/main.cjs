@@ -174,6 +174,7 @@ function startHitTestLoop() {
   }, 16);
 }
 
+function createHitodamaTrayIcon() { return createKiboTrayIcon(); }
 function createKiboTrayIcon() {
   const size = 32;
   const buf = Buffer.alloc(size * size * 4, 0);

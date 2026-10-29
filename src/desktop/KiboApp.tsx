@@ -7698,3 +7698,4 @@ export const KiboApp: React.FC = () => {
     </div>
   );
 };
+export { KiboApp as HitodamaApp };

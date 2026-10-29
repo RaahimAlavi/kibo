@@ -724,3 +724,5 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
     </div>
   );
 };
+
+export { KiboOnboardingExperience as HitodamaOnboardingExperience };
