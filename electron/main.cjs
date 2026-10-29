@@ -624,7 +624,6 @@ function createWindow() {
     mainWindow.showInactive();
     mainWindow.setAlwaysOnTop(true, 'pop-up-menu');
   });
-  });
 
   mainWindow.on('closed', () => {
     if (hitTestInterval) clearInterval(hitTestInterval);
@@ -1802,7 +1801,7 @@ function ensureLatestFrontendBuild() {
       !fs.existsSync(path.join(distDir, 'index.html'))
     ) {
       console.log('[Kibo] Compiling latest UI changes into dist/...');
-      execSync('npx vite build', { cwd: rootDir, stdio: 'inherit' });
+      execSync('npx vite build --base=./', { cwd: rootDir, stdio: 'inherit' });
       if (!fs.existsSync(distDir)) fs.mkdirSync(distDir, { recursive: true });
       fs.writeFileSync(stampFile, currentSignature, 'utf8');
     }
