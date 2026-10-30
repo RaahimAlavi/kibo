@@ -1595,7 +1595,9 @@ export const KiboApp: React.FC = () => {
     setIsHovered(true);
     if (leaveCollapseTimerRef.current) clearTimeout(leaveCollapseTimerRef.current);
 
-    if (isTucked) {
+    // Hold-hovering is strictly for waking Kibo when tucked/idle.
+    // When music is playing, the pill is active and clickable without any hold charging!
+    if (isTucked && !hasMediaSession && !showMediaNotch) {
       // Require hold-hovering for 650ms to wake Kibo and drop the notch
       setIsHoverHoldActive(true);
       setHoverHoldProgress(0);
@@ -1621,7 +1623,7 @@ export const KiboApp: React.FC = () => {
       if (hoverHoldRafRef.current) cancelAnimationFrame(hoverHoldRafRef.current);
       hoverHoldRafRef.current = requestAnimationFrame(step);
     }
-  }, [isTucked]);
+  }, [isTucked, hasMediaSession, showMediaNotch]);
 
   const handleIslandMouseLeave = useCallback(() => {
     setIsHovered(false);
@@ -4765,23 +4767,31 @@ export const KiboApp: React.FC = () => {
     if (nowMs - wheelLockRef.current < 220) return;
     wheelLockRef.current = nowMs;
 
-    // Scroll down MUST NOT wake or expand when the notch is small and Kibo is hidden
-    if (isTucked) return;
-
     if (timerAlarmRinging) {
       setTimerAlarmRinging(false);
       setSoulMode('LISTENING');
       return;
     }
 
-    if (!isExpanded) {
-      if (hasMediaSession && !showMediaNotch) {
-        setShowMediaNotch(true);
-      } else {
+    // When the music player is showing:
+    // When it is the compact mini pill (!showMediaNotch), it is only clickable.
+    // When it gets bigger (showMediaNotch is true), scrolling down expands directly to the navs!
+    if (hasMediaSession) {
+      if (showMediaNotch) {
         setActiveTab('Controls');
         setShowMediaNotch(false);
         setIsExpanded(true);
       }
+      return;
+    }
+
+    // Scroll down MUST NOT wake or expand when the notch is small and Kibo is hidden
+    if (isTucked) return;
+
+    if (!isExpanded) {
+      setActiveTab('Controls');
+      setShowMediaNotch(false);
+      setIsExpanded(true);
     }
   };
 
@@ -4837,7 +4847,7 @@ export const KiboApp: React.FC = () => {
         onMouseLeave={handleIslandMouseLeave}
         onWheel={handleNotchWheel}
       >
-        {isTucked && (
+        {isTuckedSliver && (
           <div className="tucked-hover-dock">
             <div className={`tucked-hold-pill ${isHoverHoldActive ? 'charging' : ''}`}>
               <div
@@ -5025,7 +5035,10 @@ export const KiboApp: React.FC = () => {
           {!isExpanded && !showProactiveBanner && !showMediaNotch && !notchApiAlert && !isCompactAskBar && !isTimerNotchActive && isMiniMediaPill && (
             <div
               className="kibo-notch-mini-media"
-              onClick={() => setShowMediaNotch(true)}
+              onClick={() => {
+                setIsTucked(false);
+                setShowMediaNotch(true);
+              }}
               onContextMenu={(e) => {
                 e.preventDefault();
                 openCompanionApp('soul', false);
