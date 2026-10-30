@@ -71,8 +71,41 @@
 }
 
 .wallpaper-radial-iris-overlay.is-shockwave {
-  animation: wallpaperShockwaveExpand 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
+  animation: wallpaperShockwaveExpand 0.95s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
   pointer-events: none !important;
+}
+
+.wallpaper-shockwave-glow-ring {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 3px solid var(--adaptive-accent, #38BDF8);
+  box-shadow: 0 0 36px var(--adaptive-accent, #38BDF8), inset 0 0 20px var(--adaptive-accent, #38BDF8);
+  pointer-events: none !important;
+  z-index: 2;
+  animation: shockwaveRingExpand 0.95s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+@keyframes shockwaveRingExpand {
+  0% {
+    width: 48px;
+    height: 48px;
+    opacity: 1;
+  }
+  75% {
+    width: 250vmax;
+    height: 250vmax;
+    opacity: 0.85;
+  }
+  100% {
+    width: 280vmax;
+    height: 280vmax;
+    opacity: 0;
+  }
 }
 
 @keyframes wallpaperShockwaveExpand {
@@ -80,7 +113,7 @@
     clip-path: circle(24px at 50% 0px);
     opacity: 1;
   }
-  65% {
+  75% {
     clip-path: circle(150vmax at 50% 0px);
     opacity: 1;
   }
@@ -94,37 +127,18 @@
    TOP HARDWARE NOTCH SHELL & VECTOR SVG TOP-BEZEL ARCHES
    ========================================================================== */
 
-@keyframes kiboBootEntrance {
-  0% {
-    transform: translateY(-100%);
-    opacity: 0;
-  }
-  65% {
-    transform: translateY(3px);
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
 .kibo-bezel-shell {
   position: relative;
   background: var(--notch-black);
   border: none;
   transition:
-    width 0.36s cubic-bezier(0.16, 1, 0.3, 1),
-    height 0.36s cubic-bezier(0.16, 1, 0.3, 1),
-    border-radius 0.32s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.36s cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 0.32s ease;
-  will-change: width, height, transform;
+    width 0.48s cubic-bezier(0.16, 1, 0.3, 1),
+    height 0.48s cubic-bezier(0.16, 1, 0.3, 1),
+    border-radius 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.35s ease;
+  will-change: width, height, transform, border-radius;
   z-index: 10;
-}
-
-.kibo-bezel-shell.is-booting {
-  animation: kiboBootEntrance 0.88s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
 }
 
 .kibo-svg-arch {

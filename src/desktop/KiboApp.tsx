@@ -794,6 +794,54 @@ const DEFAULT_WALLPAPERS: WallpaperTheme[] = [
     darkText: '#06131D',
     darkSubText: 'rgba(6, 19, 29, 0.72)',
   },
+  {
+    id: 13,
+    title: 'Prismatic Mirage',
+    url: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=2560&q=90',
+    thumb: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=600&q=80',
+    accent: '#EC4899',
+    accentSecondary: '#8B5CF6',
+    pillBg: 'rgba(236, 72, 153, 0.22)',
+    rowBg: 'rgba(236, 72, 153, 0.14)',
+    darkText: '#24061A',
+    darkSubText: 'rgba(36, 6, 26, 0.72)',
+  },
+  {
+    id: 14,
+    title: 'Electric Cyber Lake',
+    url: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=2560&q=90',
+    thumb: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80',
+    accent: '#06B6D4',
+    accentSecondary: '#10B981',
+    pillBg: 'rgba(6, 182, 212, 0.22)',
+    rowBg: 'rgba(6, 182, 212, 0.14)',
+    darkText: '#04171A',
+    darkSubText: 'rgba(4, 23, 26, 0.72)',
+  },
+  {
+    id: 15,
+    title: 'Magma Flare',
+    url: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=2560&q=90',
+    thumb: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=600&q=80',
+    accent: '#EF4444',
+    accentSecondary: '#F59E0B',
+    pillBg: 'rgba(239, 68, 68, 0.22)',
+    rowBg: 'rgba(239, 68, 68, 0.14)',
+    darkText: '#220404',
+    darkSubText: 'rgba(34, 4, 4, 0.72)',
+  },
+  {
+    id: 16,
+    title: 'Violet Dreamscape',
+    url: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=2560&q=90',
+    thumb: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=600&q=80',
+    accent: '#8B5CF6',
+    accentSecondary: '#F43F5E',
+    pillBg: 'rgba(139, 92, 246, 0.22)',
+    rowBg: 'rgba(139, 92, 246, 0.14)',
+    darkText: '#130626',
+    darkSubText: 'rgba(19, 6, 38, 0.72)',
+  },
 ];
 
 
@@ -1036,26 +1084,43 @@ export const KiboApp: React.FC = () => {
   const [settingsCategory, setSettingsCategory] = useState<'Account' | 'General' | 'Core' | 'Voice' | 'Shortcuts' | 'System'>('Account');
   const [updateCheckStatus, setUpdateCheckStatus] = useState<string | null>(null);
   const [isBooting, setIsBooting] = useState<boolean>(true);
-  const [bootPhase, setBootPhase] = useState<'descending' | 'morphing' | 'ready'>('descending');
+  const [bootPhase, setBootPhase] = useState<'sleeping' | 'awakening' | 'tucking' | 'ready'>('sleeping');
+  const [bootExpression, setBootExpression] = useState<'NORMAL' | 'HAPPY' | 'EXCITED'>('HAPPY');
 
-  // Elegant startup sequence: notch descends smoothly from bezel as pure soul, chimes, then fluidly morphs
+  // Cinematic startup sequence:
+  // 1. Starts as small flush bezel sliver ('sleeping')
+  // 2. Notch fluidly blossoms open, chime rings, and Kibo awakens with smiling eyes ('awakening')
+  // 3. Kibo gently tucks/hides into the notch, and notch slenders into resting tucked state ('tucking')
+  // 4. Settles ready for interaction ('ready')
   useEffect(() => {
+    const wakeTimer = setTimeout(() => {
+      setBootPhase('awakening');
+      setBootExpression('HAPPY');
+    }, 120);
+
     const chimeTimer = setTimeout(() => {
       soundFX.playSoulPulse();
-    }, 280);
+    }, 320);
 
-    const morphTimer = setTimeout(() => {
-      setBootPhase('morphing');
-    }, 850);
+    const gazeTimer = setTimeout(() => {
+      setBootExpression('NORMAL');
+    }, 950);
+
+    const tuckTimer = setTimeout(() => {
+      setBootPhase('tucking');
+      setIsTucked(true);
+    }, 1650);
 
     const readyTimer = setTimeout(() => {
       setBootPhase('ready');
       setIsBooting(false);
-    }, 1400);
+    }, 2250);
 
     return () => {
+      clearTimeout(wakeTimer);
       clearTimeout(chimeTimer);
-      clearTimeout(morphTimer);
+      clearTimeout(gazeTimer);
+      clearTimeout(tuckTimer);
       clearTimeout(readyTimer);
     };
   }, []);
@@ -2830,7 +2895,7 @@ export const KiboApp: React.FC = () => {
       Clipboard: { w: 860, h: 444 },
       Apps:      { w: 708, h: 560 },
       Agents:    { w: 860, h: 440 },
-      Wallpaper: { w: 708, h: 228 },
+      Wallpaper: { w: 680, h: 168 },
       Power:     { w: 708, h: 168 },
       Settings:  { w: 880, h: 540 },
     };
@@ -2840,10 +2905,10 @@ export const KiboApp: React.FC = () => {
   const showProactiveBanner = !isExpanded && !showCompanionWindow && Boolean(detectedAppId);
   const isCompactAskBar = !showProactiveBanner && (askNotchPhase === 'speaking' || askNotchPhase === 'thinking');
   const isTimerNotchActive = !isExpanded && !showProactiveBanner && !showMediaNotch && !isCompactAskBar && (isTimerRunning || timerAlarmRinging);
-  const isMiniMediaPill = bootPhase === 'ready' && !isExpanded && !showProactiveBanner && !showMediaNotch && !isCompactAskBar && !isTimerNotchActive && !notchApiAlert && hasMediaSession;
-  const isTuckedSliver = isTucked && !isExpanded && !showProactiveBanner && !showMediaNotch && !isTimerNotchActive && !isCompactAskBar && !isMiniMediaPill && !notchApiAlert;
+  const isMiniMediaPill = (bootPhase === 'ready' || bootPhase === 'tucking') && !isExpanded && !showProactiveBanner && !showMediaNotch && !isCompactAskBar && !isTimerNotchActive && !notchApiAlert && hasMediaSession;
+  const isTuckedSliver = (isTucked || bootPhase === 'sleeping' || (bootPhase === 'tucking' && !hasMediaSession)) && !isExpanded && !showProactiveBanner && !showMediaNotch && !isTimerNotchActive && !isCompactAskBar && !isMiniMediaPill && !notchApiAlert;
 
-  const archSize = isTuckedSliver ? 9 : showProactiveBanner ? 20 : isMiniMediaPill || isCompactAskBar || isTimerNotchActive || notchApiAlert ? 16 : 22;
+  const archSize = (isTuckedSliver || bootPhase === 'sleeping') ? 9 : showProactiveBanner ? 20 : isMiniMediaPill || isCompactAskBar || isTimerNotchActive || notchApiAlert ? 16 : 22;
 
   const notchShellWidth = isExpanded
     ? currentTabDimensions.w - archSize * 2
@@ -2861,7 +2926,9 @@ export const KiboApp: React.FC = () => {
     ? 192
     : isCompactAskBar
     ? 192
-    : isTucked
+    : bootPhase === 'sleeping'
+    ? 88
+    : (isTucked || bootPhase === 'tucking')
     ? 190
     : 196;
 
@@ -2881,11 +2948,13 @@ export const KiboApp: React.FC = () => {
     ? 42
     : isCompactAskBar
     ? 44
-    : isTucked
+    : bootPhase === 'sleeping'
+    ? 14
+    : (isTucked || bootPhase === 'tucking')
     ? 18
     : 72;
 
-  const bottomRadius = isTuckedSliver
+  const bottomRadius = (isTuckedSliver || bootPhase === 'sleeping')
     ? 9
     : showProactiveBanner
     ? 20
@@ -3918,8 +3987,9 @@ export const KiboApp: React.FC = () => {
       const targetWp = wallpapersList[index];
       if (!targetWp) return;
 
-      // Start shockwave transition with the NEW wallpaper
-      setRipplingWallpaperUrl(targetWp.url);
+      // Start shockwave transition immediately with pre-cached thumbnail
+      const immediateSrc = targetWp.thumb || targetWp.url;
+      setRipplingWallpaperUrl(immediateSrc);
       setPrevAppliedWallpaperIndex(appliedWallpaperIndex);
       setAppliedWallpaperIndex(index);
       setFocusedWallpaperIndex(index);
@@ -3943,7 +4013,7 @@ export const KiboApp: React.FC = () => {
       setTimeout(() => {
         setIsWallpaperRippling(false);
         setRipplingWallpaperUrl('');
-      }, 920);
+      }, 980);
     },
     [wallpapersList, appliedWallpaperIndex, extractAndApplyPaletteForIndex]
   );
@@ -4872,20 +4942,28 @@ export const KiboApp: React.FC = () => {
     >
       {/* Shockwave Wallpaper Transition (Emerging smoothly from Top Notch) */}
       {isWallpaperRippling && ripplingWallpaperUrl && (
-        <div
-          className="wallpaper-radial-iris-overlay is-shockwave"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            width: '100vw',
-            height: '100vh',
-            backgroundImage: `url("${resolveWallpaperDisplayUrl(ripplingWallpaperUrl)}")`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            pointerEvents: 'none',
-            zIndex: 1,
-          }}
-        />
+        <>
+          <div
+            className="wallpaper-radial-iris-overlay is-shockwave"
+            style={{
+              position: 'fixed',
+              inset: 0,
+              width: '100vw',
+              height: '100vh',
+              backgroundImage: `url("${resolveWallpaperDisplayUrl(ripplingWallpaperUrl)}")`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center center',
+              pointerEvents: 'none',
+              zIndex: 1,
+            }}
+          />
+          <div
+            className="wallpaper-shockwave-glow-ring"
+            style={{
+              borderColor: activeTheme?.accent || '#38BDF8',
+            }}
+          />
+        </>
       )}
 
       {/* Glowing Blue Desktop Border ONLY when Kibo is actively working / controlling the PC */}
@@ -4914,7 +4992,7 @@ export const KiboApp: React.FC = () => {
         onMouseLeave={handleIslandMouseLeave}
         onWheel={handleNotchWheel}
       >
-        {isTuckedSliver && (
+        {isTuckedSliver && bootPhase !== 'sleeping' && (
           <div className="tucked-hover-dock">
             <div className={`tucked-hold-pill ${isHoverHoldActive ? 'charging' : ''}`}>
               <div
@@ -5125,6 +5203,29 @@ export const KiboApp: React.FC = () => {
                       }
                 }
               />
+              {/* Middle live song progress scrubber bar */}
+              <div
+                style={{
+                  flex: 1,
+                  margin: '0 10px',
+                  height: 3,
+                  borderRadius: 999,
+                  background: 'rgba(255, 255, 255, 0.12)',
+                  overflow: 'hidden',
+                  position: 'relative',
+                }}
+              >
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${Math.max(6, Math.min(100, (mediaProgress / Math.max(1, totalMediaDuration)) * 100))}%`,
+                    background: mediaArtPalette.accent || '#38BDF8',
+                    borderRadius: 999,
+                    boxShadow: `0 0 6px ${mediaArtPalette.accent || '#38BDF8'}66`,
+                    transition: 'width 0.3s ease',
+                  }}
+                />
+              </div>
               <div className="mini-media-eq-bars">
                 {[0.28, 0.35, 0.62, 0.72, 0.85, 1.0].map((h, i) => (
                   <span
@@ -5161,7 +5262,7 @@ export const KiboApp: React.FC = () => {
               <div
                 className="kibo-soul-underglow"
                 style={{
-                  opacity: isTucked ? 0 : isSoulDull ? 0.35 : 1,
+                  opacity: (isTucked || bootPhase === 'sleeping' || bootPhase === 'tucking') ? 0 : isSoulDull ? 0.35 : 1,
                   background:
                     isSoulDull
                       ? 'radial-gradient(circle, rgba(100, 116, 139, 0.28) 0%, transparent 72%)'
@@ -5170,23 +5271,21 @@ export const KiboApp: React.FC = () => {
                       : isBreathingRelief
                       ? (isVoidEquipped ? 'radial-gradient(circle, rgba(196, 181, 253, 0.52) 0%, transparent 72%)' : 'radial-gradient(circle, rgba(92, 184, 255, 0.52) 0%, transparent 72%)')
                       : (isVoidEquipped ? 'radial-gradient(circle, rgba(167, 139, 250, 0.46) 0%, transparent 72%)' : 'radial-gradient(circle, rgba(92, 184, 255, 0.36) 0%, transparent 72%)'),
-                  transition: 'opacity 0.25s ease, background 0.3s ease',
+                  transition: 'opacity 0.45s ease, background 0.3s ease',
                 }}
               />
               <div
-
                 className="kibo-idle-soul-wrap"
-
                 style={{
-
-                  opacity: isTucked ? 0 : 1,
-
-                  transform: isTucked ? 'translateY(-38px) scale(0.52)' : isHovered ? 'scale(1.06)' : 'scale(1)',
-
-                  pointerEvents: isTucked ? 'none' : 'auto',
-
+                  opacity: (isTucked || bootPhase === 'sleeping' || bootPhase === 'tucking') ? 0 : 1,
+                  transform: (isTucked || bootPhase === 'sleeping' || bootPhase === 'tucking')
+                    ? 'translateY(-38px) scale(0.52)'
+                    : isHovered
+                    ? 'scale(1.06)'
+                    : 'scale(1)',
+                  pointerEvents: (isTucked || bootPhase === 'sleeping' || bootPhase === 'tucking') ? 'none' : 'auto',
+                  transition: 'transform 0.48s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.38s ease',
                 }}
-
               >
                 <SoulCanvas
                   soul={currentSoul}
@@ -5194,6 +5293,7 @@ export const KiboApp: React.FC = () => {
                   height={64}
                   scale={1.13}
                   mode={soulMode}
+                  expression={isBooting ? bootExpression : undefined}
                   isDull={isSoulDull}
                   interactive={true}
                   annoyance={soulAnnoyance}
@@ -5981,22 +6081,6 @@ export const KiboApp: React.FC = () => {
                             className={`companion-todo-row ${todo.completed ? 'completed' : ''}`}
                             style={{ position: 'relative', flexShrink: 0, padding: '8px 10px', borderRadius: '10px' }}
                           >
-                            {sparkleBurstId === todo.id && (
-                              <div key={sparkleAnimKey} className="todo-sparkle-burst">
-                                <span className="sparkle-dot left-dot">
-                                  <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor">
-                                    <polygon points="12 2 15 9 22 12 15 15 12 22 9 15 2 12 9 9" />
-                                  </svg>
-                                </span>
-                                <span className="sparkle-plus">+4</span>
-                                <span className="sparkle-dot right-dot">
-                                  <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor">
-                                    <polygon points="12 2 15 9 22 12 15 15 12 22 9 15 2 12 9 9" />
-                                  </svg>
-                                </span>
-                              </div>
-                            )}
-
                             <span className={`companion-todo-check ${todo.completed ? 'checked' : ''}`}>
                               {todo.completed && (
                                 <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -6559,8 +6643,12 @@ export const KiboApp: React.FC = () => {
                       justifyContent: 'space-between',
                       minHeight: 0,
                     }}
+                    onWheel={(e) => {
+                      const rail = document.getElementById('kibo-wallpaper-rail');
+                      if (rail) rail.scrollLeft += e.deltaY;
+                    }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <button
                           onClick={() => setWallpaperSourceTab('Recent')}
@@ -6575,22 +6663,26 @@ export const KiboApp: React.FC = () => {
                           My folder
                         </button>
                         <span className="companion-mono-tiny" style={{ marginLeft: 6, color: '#71717A' }}>
-                          {wallpapersList.length} pictures
+                          {wallpapersList.length} wallpapers
                         </span>
                       </div>
                       <span style={{ fontSize: 11, color: '#71717A', fontWeight: 500 }}>
-                        Click to apply & adapt UI palette
+                        Click to apply with shockwave ripple
                       </span>
                     </div>
 
                     <div
+                      id="kibo-wallpaper-rail"
                       style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(4, 1fr)',
-                        gap: 8,
+                        display: 'flex',
+                        gap: 10,
+                        overflowX: 'auto',
+                        overflowY: 'hidden',
+                        paddingBottom: 4,
+                        paddingTop: 2,
+                        scrollbarWidth: 'none',
                         flex: 1,
-                        overflowY: 'auto',
-                        paddingRight: 4,
+                        alignItems: 'center',
                       }}
                     >
                       {wallpapersList.map((wp, idx) => {
@@ -6600,15 +6692,18 @@ export const KiboApp: React.FC = () => {
                             key={wp.id || idx}
                             onClick={() => applyWallpaperByIndex(idx)}
                             style={{
+                              flexShrink: 0,
+                              width: 138,
+                              height: 72,
                               position: 'relative',
                               borderRadius: 12,
                               overflow: 'hidden',
                               cursor: 'pointer',
-                              border: isApplied ? '2px solid var(--adaptive-accent, #38BDF8)' : '1px solid rgba(255,255,255,0.08)',
+                              border: isApplied ? `2px solid ${wp.accent || 'var(--adaptive-accent, #38BDF8)'}` : '1px solid rgba(255,255,255,0.08)',
                               background: '#141519',
-                              height: 68,
-                              boxShadow: isApplied ? '0 0 12px rgba(var(--adaptive-accent-rgb, 56, 189, 248), 0.35)' : 'none',
-                              transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
+                              boxShadow: isApplied ? `0 0 16px ${wp.accent || '#38BDF8'}55` : 'none',
+                              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                              transform: isApplied ? 'scale(1.02)' : 'scale(1)',
                             }}
                           >
                             <div
@@ -6618,31 +6713,32 @@ export const KiboApp: React.FC = () => {
                                 backgroundImage: `url("${resolveWallpaperDisplayUrl(wp.thumb || wp.url)}")`,
                                 backgroundSize: 'cover',
                                 backgroundPosition: 'center',
-                                filter: isApplied ? 'none' : 'brightness(0.85)',
+                                filter: isApplied ? 'brightness(0.95)' : 'brightness(0.75)',
+                                transition: 'filter 0.2s ease',
                               }}
                             />
                             <div
                               style={{
                                 position: 'absolute',
                                 inset: 0,
-                                background: 'linear-gradient(to top, rgba(12,13,18,0.85) 0%, transparent 60%)',
+                                background: 'linear-gradient(to top, rgba(10,12,16,0.85) 0%, transparent 60%)',
                                 display: 'flex',
                                 alignItems: 'flex-end',
                                 justifyContent: 'space-between',
-                                padding: '5px 7px',
+                                padding: '4px 6px',
                               }}
                             >
-                              <span style={{ fontSize: 10.5, fontWeight: 700, color: '#FFFFFF', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
+                              <span style={{ fontSize: 10, fontWeight: 700, color: '#FFFFFF', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
                                 {wp.title}
                               </span>
                               {isApplied && (
                                 <span
                                   style={{
-                                    fontSize: 9,
+                                    fontSize: 8.5,
                                     fontWeight: 800,
-                                    padding: '1.5px 6px',
+                                    padding: '1.5px 5.5px',
                                     borderRadius: 999,
-                                    background: 'var(--adaptive-accent, #38BDF8)',
+                                    background: wp.accent || 'var(--adaptive-accent, #38BDF8)',
                                     color: '#0A0E17',
                                   }}
                                 >
