@@ -11,7 +11,8 @@ export interface GeminiFunctionCall {
     | 'computer_action'
     | 'build_website'
     | 'convert_file'
-    | 'start_focus_timer';
+    | 'start_focus_timer'
+    | 'remember_user_fact';
   args: Record<string, any>;
 }
 
@@ -86,6 +87,87 @@ export function getActiveSkillsPromptBlock(): string {
       (s: any) => `### ACTIVE SKILL: ${s.name} (${s.fileName || 'SKILL.md'})\n${String(s.content).slice(0, 3500)}`
     );
     return `\n\n=== USER-ENABLED SKILL.MD INSTRUCTIONS (FOLLOW STRICTLY WHEN APPLICABLE) ===\n${blocks.join('\n\n')}\n=== END OF SKILLS ===`;
+  } catch (_) {
+    return '';
+  }
+}
+
+export function savePersistentUserMemory(patch: { userName?: string; fact?: string }) {
+  if (typeof window === 'undefined') return;
+  try {
+    const settingsPatch: Record<string, any> = {};
+    if (patch.userName && patch.userName.trim()) {
+      const cleanName = patch.userName.trim().replace(/[.,!?]+$/, '');
+      localStorage.setItem('kibo_user_name', cleanName);
+      settingsPatch.kibo_user_name = cleanName;
+      window.dispatchEvent(new CustomEvent('kibo-user-memory-updated', { detail: { userName: cleanName } }));
+    }
+    if (patch.fact && patch.fact.trim()) {
+      const cleanFact = patch.fact.trim();
+      const rawFacts = localStorage.getItem('kibo_user_memory');
+      let facts: string[] = [];
+      try {
+        if (rawFacts) facts = JSON.parse(rawFacts);
+      } catch (_) {}
+      if (!Array.isArray(facts)) facts = [];
+      if (!facts.includes(cleanFact)) {
+        facts = [cleanFact, ...facts].slice(0, 30);
+        localStorage.setItem('kibo_user_memory', JSON.stringify(facts));
+        settingsPatch.kibo_user_memory = JSON.stringify(facts);
+      }
+    }
+    if (Object.keys(settingsPatch).length > 0) {
+      (window as any).kiboAPI?.saveStoredSettings?.(settingsPatch);
+    }
+  } catch (_) {}
+}
+
+export function extractAndSaveUserMemoryFromInput(userPrompt: string): { extractedName?: string } {
+  if (!userPrompt) return {};
+  const text = userPrompt.trim();
+  const namePatterns = [
+    /\b(?:my name is|i am|i'm|im|call me)\s+([A-Z][a-zA-Z]{1,22})(?:\b|[.,!?]|$)/i,
+  ];
+  const stopWords = new Set([
+    'going', 'trying', 'looking', 'working', 'ready', 'here', 'back', 'good', 'fine',
+    'happy', 'sad', 'tired', 'using', 'asking', 'talking', 'testing', 'building',
+    'converting', 'playing', 'watching', 'listening', 'running', 'opening', 'having',
+    'doing', 'making', 'wondering', 'not', 'sure', 'sorry', 'kibo',
+  ]);
+  for (const rx of namePatterns) {
+    const m = text.match(rx);
+    if (m && m[1]) {
+      const candidate = m[1].trim();
+      if (!stopWords.has(candidate.toLowerCase())) {
+        const formatted = candidate.charAt(0).toUpperCase() + candidate.slice(1);
+        savePersistentUserMemory({ userName: formatted, fact: `User introduced themselves as ${formatted}` });
+        return { extractedName: formatted };
+      }
+    }
+  }
+  return {};
+}
+
+export function getUserMemoryPromptBlock(): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    const userName = (localStorage.getItem('kibo_user_name') || '').trim();
+    const rawFacts = localStorage.getItem('kibo_user_memory');
+    let facts: string[] = [];
+    if (rawFacts) {
+      try {
+        facts = JSON.parse(rawFacts);
+      } catch (_) {}
+    }
+    if (!userName && (!Array.isArray(facts) || facts.length === 0)) return '';
+    const lines: string[] = [];
+    if (userName) {
+      lines.push(`User's Name: ${userName} (Always remember their name is ${userName} across sessions and greet/address them naturally when appropriate.)`);
+    }
+    if (Array.isArray(facts) && facts.length > 0) {
+      lines.push(`Remembered User Facts:\n${facts.map((f) => `- ${f}`).join('\n')}`);
+    }
+    return `\n\n=== PERSISTENT USER MEMORY ===\n${lines.join('\n')}\n=== END OF MEMORY ===`;
   } catch (_) {
     return '';
   }
@@ -297,11 +379,29 @@ export const GEMINI_TOOLS = [
           required: ['task'],
         },
       },
+      {
+        name: 'remember_user_fact',
+        description: 'Remember the user name (e.g. Raahim) or any personal preference, role, or fact the user tells Kibo so Kibo remembers it across future sessions.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            userName: {
+              type: 'STRING',
+              description: 'The user first name or preferred name if they introduced themselves (e.g. "Raahim")',
+            },
+            fact: {
+              type: 'STRING',
+              description: 'Any personal preference, project, or fact to remember about the user',
+            },
+          },
+        },
+      },
     ],
   },
 ];
 
 const BASE_SYSTEM_INSTRUCTION = `You are Kibo, a fast, intelligent desktop companion living in the user's Windows top notch.
+- If the user tells you their name (e.g. "I'm Raahim" or "My name is Raahim") or a personal fact to remember, call remember_user_fact and greet them warmly by name.
 - When the user asks to convert any file (e.g. PDF to Word, Word to PDF, image format, CSV to JSON), ALWAYS call convert_file.
 - When the user asks to start a focus timer or stopwatch, call start_focus_timer.
 - When the user asks to click, play, select, or tap anything on screen OR write/type text on their PC, ALWAYS call computer_action.
@@ -425,7 +525,8 @@ export async function queryGemini(
     });
   }
 
-  const fullSystemInstruction = BASE_SYSTEM_INSTRUCTION + getActiveSkillsPromptBlock();
+  const { extractedName } = extractAndSaveUserMemoryFromInput(userPrompt);
+  const fullSystemInstruction = BASE_SYSTEM_INSTRUCTION + getUserMemoryPromptBlock() + getActiveSkillsPromptBlock();
 
   const { modelUsed, data } = await callGeminiWithFallback(
     apiKey,
@@ -458,9 +559,22 @@ export async function queryGemini(
     }
   }
 
+  if (detectedCall?.name === 'remember_user_fact') {
+    savePersistentUserMemory({
+      userName: detectedCall.args?.userName || extractedName,
+      fact: detectedCall.args?.fact,
+    });
+  }
+
+  const rememberedName = detectedCall?.args?.userName || extractedName || localStorage.getItem('kibo_user_name') || '';
+
   const defaultSpeech = detectedCall
     ? detectedCall.name === 'open_application'
       ? `Opened ${detectedCall.args.appName || 'app'}.`
+      : detectedCall.name === 'remember_user_fact'
+      ? rememberedName
+        ? `Got it, ${rememberedName}! I'll remember that whenever you start Kibo.`
+        : `Got it! I've saved that to my memory.`
       : detectedCall.name === 'convert_file'
       ? `Converting ${detectedCall.args.fileName} to ${String(detectedCall.args.targetFormat || '').toUpperCase()}.`
       : detectedCall.name === 'start_focus_timer'

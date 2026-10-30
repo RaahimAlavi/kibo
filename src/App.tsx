@@ -63,46 +63,40 @@ const WindowsLogoIcon = ({ size = 14 }: { size?: number }) => (
 
 const NOTCH_FEATURES = [
   {
-    name: 'Controls',
-    summary: 'Instant toggles for Wi-Fi, Bluetooth, Night Light warmth, Dark Mode, Volume, and live media scrubbing.',
-    previewTitle: 'System & Media',
-    previewMeta: 'Netflix · Spotify · System Audio',
-  },
-  {
-    name: 'Today',
-    summary: 'Focus countdown timer, daily task list, local weather, and scheduled autopilot routines in one view.',
-    previewTitle: 'Focus & Tasks',
-    previewMeta: '25:00 Focus Session · 4/5 Tasks',
+    name: 'Chat',
+    summary: 'Full conversation history, live captions, persistent personal memory, and instant voice or typed commands directly inside the top notch.',
+    previewTitle: 'Voice & Chat History',
+    previewMeta: 'Gemini Live · Persistent Memory · Captions',
   },
   {
     name: 'Agents',
-    summary: 'Parallel background workers that clone web layouts, inspect CSS tokens, and curate Notion databases.',
+    summary: 'Parallel background workers that clone web layouts, inspect CSS tokens, connect to Chrome & Notion, and execute tasks with zero interruption.',
     previewTitle: 'Autonomous Workers',
     previewMeta: 'Running in background · Zero interruption',
   },
   {
-    name: 'Clipboard',
-    summary: 'Searchable history of copied text, links, code snippets, and screenshots with one-keystroke pasting.',
-    previewTitle: 'Universal Buffer',
-    previewMeta: 'Text · Links · Code · Screenshots',
+    name: 'Convert',
+    summary: 'Drag any file into the closed notch or ask Kibo by voice to convert between PDF, Word (.docx), Markdown, CSV, JSON, HTML, and images while keeping your original file untouched.',
+    previewTitle: 'Universal File Converter',
+    previewMeta: 'PDF ↔ Word · CSV ↔ JSON · Original Safe',
   },
   {
-    name: 'Apps',
-    summary: 'Fast launcher for installed desktop software, Steam games, and web tools without leaving your workflow.',
-    previewTitle: 'Quick Launcher',
-    previewMeta: 'Win32 · Store Apps · Web',
+    name: 'Focus',
+    summary: 'Pomodoro countdown timer and precision lap stopwatch that live alongside Kibo in the compact notch—click to pause or resume, and watch Kibo dance when your session finishes.',
+    previewTitle: 'Focus Timer & Stopwatch',
+    previewMeta: 'Live Notch Readout · Kibo Victory Dance',
   },
   {
-    name: 'Wallpaper',
-    summary: 'Curated 4K dynamic desktop wallpapers with one-click live setting and custom image importing.',
-    previewTitle: 'Dynamic Wallpapers',
-    previewMeta: '4K · Unsplash · Local Files',
+    name: 'Skills',
+    summary: 'Import or author modular SKILL.md instruction packs that upgrade how Kibo designs interfaces, writes code, and executes multi-step workflows.',
+    previewTitle: 'Modular SKILL.md Engine',
+    previewMeta: 'Import SKILL.md · Custom Capabilities',
   },
   {
-    name: 'Power',
-    summary: 'Instant shortcuts to lock, sleep, restart, or shut down your PC directly from the top notch.',
-    previewTitle: 'Power & Sleep',
-    previewMeta: 'Lock · Sleep · Restart · Shutdown',
+    name: 'Media',
+    summary: 'Full-notch album artwork color glass, real-time Windows SMTC playback controls, and a smooth inline volume slider for Spotify, YouTube, and system audio.',
+    previewTitle: 'Adaptive Media Player',
+    previewMeta: 'Spotify · YouTube · Album Glass Gradient',
   },
 ];
 
@@ -112,20 +106,20 @@ const FAQS = [
     a: 'No. Kibo is strictly local-first. Screen vision and voice queries only process in direct response to your held shortcuts (Win + Alt, Ctrl + Shift, Ctrl + Win) and communicate directly with Google Gemini using your personal API key stored in your local Windows userData. Zero telemetry, zero cloud logging, and zero middleman servers.',
   },
   {
+    q: 'Does Kibo remember my name, files, and preferences across restarts?',
+    a: 'Yes. When you tell Kibo your name or preferences, Kibo saves them locally to your persistent profile so it greets you by name and remembers your context every time you launch your PC.',
+  },
+  {
     q: 'Does Kibo interrupt games or full-screen videos?',
     a: 'Never. When you launch a fullscreen game or media session, Kibo automatically tucks up into an 18px top-bezel sliver or hides completely, forwarding 100% of mouse and keyboard inputs to your application.',
   },
   {
-    q: 'Where do I get a free API key?',
-    a: 'You can create a free key in seconds at Google AI Studio (aistudio.google.com). Once created, click the gear icon in the notch or right-click the system tray icon, select "Open Preferences", and paste it into the Account tab.',
+    q: 'Can Kibo convert files or connect to Google Chrome and workspace apps?',
+    a: 'Yes. Drag any file toward the top notch—even when closed—to open the Kibo Storage drop box and convert between PDF, Word (.docx), CSV, JSON, Markdown, and images without deleting your original file. You can also install the Kibo Chrome Extension and connect Notion, GitHub, VS Code, Figma, Gmail, or custom APIs in Preferences -> Integrations.',
   },
   {
     q: 'Can I customize the hotkeys, voices, and companion skin?',
-    a: 'Yes. In Preferences, you can remap your activation hotkeys, switch between 4 real-time voice actors (Charon, Aoede, Fenrir, Puck), and select your favorite companion chassis pod.',
-  },
-  {
-    q: 'How do I enable Kibo to run on Windows startup?',
-    a: 'Right-click the Kibo icon in your Windows taskbar system tray and check "Run on Windows Startup", or toggle the startup switch in Preferences -> General.',
+    a: 'Yes. In Preferences, you can remap your activation hotkeys, configure audio input/output devices and live captions, switch between 4 Google Gemini neural voices (Charon, Aoede, Fenrir, Puck), and select your favorite companion chassis pod.',
   },
 ];
 

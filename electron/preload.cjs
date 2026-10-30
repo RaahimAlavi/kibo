@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer, clipboard, nativeImage } = require('electron');
+const { contextBridge, ipcRenderer, clipboard, nativeImage, webUtils } = require('electron');
 
 const kiboAPI = {
   // Window State & Multi-Zone Hitbox Control
@@ -207,7 +207,19 @@ const kiboAPI = {
   showItemInFolder: (filePath) => ipcRenderer.invoke('show-item-in-folder', filePath),
   exportChromeExtension: () => ipcRenderer.invoke('export-chrome-extension'),
   openChromeExtensionsPage: () => ipcRenderer.invoke('open-chrome-extensions-page'),
+  startExtensionDrag: () => ipcRenderer.send('start-extension-drag'),
   pickSkillMdFile: () => ipcRenderer.invoke('pick-skill-md-file'),
+  getFilePath: (file) => {
+    try {
+      if (webUtils && typeof webUtils.getPathForFile === 'function') {
+        const p = webUtils.getPathForFile(file);
+        if (p) return p;
+      }
+      return file?.path || '';
+    } catch (_) {
+      return file?.path || '';
+    }
+  },
   // Kibo Watts Economy Aliases
   syncWattsState: (data) => ipcRenderer.invoke('update-embers-state', data),
   setWattsCount: (count) => {

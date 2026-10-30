@@ -1,6 +1,7 @@
 const {
   app,
   BrowserWindow,
+  dialog,
   ipcMain,
   screen,
   desktopCapturer,
@@ -108,14 +109,15 @@ function startHitTestLoop() {
     const cursor = screen.getCursorScreenPoint();
     const winBounds = mainWindow.getBounds();
 
-    const notchHalfW = activeNotchBounds.width / 2;
+    const notchHalfW = Math.max(activeNotchBounds.width / 2, 130);
+    const notchHitHeight = Math.max(activeNotchBounds.height, 34);
     const centerX = winBounds.x + winBounds.width / 2;
 
     const insideNotchX =
       cursor.x >= centerX - notchHalfW && cursor.x <= centerX + notchHalfW;
     const insideNotchY =
       cursor.y >= winBounds.y &&
-      cursor.y <= winBounds.y + activeNotchBounds.height;
+      cursor.y <= winBounds.y + notchHitHeight;
     const insideNotch = insideNotchX && insideNotchY;
 
     let insideAppWin = false;
@@ -1459,9 +1461,10 @@ window.addEventListener('message', (event) => {
       fs.copyFileSync(iconSrc, path.join(extDir, 'icon.png'));
     }
 
-    shell.showItemInFolder(path.join(extDir, 'manifest.json'));
+    shell.showItemInFolder(extDir);
     return {
       success: true,
+      extDir,
       folderPath: extDir,
     };
   } catch (err) {
@@ -1470,6 +1473,23 @@ window.addEventListener('message', (event) => {
       error: err?.message || 'Failed to export Chrome extension.',
     };
   }
+});
+
+ipcMain.on('start-extension-drag', (event) => {
+  try {
+    const extDir = path.join(app.getPath('desktop'), 'Kibo-Chrome-Extension');
+    if (!fs.existsSync(extDir)) {
+      fs.mkdirSync(extDir, { recursive: true });
+    }
+    const iconPath = path.join(__dirname, '../public/icon-256.png');
+    const icon = fs.existsSync(iconPath)
+      ? nativeImage.createFromPath(iconPath).resize({ width: 32, height: 32 })
+      : nativeImage.createEmpty();
+    event.sender.startDrag({
+      file: extDir,
+      icon,
+    });
+  } catch (_) {}
 });
 
 ipcMain.handle('open-chrome-extensions-page', async () => {

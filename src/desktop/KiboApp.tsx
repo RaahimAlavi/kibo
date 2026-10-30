@@ -4,7 +4,7 @@ import { gsap } from 'gsap';
 import { SOUL_SKINS, SoulConfig } from '../lib/soulMath';
 import { SoulCanvas } from '../components/SoulCanvas';
 import { LivingEmberIcon } from '../components/LivingEmberIcon';
-import { queryGemini, cleanDictation, transcribeAudioWithGeminiAPI, askLassoWithGemini } from '../lib/gemini';
+import { queryGemini, cleanDictation, transcribeAudioWithGeminiAPI, askLassoWithGemini, savePersistentUserMemory } from '../lib/gemini';
 import { soundFX } from '../lib/soundFX';
 import { voiceEngine, KiboVoiceName } from '../lib/voiceEngine';
 import { runFastComputerUseLoop, executeDirectComputerAction } from '../lib/fastComputerUse';
@@ -147,14 +147,17 @@ declare global {
         sizeBytes?: number;
       }>;
       showItemInFolder?: (filePath: string) => Promise<{ success: boolean }>;
-      exportChromeExtension?: () => Promise<{ success: boolean; extDir?: string; error?: string }>;
+      exportChromeExtension?: () => Promise<{ success: boolean; extDir?: string; folderPath?: string; error?: string }>;
       openChromeExtensionsPage?: () => Promise<{ success: boolean }>;
+      startExtensionDrag?: () => void;
+      getFilePath?: (file: any) => string;
       pickSkillMdFile?: () => Promise<{
         success: boolean;
         name?: string;
         description?: string;
         content?: string;
         filePath?: string;
+        error?: string;
       }>;
     };
   }
@@ -1372,7 +1375,7 @@ export const KiboApp: React.FC = () => {
     };
   }, []);
 
-  // Synchronize keys and settings with persistent disk storage in userData
+  // Synchronize keys, user name, and memory with persistent disk storage in userData
   useEffect(() => {
     const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
     if (!api?.getStoredSettings) return;
@@ -1389,6 +1392,14 @@ export const KiboApp: React.FC = () => {
         setTavilyKey(val);
         setTavilyDraftKey(val);
         localStorage.setItem('kibo_tavily_key', val);
+      }
+      if (stored.kibo_user_name && typeof stored.kibo_user_name === 'string') {
+        const cleanName = stored.kibo_user_name.trim();
+        localStorage.setItem('kibo_user_name', cleanName);
+        setUserName(cleanName);
+      }
+      if (stored.kibo_user_memory && typeof stored.kibo_user_memory === 'string') {
+        localStorage.setItem('kibo_user_memory', stored.kibo_user_memory);
       }
     }).catch(() => {});
   }, []);
@@ -1584,8 +1595,19 @@ export const KiboApp: React.FC = () => {
   const reliefBreathTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // =========================================================================
-  // NEW STATE: CHAT HISTORY, FILE CONVERTER, STOPWATCH, SKILLS, AUDIO & INTEGRATIONS
+  // NEW STATE: USER MEMORY, CHAT HISTORY, FILE CONVERTER, STOPWATCH, SKILLS, AUDIO & INTEGRATIONS
   // =========================================================================
+  const [userName, setUserName] = useState<string>(() => localStorage.getItem('kibo_user_name') || '');
+
+  useEffect(() => {
+    const onMemoryUpdated = (e: any) => {
+      const updatedName = e?.detail?.userName || localStorage.getItem('kibo_user_name') || '';
+      if (updatedName) setUserName(updatedName);
+    };
+    window.addEventListener('kibo-user-memory-updated', onMemoryUpdated);
+    return () => window.removeEventListener('kibo-user-memory-updated', onMemoryUpdated);
+  }, []);
+
   const [chatMessages, setChatMessages] = useState<ChatMessageItem[]>(() => {
     try {
       const saved = localStorage.getItem('kibo_chat_history');
@@ -1594,11 +1616,14 @@ export const KiboApp: React.FC = () => {
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (_) {}
+    const savedName = localStorage.getItem('kibo_user_name') || '';
     return [
       {
         id: 'welcome_1',
         role: 'kibo',
-        text: "I'm Kibo, your desktop operator. Hold Win + Alt to talk, drop files in Convert, or ask me to build websites, run commands, or control your PC.",
+        text: savedName
+          ? `Welcome back, ${savedName}. Hold Win + Alt to talk, drag any file to the notch to convert, or ask me to run tasks.`
+          : "I'm Kibo, your desktop operator. Hold Win + Alt to talk, drag any file to the notch to convert, or ask me to build websites, run commands, or control your PC.",
         time: 'Ready',
       },
     ];
@@ -1628,7 +1653,7 @@ export const KiboApp: React.FC = () => {
     }
   }, [chatMessages, activeTab, isExpanded]);
 
-  // Universal Non-Destructive File Converter State
+  // Universal Non-Destructive File Converter State & Smart Notch Storage Drop Box
   const [convertSourceFile, setConvertSourceFile] = useState<{
     filePath: string;
     fileName: string;
@@ -1639,6 +1664,38 @@ export const KiboApp: React.FC = () => {
   const [isConvertingFile, setIsConvertingFile] = useState<boolean>(false);
   const [convertStatusMsg, setConvertStatusMsg] = useState<{ type: 'ok' | 'err' | 'info'; text: string; outputPath?: string } | null>(null);
   const [isConvertDragOver, setIsConvertDragOver] = useState<boolean>(false);
+  const [isFileDraggingOverNotch, setIsFileDraggingOverNotch] = useState<boolean>(false);
+  const fileDragLeaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isNativeDialogOpenRef = useRef<boolean>(false);
+  const skillFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const ingestDroppedFileForConvert = useCallback((f: any) => {
+    if (!f) return;
+    const resolvedPath = window.kiboAPI?.getFilePath?.(f) || f.path || f.name || '';
+    const fileName = f.name || resolvedPath.split(/[\\/]/).pop() || 'File';
+    const ext = (fileName.split('.').pop() || '').toLowerCase();
+    setConvertSourceFile({
+      filePath: resolvedPath,
+      fileName,
+      ext,
+      sizeBytes: f.size,
+    });
+    if (ext === 'pdf') setConvertTargetFormat('docx');
+    else if (ext === 'docx' || ext === 'doc') setConvertTargetFormat('pdf');
+    else if (ext === 'csv') setConvertTargetFormat('json');
+    else if (ext === 'json') setConvertTargetFormat('csv');
+    else if (['png', 'jpg', 'jpeg', 'webp'].includes(ext)) setConvertTargetFormat('pdf');
+    else if (ext === 'md' || ext === 'txt') setConvertTargetFormat('pdf');
+    setConvertStatusMsg(null);
+    setIsFileDraggingOverNotch(false);
+    setIsConvertDragOver(false);
+    setIsTucked(false);
+    setShowMediaNotch(false);
+    setActiveTab('Convert');
+    setIsExpanded(true);
+    soundFX.playExpand();
+  }, []);
+
   const [recentConversions, setRecentConversions] = useState<ConvertedFileRecord[]>(() => {
     try {
       const saved = localStorage.getItem('kibo_recent_conversions');
@@ -2336,7 +2393,7 @@ export const KiboApp: React.FC = () => {
     setIsHoverHoldActive(false);
     setHoverHoldProgress(0);
 
-    if (isDraggingVolumeRef.current || isDraggingMediaScrubRef.current) {
+    if (isDraggingVolumeRef.current || isDraggingMediaScrubRef.current || isNativeDialogOpenRef.current) {
       return;
     }
 
@@ -2346,23 +2403,24 @@ export const KiboApp: React.FC = () => {
     }
 
     if (isExpanded || showMediaNotch) {
+      const collapseDelay = isExpanded && (activeTab === 'Convert' || activeTab === 'Skills') ? 5500 : 320;
       leaveCollapseTimerRef.current = setTimeout(() => {
-        if (isDraggingVolumeRef.current || isDraggingMediaScrubRef.current) return;
+        if (isDraggingVolumeRef.current || isDraggingMediaScrubRef.current || isNativeDialogOpenRef.current) return;
         if (soulAnnoyanceRef.current > 0.05 || isBreathingReliefRef.current) return;
         setActiveControlDropdown(null);
         setShowMediaNotch(false);
         setIsExpanded(false);
         setPendingPowerAction(null);
         if (autoTuckEnabled) setIsTucked(true);
-      }, 320);
+      }, collapseDelay);
     } else if (autoTuckEnabled) {
       leaveCollapseTimerRef.current = setTimeout(() => {
-        if (isDraggingVolumeRef.current || isDraggingMediaScrubRef.current) return;
+        if (isDraggingVolumeRef.current || isDraggingMediaScrubRef.current || isNativeDialogOpenRef.current) return;
         if (soulAnnoyanceRef.current > 0.05 || isBreathingReliefRef.current) return;
         setIsTucked(true);
       }, 1500);
     }
-  }, [isExpanded, showMediaNotch, autoTuckEnabled]);
+  }, [isExpanded, showMediaNotch, autoTuckEnabled, activeTab]);
 
   useEffect(() => {
     if (!isDraggingMediaScrub) return;
@@ -3498,14 +3556,17 @@ export const KiboApp: React.FC = () => {
 
   const showProactiveBanner = !isExpanded && !showCompanionWindow && Boolean(detectedAppId);
   const isCompactAskBar = !showProactiveBanner && (askNotchPhase === 'speaking' || askNotchPhase === 'thinking');
-  const isTimerNotchActive = !isExpanded && !showProactiveBanner && !showMediaNotch && !isCompactAskBar && (isTimerRunning || timerAlarmRinging);
-  const isMiniMediaPill = (bootPhase === 'ready' || bootPhase === 'tucking') && !isExpanded && !showProactiveBanner && !showMediaNotch && !isCompactAskBar && !isTimerNotchActive && !notchApiAlert && hasMediaSession;
-  const isTuckedSliver = (isTucked || bootPhase === 'sleeping' || (bootPhase === 'tucking' && !hasMediaSession)) && !isExpanded && !showProactiveBanner && !showMediaNotch && !isTimerNotchActive && !isCompactAskBar && !isMiniMediaPill && !notchApiAlert;
+  const isStopwatchNotchActive = !isExpanded && !showProactiveBanner && !showMediaNotch && !isCompactAskBar && (stopwatchRunning || stopwatchMs > 0);
+  const isTimerNotchActive = !isExpanded && !showProactiveBanner && !showMediaNotch && !isCompactAskBar && (isTimerRunning || timerAlarmRinging || isStopwatchNotchActive);
+  const isMiniMediaPill = (bootPhase === 'ready' || bootPhase === 'tucking') && !isExpanded && !showProactiveBanner && !showMediaNotch && !isCompactAskBar && !isTimerNotchActive && !notchApiAlert && !isFileDraggingOverNotch && hasMediaSession;
+  const isTuckedSliver = (isTucked || bootPhase === 'sleeping' || (bootPhase === 'tucking' && !hasMediaSession)) && !isExpanded && !showProactiveBanner && !showMediaNotch && !isTimerNotchActive && !isCompactAskBar && !isMiniMediaPill && !notchApiAlert && !isFileDraggingOverNotch;
 
-  const archSize = (isTuckedSliver || bootPhase === 'sleeping') ? 9 : showProactiveBanner ? 20 : isMiniMediaPill || isCompactAskBar || isTimerNotchActive || notchApiAlert ? 16 : 22;
+  const archSize = (isTuckedSliver || bootPhase === 'sleeping') ? 9 : showProactiveBanner || isFileDraggingOverNotch ? 20 : isMiniMediaPill || isCompactAskBar || isTimerNotchActive || notchApiAlert ? 16 : 22;
 
   const notchShellWidth = isExpanded
     ? currentTabDimensions.w - archSize * 2
+    : isFileDraggingOverNotch
+    ? 336
     : showProactiveBanner
     ? 580 - archSize * 2
     : showMediaNotch
@@ -3517,7 +3578,7 @@ export const KiboApp: React.FC = () => {
     : isMiniMediaPill
     ? 204
     : isTimerNotchActive
-    ? 192
+    ? 212
     : isCompactAskBar
     ? 192
     : bootPhase === 'sleeping'
@@ -3528,6 +3589,8 @@ export const KiboApp: React.FC = () => {
 
   const notchShellHeight = isExpanded
     ? currentTabDimensions.h
+    : isFileDraggingOverNotch
+    ? 108
     : showProactiveBanner
     ? 106
     : showMediaNotch
@@ -3550,7 +3613,7 @@ export const KiboApp: React.FC = () => {
 
   const bottomRadius = (isTuckedSliver || bootPhase === 'sleeping')
     ? 9
-    : showProactiveBanner
+    : showProactiveBanner || isFileDraggingOverNotch
     ? 20
     : isMiniMediaPill || isCompactAskBar || isTimerNotchActive || notchApiAlert
     ? 15
@@ -3648,6 +3711,37 @@ export const KiboApp: React.FC = () => {
       }
 
       const lower = text.toLowerCase().trim();
+
+      // 00. Persistent User Name & Memory ("I'm Raahim", "My name is Raahim", or Gemini's remember_user_fact tool)
+      const nameQuickMatch = text.match(/\b(?:i\s+am|i'm|im|my\s+name\s+is|call\s+me)\s+([A-Z][a-zA-Z0-9_-]{1,22})\b/i);
+      if (nameQuickMatch?.[1]) {
+        const cleanName = nameQuickMatch[1].trim();
+        const banned = ['kibo', 'ready', 'back', 'here', 'working', 'trying', 'going', 'looking', 'asking', 'talking', 'good', 'fine', 'okay', 'tired', 'happy'];
+        if (!banned.includes(cleanName.toLowerCase())) {
+          setUserName(cleanName);
+          savePersistentUserMemory({ userName: cleanName });
+        }
+      }
+      if (fc?.name === 'remember_user_fact') {
+        const learnedName = fc.args?.userName ? String(fc.args.userName).trim() : '';
+        const learnedFact = fc.args?.fact ? String(fc.args.fact).trim() : '';
+        if (learnedName) {
+          setUserName(learnedName);
+        }
+        savePersistentUserMemory({
+          userName: learnedName || undefined,
+          fact: learnedFact || undefined,
+        });
+        showReplyWithSpeech(
+          speech && speech !== 'Done.'
+            ? speech
+            : learnedName
+            ? `Got it, ${learnedName}! I'll remember your name and preferences whenever you start Kibo.`
+            : `Got it! I've saved that to my memory.`,
+          learnedName ? `Remembered: ${learnedName}` : 'Saved to Memory'
+        );
+        return;
+      }
 
       // 0A. Voice-Triggered Non-Destructive File Conversion ("Convert resume.pdf to Word")
       const convertRegexMatch = text.match(
@@ -5616,6 +5710,68 @@ export const KiboApp: React.FC = () => {
         onMouseEnter={handleIslandMouseEnter}
         onMouseLeave={handleIslandMouseLeave}
         onWheel={handleNotchWheel}
+        onDragEnter={(e) => {
+          if (e.dataTransfer?.types?.includes('Files')) {
+            e.preventDefault();
+            if (leaveCollapseTimerRef.current) {
+              clearTimeout(leaveCollapseTimerRef.current);
+              leaveCollapseTimerRef.current = null;
+            }
+            if (idleTuckTimerRef.current) {
+              clearTimeout(idleTuckTimerRef.current);
+              idleTuckTimerRef.current = null;
+            }
+            setIsTucked(false);
+            setIsFileDraggingOverNotch(true);
+          }
+        }}
+        onDragOver={(e) => {
+          if (e.dataTransfer?.types?.includes('Files')) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+            if (!isFileDraggingOverNotch) {
+              setIsTucked(false);
+              setIsFileDraggingOverNotch(true);
+            }
+          }
+        }}
+        onDragLeave={(e) => {
+          const related = e.relatedTarget as Node | null;
+          if (!related || !notchShellRef.current?.contains(related)) {
+            setIsFileDraggingOverNotch(false);
+          }
+        }}
+        onDrop={(e) => {
+          const droppedFile = e.dataTransfer?.files?.[0];
+          if (droppedFile) {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsFileDraggingOverNotch(false);
+            setIsConvertDragOver(false);
+            const nameLower = (droppedFile.name || '').toLowerCase();
+            if (isExpanded && activeTab === 'Skills' && (nameLower.endsWith('.md') || nameLower.endsWith('.markdown') || nameLower.endsWith('.txt'))) {
+              const reader = new FileReader();
+              reader.onload = () => {
+                const content = String(reader.result || '');
+                if (content.trim()) {
+                  const baseName = droppedFile.name.replace(/\.(md|markdown|txt)$/i, '');
+                  const newSkill: KiboSkillItem = {
+                    id: `skill_${Date.now()}`,
+                    name: `${baseName} (SKILL.md)`,
+                    description: 'Imported SKILL.md instruction module.',
+                    content,
+                    enabled: true,
+                  };
+                  updateSkillsList((prev) => [newSkill, ...prev]);
+                  soundFX.playTaskSuccess();
+                }
+              };
+              reader.readAsText(droppedFile);
+              return;
+            }
+            ingestDroppedFileForConvert(droppedFile);
+          }
+        }}
       >
         {isTuckedSliver && bootPhase !== 'sleeping' && (
           <div className="tucked-hover-dock">
@@ -5671,10 +5827,54 @@ export const KiboApp: React.FC = () => {
           style={{
             borderBottomLeftRadius: `${bottomRadius}px`,
             borderBottomRightRadius: `${bottomRadius}px`,
+            background:
+              isExpanded && activeTab === 'Media'
+                ? `radial-gradient(125% 135% at 18% 18%, rgba(${mediaArtPalette.rgb}, 0.42) 0%, rgba(${mediaArtPalette.rgb}, 0.16) 52%, rgba(12, 12, 14, 0.96) 100%), #0C0C0E`
+                : undefined,
+            transition: 'background 0.45s ease',
           }}
         >
+          {/* STATE 00: SMART FILE DRAG-INTO-NOTCH STORAGE DROP CHAMBER */}
+          {!isExpanded && isFileDraggingOverNotch && (
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                padding: '12px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                boxSizing: 'border-box',
+              }}
+            >
+              <div
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '12px',
+                  background: 'rgba(56, 189, 248, 0.14)',
+                  border: '1.5px dashed rgba(56, 189, 248, 0.65)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <SvgIcon name="upload" size={20} color="#38BDF8" />
+              </div>
+              <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                <div style={{ fontSize: '13px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.01em' }}>
+                  Drop into Kibo Storage Box
+                </div>
+                <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>
+                  Release file to open Universal Converter (Original stays safe)
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* STATE 0: PROACTIVE CONTEXT APP NOTCH ("Connect GitHub to Kibo?") */}
-          {showProactiveBanner && detectedAppId && (
+          {!isFileDraggingOverNotch && showProactiveBanner && detectedAppId && (
             <ProactiveContextNotch
               appId={detectedAppId}
               soul={currentSoul}
@@ -5702,7 +5902,7 @@ export const KiboApp: React.FC = () => {
             />
           )}
 
-          {!isExpanded && !showProactiveBanner && !showMediaNotch && notchApiAlert && (
+          {!isExpanded && !isFileDraggingOverNotch && !showProactiveBanner && !showMediaNotch && notchApiAlert && (
             <div
               className="kibo-notch-api-alert"
               onClick={() => {
@@ -5715,7 +5915,7 @@ export const KiboApp: React.FC = () => {
             </div>
           )}
 
-          {!isExpanded && !showProactiveBanner && !showMediaNotch && !notchApiAlert && isCompactAskBar && (
+          {!isExpanded && !isFileDraggingOverNotch && !showProactiveBanner && !showMediaNotch && !notchApiAlert && isCompactAskBar && (
             <div className="kibo-notch-ask-compact" onClick={() => setAskNotchPhase('idle')}>
               <div className="ask-mini-soul-left">
                 <SoulCanvas
@@ -5762,27 +5962,45 @@ export const KiboApp: React.FC = () => {
             </div>
           )}
 
-          {!isExpanded && !showProactiveBanner && !showMediaNotch && !notchApiAlert && !isCompactAskBar && isTimerNotchActive && (
+          {!isExpanded && !isFileDraggingOverNotch && !showProactiveBanner && !showMediaNotch && !notchApiAlert && !isCompactAskBar && isTimerNotchActive && (
             <div
               className={`kibo-notch-timer-bar ${timerAlarmRinging ? 'is-ringing' : ''}`}
+              title={
+                timerAlarmRinging
+                  ? 'Click to stop celebration'
+                  : isStopwatchNotchActive && !isTimerRunning
+                  ? stopwatchRunning
+                    ? 'Click to pause stopwatch · Right button opens Focus'
+                    : 'Click to resume stopwatch · Right button opens Focus'
+                  : isTimerRunning
+                  ? 'Click to pause timer · Right button opens Focus'
+                  : 'Click to resume timer'
+              }
               onClick={() => {
                 if (timerAlarmRinging) {
                   setTimerAlarmRinging(false);
                   setIsKiboDancing(false);
                   setTimerSeconds(timerTotalSeconds);
                   setSoulMode('LISTENING');
+                } else if (isStopwatchNotchActive && !isTimerRunning) {
+                  setStopwatchRunning((r) => {
+                    soundFX.playToggle(!r);
+                    return !r;
+                  });
                 } else {
-                  setActiveTab('Focus');
-                  setIsExpanded(true);
+                  setIsTimerRunning((r) => {
+                    soundFX.playToggle(!r);
+                    return !r;
+                  });
                 }
               }}
             >
               <div className={timerAlarmRinging ? 'alarm-dancing-soul' : 'ask-mini-soul-left'}>
                 <SoulCanvas
                   soul={currentSoul}
-                  width={timerAlarmRinging ? 58 : 52}
-                  height={timerAlarmRinging ? 48 : 40}
-                  scale={timerAlarmRinging ? 0.95 : 0.88}
+                  width={timerAlarmRinging ? 58 : 50}
+                  height={timerAlarmRinging ? 48 : 38}
+                  scale={timerAlarmRinging ? 0.95 : 0.86}
                   isDull={isSoulDull}
                   interactive={true}
                   mode={timerAlarmRinging ? 'DANCING' : 'LISTENING'}
@@ -5793,17 +6011,86 @@ export const KiboApp: React.FC = () => {
                   <span className="alarm-title">Time's up! Kibo Dance!</span>
                   <span className="alarm-sub">Click to stop celebration</span>
                 </div>
+              ) : isStopwatchNotchActive && !isTimerRunning ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                  <span
+                    className="notch-timer-digits"
+                    style={{
+                      opacity: stopwatchRunning ? 1 : 0.62,
+                      color: stopwatchRunning ? '#FFFFFF' : '#94A3B8',
+                      fontVariantNumeric: 'tabular-nums',
+                    }}
+                  >
+                    {String(Math.floor(stopwatchMs / 60000)).padStart(2, '0')}:
+                    {String(Math.floor((stopwatchMs % 60000) / 1000)).padStart(2, '0')}.
+                    {String(Math.floor((stopwatchMs % 1000) / 10)).padStart(2, '0')}
+                  </span>
+                  <button
+                    type="button"
+                    title="Open Focus Tab"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFocusSubMode('stopwatch');
+                      setActiveTab('Focus');
+                      setIsExpanded(true);
+                    }}
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '999px',
+                      border: '1px solid rgba(255,255,255,0.14)',
+                      background: 'rgba(255,255,255,0.06)',
+                      color: '#94A3B8',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      fontSize: '10px',
+                      padding: 0,
+                    }}
+                  >
+                    ⌄
+                  </button>
+                </div>
               ) : (
-                <span className="notch-timer-digits">
-                  {String(Math.floor(timerSeconds / 60)).padStart(2, '0')}:
-                  {String(timerSeconds % 60).padStart(2, '0')}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                  <span className="notch-timer-digits">
+                    {String(Math.floor(timerSeconds / 60)).padStart(2, '0')}:
+                    {String(timerSeconds % 60).padStart(2, '0')}
+                  </span>
+                  <button
+                    type="button"
+                    title="Open Focus Tab"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFocusSubMode('timer');
+                      setActiveTab('Focus');
+                      setIsExpanded(true);
+                    }}
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '999px',
+                      border: '1px solid rgba(255,255,255,0.14)',
+                      background: 'rgba(255,255,255,0.06)',
+                      color: '#94A3B8',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      fontSize: '10px',
+                      padding: 0,
+                    }}
+                  >
+                    ⌄
+                  </button>
+                </div>
               )}
             </div>
           )}
 
           {/* STATE 1C: APPLE DYNAMIC ISLAND MINI MEDIA NOTCH (Synth freezes when paused) */}
-          {!isExpanded && !showProactiveBanner && !showMediaNotch && !notchApiAlert && !isCompactAskBar && !isTimerNotchActive && isMiniMediaPill && (
+          {!isExpanded && !isFileDraggingOverNotch && !showProactiveBanner && !showMediaNotch && !notchApiAlert && !isCompactAskBar && !isTimerNotchActive && isMiniMediaPill && (
             <div
               className="kibo-notch-mini-media"
               onClick={() => {
@@ -5829,29 +6116,7 @@ export const KiboApp: React.FC = () => {
                       }
                 }
               />
-              {/* Middle live song progress scrubber bar */}
-              <div
-                style={{
-                  flex: 1,
-                  margin: '0 10px',
-                  height: 3,
-                  borderRadius: 999,
-                  background: 'rgba(255, 255, 255, 0.12)',
-                  overflow: 'hidden',
-                  position: 'relative',
-                }}
-              >
-                <div
-                  style={{
-                    height: '100%',
-                    width: `${Math.max(6, Math.min(100, (mediaProgress / Math.max(1, totalMediaDuration)) * 100))}%`,
-                    background: mediaArtPalette.accent || '#38BDF8',
-                    borderRadius: 999,
-                    boxShadow: `0 0 6px ${mediaArtPalette.accent || '#38BDF8'}66`,
-                    transition: 'width 0.3s ease',
-                  }}
-                />
-              </div>
+              <div style={{ flex: 1 }} />
               <div className="mini-media-eq-bars">
                 {[0.28, 0.35, 0.62, 0.72, 0.85, 1.0].map((h, i) => (
                   <span
@@ -5871,7 +6136,7 @@ export const KiboApp: React.FC = () => {
           )}
 
           {/* STATE 1E: AWAKE OR TUCKED SOUL NOTCH (standard Kibo notch) */}
-          {!isExpanded && !showProactiveBanner && !showMediaNotch && !notchApiAlert && !isCompactAskBar && !isTimerNotchActive && !isMiniMediaPill && (
+          {!isExpanded && !isFileDraggingOverNotch && !showProactiveBanner && !showMediaNotch && !notchApiAlert && !isCompactAskBar && !isTimerNotchActive && !isMiniMediaPill && (
             <div
               className={`kibo-notch-soul ${soulIsHit ? 'is-hit' : ''}`}
               style={{
@@ -5932,14 +6197,14 @@ export const KiboApp: React.FC = () => {
           )}
 
           {/* STATE 2: COMPACT MEDIA PLAYER NOTCH (Bottom-anchored glow keeps top-left & top-right #0C0C0E seamless!) */}
-          {!isExpanded && showMediaNotch && (
+          {!isExpanded && !isFileDraggingOverNotch && showMediaNotch && (
             <div
               className="kibo-notch-media-v2"
               style={{
                 background: `radial-gradient(circle at 50% 95%, rgba(${mediaArtPalette.rgb}, 0.28) 0%, rgba(12, 12, 14, 0) 68%), #0C0C0E`,
               }}
               onClick={() => {
-                setActiveTab('Controls');
+                setActiveTab('Media');
                 setShowMediaNotch(false);
                 setIsExpanded(true);
               }}
@@ -6154,14 +6419,15 @@ export const KiboApp: React.FC = () => {
                                 isUser
                                   ? {
                                       maxWidth: '78%',
-                                      padding: '9px 16px',
-                                      borderRadius: '18px 18px 4px 18px',
-                                      background: 'linear-gradient(180deg, #DCEBFF 0%, #98C5FF 100%)',
-                                      color: '#09111E',
+                                      padding: '10px 16px',
+                                      borderRadius: '16px 16px 4px 16px',
+                                      background: '#1E293B',
+                                      border: '1px solid rgba(56, 189, 248, 0.32)',
+                                      color: '#F8FAFC',
                                       fontSize: '13px',
                                       fontWeight: 600,
                                       lineHeight: 1.42,
-                                      boxShadow: '0 4px 14px rgba(120, 180, 255, 0.22), inset 0 1px 0 rgba(255,255,255,0.75)',
+                                      boxShadow: '0 4px 14px rgba(0, 0, 0, 0.26)',
                                       wordBreak: 'break-word',
                                     }
                                   : {
@@ -6254,24 +6520,30 @@ export const KiboApp: React.FC = () => {
                         style={{
                           height: '42px',
                           borderRadius: '999px',
-                          border: '1px solid rgba(255, 255, 255, 0.65)',
+                          border:
+                            askNotchPhase === 'speaking'
+                              ? '1px solid rgba(56, 189, 248, 0.55)'
+                              : '1px solid rgba(255, 255, 255, 0.14)',
                           background:
                             askNotchPhase === 'speaking'
-                              ? 'linear-gradient(180deg, #7DD3FC 0%, #38BDF8 100%)'
-                              : 'linear-gradient(180deg, #E2EEFF 0%, #99C6FF 100%)',
-                          color: '#09111E',
-                          fontWeight: 700,
+                              ? 'rgba(56, 189, 248, 0.18)'
+                              : '#18191E',
+                          color: '#F4F4F5',
+                          fontWeight: 600,
                           fontSize: '13px',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           gap: '8px',
                           cursor: 'pointer',
-                          boxShadow: '0 4px 18px rgba(120, 180, 255, 0.28), inset 0 1px 1px rgba(255, 255, 255, 0.85)',
-                          transition: 'transform 0.14s ease, box-shadow 0.14s ease',
+                          boxShadow:
+                            askNotchPhase === 'speaking'
+                              ? '0 0 16px rgba(56, 189, 248, 0.22)'
+                              : 'inset 0 1px 0 rgba(255, 255, 255, 0.05)',
+                          transition: 'all 0.16s ease',
                         }}
                       >
-                        <SvgIcon name="mic" size={14} color="#09111E" />
+                        <SvgIcon name="mic" size={14} color="#38BDF8" />
                         <span>
                           {askNotchPhase === 'speaking'
                             ? 'Listening... Release to send'
@@ -6411,41 +6683,35 @@ export const KiboApp: React.FC = () => {
                           e.preventDefault();
                           e.stopPropagation();
                           setIsConvertDragOver(false);
-                          const f = e.dataTransfer?.files?.[0] as any;
+                          const f = e.dataTransfer?.files?.[0];
                           if (f) {
-                            const fp = f.path || f.name;
-                            const ext = (f.name.split('.').pop() || '').toLowerCase();
-                            setConvertSourceFile({
-                              filePath: fp,
-                              fileName: f.name,
-                              ext,
-                              sizeBytes: f.size,
-                            });
-                            if (ext === 'pdf') setConvertTargetFormat('docx');
-                            else if (ext === 'docx' || ext === 'doc') setConvertTargetFormat('pdf');
-                            else if (ext === 'csv') setConvertTargetFormat('json');
-                            else if (ext === 'json') setConvertTargetFormat('csv');
-                            else if (['png', 'jpg', 'jpeg', 'webp'].includes(ext)) setConvertTargetFormat('pdf');
-                            setConvertStatusMsg(null);
+                            ingestDroppedFileForConvert(f);
                           }
                         }}
                         onClick={async () => {
                           if (!window.kiboAPI?.pickFileForConvert) return;
-                          const picked = await window.kiboAPI.pickFileForConvert();
-                          if (picked?.success && picked.filePath) {
-                            const ext = (picked.ext || '').toLowerCase();
-                            setConvertSourceFile({
-                              filePath: picked.filePath,
-                              fileName: picked.fileName || picked.filePath.split(/[\\/]/).pop() || 'File',
-                              ext,
-                              sizeBytes: picked.sizeBytes,
-                            });
-                            if (ext === 'pdf') setConvertTargetFormat('docx');
-                            else if (ext === 'docx' || ext === 'doc') setConvertTargetFormat('pdf');
-                            else if (ext === 'csv') setConvertTargetFormat('json');
-                            else if (ext === 'json') setConvertTargetFormat('csv');
-                            else if (['png', 'jpg', 'jpeg', 'webp'].includes(ext)) setConvertTargetFormat('pdf');
-                            setConvertStatusMsg(null);
+                          isNativeDialogOpenRef.current = true;
+                          try {
+                            const picked = await window.kiboAPI.pickFileForConvert();
+                            if (picked?.success && picked.filePath) {
+                              const ext = (picked.ext || '').toLowerCase();
+                              setConvertSourceFile({
+                                filePath: picked.filePath,
+                                fileName: picked.fileName || picked.filePath.split(/[\\/]/).pop() || 'File',
+                                ext,
+                                sizeBytes: picked.sizeBytes,
+                              });
+                              if (ext === 'pdf') setConvertTargetFormat('docx');
+                              else if (ext === 'docx' || ext === 'doc') setConvertTargetFormat('pdf');
+                              else if (ext === 'csv') setConvertTargetFormat('json');
+                              else if (ext === 'json') setConvertTargetFormat('csv');
+                              else if (['png', 'jpg', 'jpeg', 'webp'].includes(ext)) setConvertTargetFormat('pdf');
+                              setConvertStatusMsg(null);
+                            }
+                          } finally {
+                            setTimeout(() => {
+                              isNativeDialogOpenRef.current = false;
+                            }, 350);
                           }
                         }}
                         style={{
@@ -6561,11 +6827,11 @@ export const KiboApp: React.FC = () => {
                             width: '100%',
                             padding: '10px 14px',
                             borderRadius: '10px',
-                            border: 'none',
+                            border: convertSourceFile ? '1px solid rgba(56, 189, 248, 0.45)' : '1px solid rgba(255, 255, 255, 0.06)',
                             background: convertSourceFile
-                              ? 'linear-gradient(135deg, #38BDF8 0%, #2563EB 100%)'
-                              : 'rgba(255, 255, 255, 0.07)',
-                            color: convertSourceFile ? '#FFFFFF' : '#71717A',
+                              ? '#38BDF8'
+                              : 'rgba(255, 255, 255, 0.06)',
+                            color: convertSourceFile ? '#09111E' : '#71717A',
                             fontWeight: 800,
                             fontSize: '12.5px',
                             cursor: convertSourceFile ? 'pointer' : 'not-allowed',
@@ -6575,7 +6841,7 @@ export const KiboApp: React.FC = () => {
                             gap: '8px',
                           }}
                         >
-                          <SvgIcon name="convert" size={14} color={convertSourceFile ? '#FFFFFF' : '#71717A'} />
+                          <SvgIcon name="convert" size={14} color={convertSourceFile ? '#09111E' : '#71717A'} />
                           <span>
                             {isConvertingFile
                               ? 'Converting...'
@@ -7089,28 +7355,66 @@ export const KiboApp: React.FC = () => {
                       </div>
 
                       <div style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          ref={skillFileInputRef}
+                          type="file"
+                          accept=".md,.markdown,.txt"
+                          style={{ display: 'none' }}
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (!f) return;
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                              const content = String(reader.result || '');
+                              if (content.trim()) {
+                                const baseName = f.name.replace(/\.(md|markdown|txt)$/i, '');
+                                const newSkill: KiboSkillItem = {
+                                  id: `skill_${Date.now()}`,
+                                  name: `${baseName} (SKILL.md)`,
+                                  description: 'Imported custom SKILL.md instruction pack.',
+                                  content,
+                                  enabled: true,
+                                };
+                                updateSkillsList((prev) => [newSkill, ...prev]);
+                                soundFX.playTaskSuccess();
+                              }
+                            };
+                            reader.readAsText(f);
+                            e.target.value = '';
+                          }}
+                        />
                         <button
                           type="button"
                           onClick={async () => {
-                            if (!window.kiboAPI?.pickSkillMdFile) return;
-                            const picked = await window.kiboAPI.pickSkillMdFile();
-                            if (picked?.success && picked.content) {
-                              const newSkill: KiboSkillItem = {
-                                id: `skill_${Date.now()}`,
-                                name: `${picked.name || 'custom-skill'} (SKILL.md)`,
-                                description: picked.description || 'Imported custom SKILL.md instruction pack.',
-                                content: picked.content,
-                                enabled: true,
-                              };
-                              updateSkillsList((prev) => [newSkill, ...prev]);
-                              soundFX.playTaskSuccess();
+                            if (window.kiboAPI?.pickSkillMdFile) {
+                              isNativeDialogOpenRef.current = true;
+                              try {
+                                const picked = await window.kiboAPI.pickSkillMdFile();
+                                if (picked?.success && picked.content) {
+                                  const newSkill: KiboSkillItem = {
+                                    id: `skill_${Date.now()}`,
+                                    name: `${picked.name || 'custom-skill'} (SKILL.md)`,
+                                    description: picked.description || 'Imported custom SKILL.md instruction pack.',
+                                    content: picked.content,
+                                    enabled: true,
+                                  };
+                                  updateSkillsList((prev) => [newSkill, ...prev]);
+                                  soundFX.playTaskSuccess();
+                                }
+                              } finally {
+                                setTimeout(() => {
+                                  isNativeDialogOpenRef.current = false;
+                                }, 350);
+                              }
+                            } else {
+                              skillFileInputRef.current?.click();
                             }
                           }}
                           style={{
                             padding: '6px 12px',
                             borderRadius: '9px',
-                            background: 'rgba(56, 189, 248, 0.15)',
-                            border: '1px solid rgba(56, 189, 248, 0.35)',
+                            background: 'rgba(56, 189, 248, 0.14)',
+                            border: '1px solid rgba(56, 189, 248, 0.32)',
                             color: '#BAE6FD',
                             fontSize: '11.5px',
                             fontWeight: 700,
@@ -7313,7 +7617,7 @@ export const KiboApp: React.FC = () => {
                 )}
 
                 {/* =========================================================
-                    TAB 5: MEDIA (Enhanced Music Player + Synthwave Focus Stream)
+                    TAB 5: MEDIA (Full-Notch Album Cover Glass Gradient + Single-Line Volume)
                     ========================================================= */}
                 {activeTab === 'Media' && (
                   <div
@@ -7321,84 +7625,90 @@ export const KiboApp: React.FC = () => {
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'space-between',
-                      gap: '12px',
+                      gap: '14px',
                       flex: 1,
                       minHeight: 0,
                       width: '100%',
+                      padding: '8px 10px 6px',
+                      boxSizing: 'border-box',
                     }}
                   >
-                    <div
-                      className="companion-media-card-v2"
-                      style={{
-                        flex: 1,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                        padding: '18px 20px',
-                        background: `linear-gradient(135deg, rgba(${mediaArtPalette.rgb}, 0.34) 0%, rgba(${mediaArtPalette.rgb}, 0.10) 55%, #141519 100%)`,
-                        border: `1px solid rgba(${mediaArtPalette.rgb}, 0.28)`,
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '11px', fontWeight: 800, color: '#BAE6FD', letterSpacing: '0.04em' }}>
-                          {hasMediaSession ? (osMedia.source || 'SYSTEM MEDIA SESSION').toUpperCase() : isPlayingLofi ? 'KIBO SYNTH STREAM' : 'MEDIA PLAYER'}
-                        </span>
-                        <div className="mini-media-eq-bars">
-                          {[0.35, 0.7, 1.0, 0.65, 0.85, 0.5].map((h, i) => (
-                            <span
-                              key={i}
-                              className={`mini-eq-bar ${!(isPlayingMedia || isPlayingLofi) ? 'is-paused' : ''}`}
-                              style={{
-                                height: isPlayingMedia || isPlayingLofi ? `${Math.round(h * 14)}px` : '4px',
-                                background: mediaArtPalette.accent,
-                              }}
-                            />
-                          ))}
+                    {/* Top Row: Source Label + Live Equalizer */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          fontWeight: 800,
+                          color: mediaArtPalette.accent || '#BAE6FD',
+                          letterSpacing: '0.06em',
+                        }}
+                      >
+                        {hasMediaSession
+                          ? (osMedia.source || 'SPOTIFY').toUpperCase()
+                          : isPlayingLofi
+                          ? 'KIBO SYNTH STREAM'
+                          : 'MEDIA PLAYER'}
+                      </span>
+                      <div className="mini-media-eq-bars">
+                        {[0.35, 0.7, 1.0, 0.65, 0.85, 0.5].map((h, i) => (
+                          <span
+                            key={i}
+                            className={`mini-eq-bar ${!(isPlayingMedia || isPlayingLofi) ? 'is-paused' : ''}`}
+                            style={{
+                              height: isPlayingMedia || isPlayingLofi ? `${Math.round(h * 14)}px` : '4px',
+                              background: mediaArtPalette.accent,
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Middle Row: Album Art + Track Metadata + Transport Controls */}
+                    <div className="media-middle-row" style={{ gap: '18px', margin: '4px 0' }}>
+                      <div
+                        className="companion-album-art"
+                        style={{
+                          width: '84px',
+                          height: '84px',
+                          borderRadius: '16px',
+                          boxShadow: `0 12px 28px rgba(0, 0, 0, 0.45), 0 0 24px rgba(${mediaArtPalette.rgb}, 0.24)`,
+                          ...(activeMediaArtwork
+                            ? {
+                                backgroundImage: `url("${activeMediaArtwork}")`,
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center',
+                              }
+                            : {
+                                background: mediaArtPalette.gradient,
+                              }),
+                        }}
+                      />
+
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '5px', minWidth: 0, textAlign: 'left' }}>
+                        <div className="companion-truncate" style={{ fontSize: '18.5px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.015em' }}>
+                          {hasMediaSession ? activeMediaTitle : isPlayingLofi ? 'Nightride Chillsynth Radio' : 'No Track Playing'}
+                        </div>
+                        <div className="companion-truncate" style={{ fontSize: '13px', fontWeight: 500, color: 'rgba(255, 255, 255, 0.72)' }}>
+                          {hasMediaSession ? activeMediaArtist : isPlayingLofi ? 'Ambient Focus Stream' : 'Play music in Spotify, YouTube, or start Focus Stream'}
                         </div>
                       </div>
 
-                      <div className="media-middle-row" style={{ gap: '16px', margin: '8px 0' }}>
-                        <div
-                          className="companion-album-art"
-                          style={{
-                            width: '72px',
-                            height: '72px',
-                            borderRadius: '14px',
-                            ...(activeMediaArtwork
-                              ? {
-                                  backgroundImage: `url("${activeMediaArtwork}")`,
-                                  backgroundSize: 'cover',
-                                  backgroundPosition: 'center',
-                                }
-                              : {
-                                  background: mediaArtPalette.gradient,
-                                }),
-                          }}
-                        />
-
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, textAlign: 'left' }}>
-                          <div className="companion-truncate" style={{ fontSize: '17px', fontWeight: 800, color: '#ffffff' }}>
-                            {hasMediaSession ? activeMediaTitle : isPlayingLofi ? 'Nightride Chillsynth Radio' : 'No Track Playing'}
-                          </div>
-                          <div className="companion-truncate" style={{ fontSize: '12.5px', color: '#D4D4D8' }}>
-                            {hasMediaSession ? activeMediaArtist : isPlayingLofi ? 'Ambient Focus Stream' : 'Play music in Spotify, YouTube, or start Focus Stream'}
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <button onClick={handleMediaPrev} className="media-circle-btn">
-                            <SvgIcon name="prev" size={15} color="#D4D4D8" />
-                          </button>
-                          <button onClick={toggleMediaPlayback} className="media-ivory-play-btn" style={{ width: '44px', height: '44px' }}>
-                            <SvgIcon name={isPlayingMedia || isPlayingLofi ? 'pause' : 'play'} size={18} color="#1C1917" />
-                          </button>
-                          <button onClick={handleMediaNext} className="media-circle-btn">
-                            <SvgIcon name="next" size={15} color="#D4D4D8" />
-                          </button>
-                        </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <button onClick={handleMediaPrev} className="media-circle-btn">
+                          <SvgIcon name="prev" size={15} color="#E4E4E7" />
+                        </button>
+                        <button onClick={toggleMediaPlayback} className="media-ivory-play-btn" style={{ width: '46px', height: '46px' }}>
+                          <SvgIcon name={isPlayingMedia || isPlayingLofi ? 'pause' : 'play'} size={18} color="#1C1917" />
+                        </button>
+                        <button onClick={handleMediaNext} className="media-circle-btn">
+                          <SvgIcon name="next" size={15} color="#E4E4E7" />
+                        </button>
                       </div>
+                    </div>
 
-                      <div className="media-bottom-scrub">
+                    {/* Bottom Row: Track Scrubber + Inline Single-Line Smooth Volume Control */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '18px', width: '100%' }}>
+                      <div className="media-bottom-scrub" style={{ flex: 1, margin: 0 }}>
                         <span className="companion-mono-tiny">{formatTime(mediaProgress)}</span>
                         <div
                           ref={controlsScrubRef}
@@ -7429,45 +7739,94 @@ export const KiboApp: React.FC = () => {
                         </div>
                         <span className="companion-mono-tiny">{formatTime(totalMediaDuration)}</span>
                       </div>
-                    </div>
 
-                    {/* Volume Bar */}
-                    <div
-                      ref={volumeTrackRef}
-                      className="companion-volume-pill-track"
-                      onPointerDown={(e) => {
-                        if (leaveCollapseTimerRef.current) {
-                          clearTimeout(leaveCollapseTimerRef.current);
-                        }
-                        isDraggingVolumeRef.current = true;
-                        setIsDraggingVolume(true);
-                        updateVolumeFromClientX(e.clientX);
-                      }}
-                      onWheel={(e) => {
-                        const delta = e.deltaY < 0 ? 4 : -4;
-                        applyUserVolumeChange(volumeLevel + delta);
-                      }}
-                    >
+                      {/* Single-line inline smooth volume adjuster */}
                       <div
-                        className="companion-volume-pill-fill"
                         style={{
-                          width: `${isMuted ? 8 : Math.max(8, volumeLevel)}%`,
-                          transition: isDraggingVolume ? 'none' : 'width 0.12s ease-out',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          width: '148px',
+                          flexShrink: 0,
+                        }}
+                        onWheel={(e) => {
+                          const delta = e.deltaY < 0 ? 4 : -4;
+                          applyUserVolumeChange(volumeLevel + delta);
                         }}
                       >
                         <button
+                          type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             const nextMute = !isMuted;
                             setIsMuted(nextMute);
                             window.kiboAPI?.setMute?.(nextMute);
                           }}
-                          className="volume-inner-speaker-btn"
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            padding: '2px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            color: isMuted ? '#71717A' : '#E4E4E7',
+                          }}
+                          title={isMuted ? 'Unmute' : `Volume ${volumeLevel}%`}
                         >
-                          <SvgIcon name={isMuted ? 'mute' : 'speaker'} size={14} />
+                          <SvgIcon name={isMuted ? 'mute' : 'speaker'} size={14} color={isMuted ? '#71717A' : '#E4E4E7'} />
                         </button>
+
+                        <div
+                          ref={volumeTrackRef}
+                          onPointerDown={(e) => {
+                            e.stopPropagation();
+                            if (leaveCollapseTimerRef.current) {
+                              clearTimeout(leaveCollapseTimerRef.current);
+                            }
+                            isDraggingVolumeRef.current = true;
+                            setIsDraggingVolume(true);
+                            updateVolumeFromClientX(e.clientX);
+                          }}
+                          style={{
+                            flex: 1,
+                            height: '4px',
+                            borderRadius: '999px',
+                            background: 'rgba(255, 255, 255, 0.16)',
+                            position: 'relative',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: `${isMuted ? 0 : Math.max(0, Math.min(100, volumeLevel))}%`,
+                              height: '100%',
+                              borderRadius: '999px',
+                              background: mediaArtPalette.accent || '#FFFFFF',
+                              position: 'relative',
+                              transition: isDraggingVolume ? 'none' : 'width 0.14s cubic-bezier(0.16, 1, 0.3, 1)',
+                            }}
+                          >
+                            <div
+                              style={{
+                                position: 'absolute',
+                                right: '-5px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                width: '10px',
+                                height: '10px',
+                                borderRadius: '999px',
+                                background: '#FFFFFF',
+                                boxShadow: '0 1px 4px rgba(0,0,0,0.45)',
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        <span className="companion-mono-tiny" style={{ minWidth: '28px', textAlign: 'right' }}>
+                          {isMuted ? '0%' : `${volumeLevel}%`}
+                        </span>
                       </div>
-                      <span className="volume-right-pct">{isMuted ? '0%' : `${volumeLevel}%`}</span>
                     </div>
                   </div>
                 )}
@@ -8852,6 +9211,35 @@ export const KiboApp: React.FC = () => {
                               </div>
                               <span style={{ fontSize: '12px', color: '#10B981', fontWeight: 600 }}>Active</span>
                             </div>
+
+                            <div className="kibo-settings-row">
+                              <div>
+                                <div className="kibo-settings-row-label">Your Name (Persistent Memory)</div>
+                                <div className="kibo-settings-row-desc">Kibo remembers your name and preferences across restarts</div>
+                              </div>
+                              <input
+                                type="text"
+                                value={userName}
+                                placeholder="e.g. Raahim"
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setUserName(val);
+                                  savePersistentUserMemory({ userName: val });
+                                }}
+                                style={{
+                                  width: '150px',
+                                  height: '32px',
+                                  boxSizing: 'border-box',
+                                  background: '#141519',
+                                  border: '1px solid rgba(255,255,255,0.12)',
+                                  borderRadius: 8,
+                                  padding: '0 10px',
+                                  color: '#F8FAFC',
+                                  fontSize: 12.5,
+                                  outline: 'none',
+                                }}
+                              />
+                            </div>
                           </div>
 
                           <div className="kibo-settings-card">
@@ -9088,11 +9476,11 @@ export const KiboApp: React.FC = () => {
 
                           <div className="kibo-settings-card">
                             <div className="kibo-settings-row">
-                              <div>
+                              <div style={{ flex: 1, minWidth: 0, paddingRight: 12 }}>
                                 <div className="kibo-settings-row-label">Google Gemini Neural Voice</div>
                                 <div className="kibo-settings-row-desc">Unlimited-quota Gemini Live & TTS neural voice used when Kibo speaks</div>
                               </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                                 <select
                                   value={equippedCards.Voice || 'voice_charon'}
                                   onChange={(e) => {
@@ -9101,12 +9489,14 @@ export const KiboApp: React.FC = () => {
                                     localStorage.setItem('kibo_loadout_voice', val);
                                   }}
                                   style={{
+                                    height: '34px',
+                                    boxSizing: 'border-box',
                                     background: '#141519',
                                     color: '#F8FAFC',
                                     border: '1px solid rgba(255,255,255,0.12)',
                                     borderRadius: 8,
-                                    padding: '6px 12px',
-                                    fontSize: 12.5,
+                                    padding: '0 10px',
+                                    fontSize: 12,
                                     outline: 'none',
                                   }}
                                 >
@@ -9122,13 +9512,20 @@ export const KiboApp: React.FC = () => {
                                   }}
                                   className="config-pill-btn"
                                   style={{
-                                    background: 'rgba(56, 189, 248, 0.14)',
+                                    height: '34px',
+                                    boxSizing: 'border-box',
+                                    background: '#18191E',
                                     color: '#38BDF8',
-                                    border: '1px solid rgba(56, 189, 248, 0.3)',
-                                    padding: '6px 12px',
+                                    border: '1px solid rgba(56, 189, 248, 0.32)',
+                                    padding: '0 12px',
                                     borderRadius: 8,
                                     fontSize: 12,
                                     fontWeight: 700,
+                                    whiteSpace: 'nowrap',
+                                    flexShrink: 0,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
                                     cursor: 'pointer',
                                   }}
                                 >
@@ -9283,7 +9680,7 @@ export const KiboApp: React.FC = () => {
                                       width: `${isTestingMic ? Math.max(4, micTestLevel) : 0}%`,
                                       height: '100%',
                                       borderRadius: 999,
-                                      background: 'linear-gradient(90deg, #38BDF8 0%, #34D399 70%, #FBBF24 100%)',
+                                      background: '#38BDF8',
                                       transition: 'width 0.08s ease-out',
                                     }}
                                   />
@@ -9304,98 +9701,98 @@ export const KiboApp: React.FC = () => {
                             <p className="kibo-settings-header-sub">Connect Kibo to Chrome, workspace apps, and custom APIs like Meta Ads or Linear.</p>
                           </div>
 
-                          {/* Chrome Extension Drag-and-Drop Walkthrough Card */}
-                          <div className="kibo-settings-card" style={{ border: '1px solid rgba(56, 189, 248, 0.25)', background: 'linear-gradient(180deg, rgba(56, 189, 248, 0.06) 0%, rgba(20, 21, 25, 0.85) 100%)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <div style={{ width: 32, height: 32, borderRadius: 9, background: 'rgba(56, 189, 248, 0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                  <SvgIcon name="chrome" size={17} color="#38BDF8" />
-                                </div>
-                                <div>
-                                  <div className="kibo-settings-row-label">Kibo Chrome Companion Extension (Manifest V3)</div>
-                                  <div className="kibo-settings-row-desc">Lets Kibo read active tab context, DOM elements, and automate browser workflows</div>
-                                </div>
-                              </div>
-                              <span style={{ fontSize: 11, fontWeight: 700, color: '#38BDF8', background: 'rgba(56, 189, 248, 0.12)', padding: '3px 9px', borderRadius: 999 }}>
-                                3-Step Setup
-                              </span>
-                            </div>
+                          {/* Native App Connections + Clean Chrome Companion Row */}
+                          <div className="kibo-settings-card">
+                            <div className="kibo-settings-row-label" style={{ marginBottom: 6 }}>Workspace App Connections</div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 6 }}>
-                              <div style={{ background: '#141519', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '10px' }}>
-                                <div style={{ fontSize: 10.5, fontWeight: 800, color: '#38BDF8', marginBottom: 4 }}>STEP 1 · EXPORT FILES</div>
-                                <div style={{ fontSize: 11, color: '#94A3B8', lineHeight: 1.4, marginBottom: 8 }}>
-                                  Generate the unpacked <code style={{ color: '#E2E8F0' }}>Kibo-Chrome-Extension</code> folder on your Desktop.
+                            {/* Google Chrome Companion Row (Matching hierarchy of other integrations) */}
+                            <div className="kibo-settings-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: chromeExtStatus ? 8 : 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                  <div style={{ width: 28, height: 28, borderRadius: 7, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <SvgIcon name="chrome" size={14} color="#38BDF8" />
+                                  </div>
+                                  <div>
+                                    <div className="kibo-settings-row-label">Google Chrome Extension</div>
+                                    <div className="kibo-settings-row-desc">Read active tab context and automate browser workflows</div>
+                                  </div>
                                 </div>
                                 <button
                                   type="button"
                                   onClick={async () => {
                                     const res = await window.kiboAPI?.exportChromeExtension?.();
+                                    window.kiboAPI?.openChromeExtensionsPage?.();
                                     if (res?.success && res.extDir) {
-                                      setChromeExtStatus(`Exported to ${res.extDir}`);
+                                      setChromeExtStatus(res.extDir);
                                       soundFX.playSuccessChime();
+                                    } else {
+                                      setChromeExtStatus('Kibo-Chrome-Extension');
                                     }
                                   }}
                                   style={{
-                                    width: '100%',
-                                    background: '#38BDF8',
-                                    color: '#0A0E17',
-                                    border: 'none',
-                                    borderRadius: 7,
-                                    padding: '6px 10px',
-                                    fontSize: 11.5,
-                                    fontWeight: 700,
-                                    cursor: 'pointer',
-                                  }}
-                                >
-                                  Export Extension Folder
-                                </button>
-                              </div>
-
-                              <div style={{ background: '#141519', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '10px' }}>
-                                <div style={{ fontSize: 10.5, fontWeight: 800, color: '#38BDF8', marginBottom: 4 }}>STEP 2 · DEV MODE</div>
-                                <div style={{ fontSize: 11, color: '#94A3B8', lineHeight: 1.4, marginBottom: 8 }}>
-                                  Open <code style={{ color: '#E2E8F0' }}>chrome://extensions</code> and toggle on <strong>Developer mode</strong> in the top-right.
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    window.kiboAPI?.openChromeExtensionsPage?.();
-                                  }}
-                                  style={{
-                                    width: '100%',
+                                    height: '32px',
                                     background: '#1E293B',
                                     color: '#F8FAFC',
                                     border: '1px solid rgba(255,255,255,0.12)',
-                                    borderRadius: 7,
-                                    padding: '6px 10px',
+                                    borderRadius: 8,
+                                    padding: '0 12px',
                                     fontSize: 11.5,
-                                    fontWeight: 600,
+                                    fontWeight: 700,
+                                    whiteSpace: 'nowrap',
+                                    flexShrink: 0,
                                     cursor: 'pointer',
                                   }}
                                 >
-                                  Open Chrome Extensions
+                                  {chromeExtStatus ? 'Re-open Extensions' : 'Install Extension'}
                                 </button>
                               </div>
 
-                              <div style={{ background: '#141519', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '10px' }}>
-                                <div style={{ fontSize: 10.5, fontWeight: 800, color: '#34D399', marginBottom: 4 }}>STEP 3 · DRAG & DROP</div>
-                                <div style={{ fontSize: 11, color: '#94A3B8', lineHeight: 1.4 }}>
-                                  Drag the exported <code style={{ color: '#E2E8F0' }}>Kibo-Chrome-Extension</code> folder from Explorer and drop it directly into Chrome.
+                              {chromeExtStatus && (
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: 10,
+                                    padding: '8px 10px',
+                                    borderRadius: 8,
+                                    background: '#141519',
+                                    border: '1px solid rgba(255,255,255,0.08)',
+                                  }}
+                                >
+                                  <span style={{ fontSize: 11, color: '#94A3B8' }}>
+                                    Enable <strong>Developer mode</strong> in <code style={{ color: '#E2E8F0' }}>chrome://extensions</code>, then drag this chip or the highlighted folder into Chrome:
+                                  </span>
+                                  <div
+                                    draggable
+                                    onDragStart={(e) => {
+                                      e.preventDefault();
+                                      window.kiboAPI?.startExtensionDrag?.();
+                                    }}
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: 6,
+                                      padding: '5px 10px',
+                                      borderRadius: 7,
+                                      background: '#1E293B',
+                                      border: '1px dashed rgba(56, 189, 248, 0.5)',
+                                      color: '#BAE6FD',
+                                      fontSize: 11,
+                                      fontWeight: 700,
+                                      cursor: 'grab',
+                                      whiteSpace: 'nowrap',
+                                      flexShrink: 0,
+                                    }}
+                                    title="Drag this directly into chrome://extensions"
+                                  >
+                                    <SvgIcon name="folder" size={12} color="#38BDF8" />
+                                    <span>Drag Kibo Extension</span>
+                                  </div>
                                 </div>
-                              </div>
+                              )}
                             </div>
 
-                            {chromeExtStatus && (
-                              <div style={{ marginTop: 8, fontSize: 11, color: '#34D399', fontWeight: 600 }}>
-                                {chromeExtStatus} — Folder opened in Windows Explorer ready to drag & drop!
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Native App Connections */}
-                          <div className="kibo-settings-card">
-                            <div className="kibo-settings-row-label" style={{ marginBottom: 6 }}>Workspace App Connections</div>
                             {Object.values(APP_INTEGRATIONS).map((app) => {
                               const isConn = multitaskAgent.isAppConnected(app.id);
                               return (
