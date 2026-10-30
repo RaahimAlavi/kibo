@@ -652,63 +652,99 @@ const SvgIcon: React.FC<{ name: string; size?: number; color?: string }> = ({
 const DEFAULT_WALLPAPERS: WallpaperTheme[] = [
   {
     id: 1,
-    title: 'Cyber Horizon',
-    url: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1920&q=85',
-    thumb: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80',
-    accent: '#5CB8FF',
-    accentSecondary: '#38BDF8',
-    pillBg: 'rgba(92, 184, 255, 0.2)',
-    rowBg: 'rgba(92, 184, 255, 0.14)',
-    darkText: '#09131C',
-    darkSubText: 'rgba(9, 19, 28, 0.72)',
+    title: 'Cyberpunk Neon',
+    url: 'https://images.unsplash.com/photo-1508739773434-c26b3d09e071?auto=format&fit=crop&w=2560&q=90',
+    thumb: 'https://images.unsplash.com/photo-1508739773434-c26b3d09e071?auto=format&fit=crop&w=600&q=80',
+    accent: '#38BDF8',
+    accentSecondary: '#818CF8',
+    pillBg: 'rgba(56, 189, 248, 0.22)',
+    rowBg: 'rgba(56, 189, 248, 0.14)',
+    darkText: '#06131D',
+    darkSubText: 'rgba(6, 19, 29, 0.72)',
   },
   {
     id: 2,
-    title: 'Solar Coast',
-    url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1920&q=85',
-    thumb: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80',
-    accent: '#F27D72',
-    accentSecondary: '#F59E0B',
-    pillBg: 'rgba(242, 125, 114, 0.22)',
-    rowBg: 'rgba(242, 125, 114, 0.15)',
-    darkText: '#1F0D0B',
-    darkSubText: 'rgba(31, 13, 11, 0.72)',
+    title: 'Cosmic Nebula',
+    url: 'https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=2560&q=90',
+    thumb: 'https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=600&q=80',
+    accent: '#C084FC',
+    accentSecondary: '#F472B6',
+    pillBg: 'rgba(192, 132, 252, 0.22)',
+    rowBg: 'rgba(192, 132, 252, 0.14)',
+    darkText: '#180B24',
+    darkSubText: 'rgba(24, 11, 36, 0.72)',
   },
   {
     id: 3,
-    title: 'Amber Valley',
-    url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=85',
-    thumb: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80',
-    accent: '#F68C58',
-    accentSecondary: '#EE9B27',
-    pillBg: 'rgba(246, 140, 88, 0.22)',
-    rowBg: 'rgba(246, 140, 88, 0.16)',
-    darkText: '#1E110A',
-    darkSubText: 'rgba(30, 17, 10, 0.72)',
+    title: 'Aurora Borealis',
+    url: 'https://images.unsplash.com/photo-1531366936337-7c912a4589a7?auto=format&fit=crop&w=2560&q=90',
+    thumb: 'https://images.unsplash.com/photo-1531366936337-7c912a4589a7?auto=format&fit=crop&w=600&q=80',
+    accent: '#34D399',
+    accentSecondary: '#38BDF8',
+    pillBg: 'rgba(52, 211, 153, 0.22)',
+    rowBg: 'rgba(52, 211, 153, 0.14)',
+    darkText: '#061A13',
+    darkSubText: 'rgba(6, 26, 19, 0.72)',
   },
   {
     id: 4,
-    title: 'Alpine Monolith',
-    url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1920&q=85',
-    thumb: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=600&q=80',
-    accent: '#D9AD5B',
-    accentSecondary: '#EE9B27',
-    pillBg: 'rgba(217, 173, 91, 0.22)',
-    rowBg: 'rgba(217, 173, 91, 0.16)',
-    darkText: '#1C1508',
-    darkSubText: 'rgba(28, 21, 8, 0.72)',
+    title: 'Radiant Sunset',
+    url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=2560&q=90',
+    thumb: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80',
+    accent: '#FB923C',
+    accentSecondary: '#F43F5E',
+    pillBg: 'rgba(251, 146, 60, 0.22)',
+    rowBg: 'rgba(251, 146, 60, 0.14)',
+    darkText: '#220D04',
+    darkSubText: 'rgba(34, 13, 4, 0.72)',
   },
   {
     id: 5,
-    title: 'Nordic Mist',
-    url: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1920&q=85',
-    thumb: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=600&q=80',
-    accent: '#68B5F8',
-    accentSecondary: '#38BDF8',
-    pillBg: 'rgba(104, 181, 248, 0.22)',
-    rowBg: 'rgba(104, 181, 248, 0.15)',
-    darkText: '#0A1520',
-    darkSubText: 'rgba(10, 21, 32, 0.72)',
+    title: 'Tokyo Twilight',
+    url: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=2560&q=90',
+    thumb: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=600&q=80',
+    accent: '#E879F9',
+    accentSecondary: '#60A5FA',
+    pillBg: 'rgba(232, 121, 249, 0.22)',
+    rowBg: 'rgba(232, 121, 249, 0.14)',
+    darkText: '#1C0B20',
+    darkSubText: 'rgba(28, 11, 32, 0.72)',
+  },
+  {
+    id: 6,
+    title: 'Emerald Peak',
+    url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2560&q=90',
+    thumb: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=600&q=80',
+    accent: '#4ADE80',
+    accentSecondary: '#2DD4BF',
+    pillBg: 'rgba(74, 222, 128, 0.22)',
+    rowBg: 'rgba(74, 222, 128, 0.14)',
+    darkText: '#06170C',
+    darkSubText: 'rgba(6, 23, 12, 0.72)',
+  },
+  {
+    id: 7,
+    title: 'Cherry Horizon',
+    url: 'https://images.unsplash.com/photo-1522383225653-ed111181a951?auto=format&fit=crop&w=2560&q=90',
+    thumb: 'https://images.unsplash.com/photo-1522383225653-ed111181a951?auto=format&fit=crop&w=600&q=80',
+    accent: '#F472B6',
+    accentSecondary: '#FB7185',
+    pillBg: 'rgba(244, 114, 182, 0.22)',
+    rowBg: 'rgba(244, 114, 182, 0.14)',
+    darkText: '#210815',
+    darkSubText: 'rgba(33, 8, 21, 0.72)',
+  },
+  {
+    id: 8,
+    title: 'Autumn Glade',
+    url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=2560&q=90',
+    thumb: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80',
+    accent: '#F59E0B',
+    accentSecondary: '#EF4444',
+    pillBg: 'rgba(245, 158, 11, 0.22)',
+    rowBg: 'rgba(245, 158, 11, 0.14)',
+    darkText: '#201303',
+    darkSubText: 'rgba(32, 19, 3, 0.72)',
   },
 ];
 
@@ -951,17 +987,26 @@ export const KiboApp: React.FC = () => {
   const [settingsCategory, setSettingsCategory] = useState<'Account' | 'General' | 'Core' | 'Voice' | 'Shortcuts' | 'System'>('Account');
   const [updateCheckStatus, setUpdateCheckStatus] = useState<string | null>(null);
   const [isBooting, setIsBooting] = useState<boolean>(true);
+  const [bootPhase, setBootPhase] = useState<'descending' | 'morphing' | 'ready'>('descending');
 
-  // Elegant startup sequence: notch descends smoothly from bezel, eyes awaken, soft harmonic tone
+  // Elegant startup sequence: notch descends smoothly from bezel as pure soul, chimes, then fluidly morphs
   useEffect(() => {
-    const bootTimer = setTimeout(() => {
+    const morphTimer = setTimeout(() => {
+      setBootPhase('morphing');
+    }, 700);
+
+    const readyTimer = setTimeout(() => {
+      setBootPhase('ready');
       setIsBooting(false);
-    }, 1000);
+    }, 1250);
+
     const chimeTimer = setTimeout(() => {
       soundFX.playSoulPulse();
-    }, 450);
+    }, 380);
+
     return () => {
-      clearTimeout(bootTimer);
+      clearTimeout(morphTimer);
+      clearTimeout(readyTimer);
       clearTimeout(chimeTimer);
     };
   }, []);
@@ -1213,30 +1258,44 @@ export const KiboApp: React.FC = () => {
       setAskNotchPhase('idle');
       setSoulMode('TALKING');
       setKiboReply({ bold: boldHeader || text, rest: boldHeader ? text : undefined });
+
+      // Guarantee lasso lock is released so user can multitask freely across apps
+      setLassoActive(false);
+      window.kiboAPI?.setLassoActive?.(false);
+
       if (replyDismissTimerRef.current) {
         clearTimeout(replyDismissTimerRef.current);
         replyDismissTimerRef.current = null;
       }
 
-      speakAsKibo(text, () => {
-        // Lingering window: keep the answer visible for 4.0s after Kibo finishes speaking
+      let speechFinished = false;
+
+      const scheduleDismiss = (delayMs = 4500) => {
         if (replyDismissTimerRef.current) clearTimeout(replyDismissTimerRef.current);
         replyDismissTimerRef.current = setTimeout(() => {
-          setSoulMode('LISTENING');
-          setKiboReply(null);
-          setUserBubbleText(null);
-        }, 4000);
+          if (!voiceEngine.isSpeaking()) {
+            setSoulMode('LISTENING');
+            setKiboReply(null);
+            setUserBubbleText(null);
+          } else {
+            scheduleDismiss(2000);
+          }
+        }, delayMs);
+      };
+
+      speakAsKibo(text, () => {
+        speechFinished = true;
+        scheduleDismiss(4500);
       });
 
-      // Long safety fallback (minimum 25s) so the bubble never vanishes while Kibo is talking
-      const safetyFallbackMs = Math.max(25000, text.length * 150);
-      replyDismissTimerRef.current = setTimeout(() => {
-        if (!voiceEngine.isSpeaking()) {
-          setSoulMode('LISTENING');
-          setKiboReply(null);
-          setUserBubbleText(null);
+      // Generous fallback in case speech doesn't fire onEnd
+      const words = text.split(/\s+/).length;
+      const expectedDurationMs = Math.max(12000, words * 380 + 6000);
+      setTimeout(() => {
+        if (!speechFinished && !voiceEngine.isSpeaking()) {
+          scheduleDismiss(3000);
         }
-      }, safetyFallbackMs);
+      }, expectedDurationMs);
     },
     [speakAsKibo]
   );
@@ -1902,9 +1961,9 @@ export const KiboApp: React.FC = () => {
 
   // Today View, Focus Timer Notch Countdown & Alarm Celebration State
   const [now, setNow] = useState(() => new Date());
-  const [timerSeconds, setTimerSeconds] = useState(300);
-  const [timerTotalSeconds, setTimerTotalSeconds] = useState(300);
-  const [timerPreset, setTimerPreset] = useState<'1m' | '5m' | '10m' | '15m' | '20m'>('5m');
+  const [timerSeconds, setTimerSeconds] = useState(1500);
+  const [timerTotalSeconds, setTimerTotalSeconds] = useState(1500);
+  const [timerPreset, setTimerPreset] = useState<'1m' | '5m' | '10m' | '15m' | '20m' | '25m' | '45m'>('25m');
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [timerAlarmRinging, setTimerAlarmRinging] = useState(false);
   const alarmIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -2597,14 +2656,16 @@ export const KiboApp: React.FC = () => {
       setActiveTab('Settings');
       setShowMediaNotch(false);
       setShowCompanionWindow(false);
-      if (tab === 'soul') {
+      if (tab === 'soul' || tab === 'Core') {
         setSettingsCategory('Core');
-      } else if (tab === 'shortcuts') {
+      } else if (tab === 'shortcuts' || tab === 'Shortcuts') {
         setSettingsCategory('Shortcuts');
-      } else if (openKeyModal || tab === 'connect') {
-        setSettingsCategory('Account');
-      } else {
+      } else if (tab === 'general' || tab === 'General') {
         setSettingsCategory('General');
+      } else if (tab === 'system' || tab === 'System') {
+        setSettingsCategory('System');
+      } else {
+        setSettingsCategory('Account');
       }
     },
     []
@@ -2734,7 +2795,7 @@ export const KiboApp: React.FC = () => {
   const showProactiveBanner = !isExpanded && !showCompanionWindow && Boolean(detectedAppId);
   const isCompactAskBar = !showProactiveBanner && (askNotchPhase === 'speaking' || askNotchPhase === 'thinking');
   const isTimerNotchActive = !isExpanded && !showProactiveBanner && !showMediaNotch && !isCompactAskBar && (isTimerRunning || timerAlarmRinging);
-  const isMiniMediaPill = !isExpanded && !showProactiveBanner && !showMediaNotch && !isCompactAskBar && !isTimerNotchActive && !notchApiAlert && hasMediaSession;
+  const isMiniMediaPill = bootPhase !== 'descending' && !isExpanded && !showProactiveBanner && !showMediaNotch && !isCompactAskBar && !isTimerNotchActive && !notchApiAlert && hasMediaSession;
   const isTuckedSliver = isTucked && !isExpanded && !showProactiveBanner && !showMediaNotch && !isTimerNotchActive && !isCompactAskBar && !isMiniMediaPill && !notchApiAlert;
 
   const archSize = isTuckedSliver ? 9 : showProactiveBanner ? 20 : isMiniMediaPill || isCompactAskBar || isTimerNotchActive || notchApiAlert ? 16 : 22;
@@ -3814,6 +3875,11 @@ export const KiboApp: React.FC = () => {
 
       setIsApplyingWallpaper(true);
 
+      // Instantly apply the vibrant color palette of the target wallpaper to the entire UI
+      setAdaptiveWallpaperTheme(targetWp);
+      setAppliedWallpaperIndex(index);
+      localStorage.setItem('kibo_wallpaper_idx', String(index));
+
       extractAndApplyPaletteForIndex(index, wallpapersList);
 
       try {
@@ -3831,7 +3897,6 @@ export const KiboApp: React.FC = () => {
 
       setRipplingWallpaperUrl(targetWp.url);
       setPrevAppliedWallpaperIndex(appliedWallpaperIndex);
-      setAppliedWallpaperIndex(index);
       setIsWallpaperRippling(true);
 
       requestAnimationFrame(() => {
@@ -5299,11 +5364,12 @@ export const KiboApp: React.FC = () => {
                       if (activeTab === 'Settings') {
                         setActiveTab('Controls');
                       } else {
+                        setSettingsCategory('Account');
                         setActiveTab('Settings');
                       }
                     }}
                     className={`companion-header-circle ${activeTab === 'Settings' ? 'active' : ''}`}
-                    title={activeTab === 'Settings' ? 'Return to Controls' : 'Settings & Preferences'}
+                    title={activeTab === 'Settings' ? 'Return to Controls' : 'Settings & API Keys'}
                     style={activeTab === 'Settings' ? { background: 'rgba(56, 189, 248, 0.22)', color: '#38BDF8' } : undefined}
                   >
                     <SvgIcon name="gear" size={12} />
@@ -5731,70 +5797,121 @@ export const KiboApp: React.FC = () => {
                     className="today-tab-grid"
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: '148px 1.25fr 1fr',
-                      gridTemplateRows: 'minmax(0, 1fr)',
-                      gap: '12px',
+                      gridTemplateColumns: '310px 1fr',
+                      gap: '14px',
                       width: '100%',
                       flex: 1,
                       minHeight: 0,
                     }}
                   >
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <div className="companion-glass-card" style={{ padding: '18px 12px', alignItems: 'center', justifyContent: 'center', flex: 1.25 }}>
-                        <div className="companion-bold-clock">{hoursStr}</div>
-                        <div className="companion-clock-dots">• • •</div>
-                        <div className="companion-bold-clock">{minsStr}</div>
-                        <div style={{ fontSize: '11px', color: '#8A8A93', marginTop: '12px', fontWeight: 500 }}>
-                          {ampmStr} · {dayShortStr} {selectedDay}
+                    {/* Left Column: Briefing & Focus Session */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', minHeight: 0 }}>
+                      {/* Compact Briefing Card */}
+                      <div className="companion-glass-card" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '20px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+                            {hoursStr}:{minsStr} <span style={{ fontSize: '12px', fontWeight: 600, color: '#94A3B8' }}>{ampmStr}</span>
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#71717A', marginTop: '3px', fontWeight: 500 }}>
+                            {now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                          <SvgIcon name="sun" size={16} color="#F5B027" />
+                          <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#FFFFFF' }}>32°C</span>
                         </div>
                       </div>
 
-                      <div className="companion-glass-card" style={{ padding: '14px 12px', alignItems: 'center', justifyContent: 'center', flex: 0.75 }}>
-                        <SvgIcon name="sun" size={24} color="#F5B027" />
-                        <div style={{ fontSize: '22px', fontWeight: 800, color: '#ffffff', margin: '4px 0 2px 0' }}>
-                          32°C
-                        </div>
-                        <div style={{ fontSize: '11px', color: '#8A8A93' }}>Mostly clear</div>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <div className="companion-glass-card" style={{ padding: '14px 16px', gap: '10px' }}>
+                      {/* Minimalist Focus Timer Card */}
+                      <div className="companion-glass-card" style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '14px', flex: 1, justifyContent: 'space-between' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#ffffff' }}>This week</span>
-                          <span className="companion-mono-tiny">
-                            {now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: '#FFFFFF', letterSpacing: '0.02em' }}>Focus Timer</span>
+                          <span className="companion-mono-tiny" style={{ color: isTimerRunning ? 'var(--adaptive-accent)' : '#71717A' }}>
+                            {isTimerRunning ? 'Session active' : 'Ready'}
                           </span>
                         </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', textAlign: 'center', alignItems: 'center' }}>
-                          {[
-                            { day: 'Mon', num: 28 },
-                            { day: 'Tue', num: 29 },
-                            { day: 'Wed', num: 30 },
-                            { day: 'Thu', num: 1 },
-                            { day: 'Fri', num: 2 },
-                            { day: 'Sat', num: 3 },
-                            { day: 'Sun', num: 4 },
-                          ].map((item) => {
-                            const isSelected = selectedDay === item.num;
-                            return (
-                              <div
-                                key={item.num}
-                                onClick={() => setSelectedDay(item.num)}
-                                className="companion-day-col"
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '22px' }}>
+                          <div style={{ position: 'relative', width: `${timerRingSize}px`, height: `${timerRingSize}px`, flexShrink: 0 }}>
+                            <svg width={timerRingSize} height={timerRingSize} style={{ transform: 'rotate(-90deg)' }}>
+                              <circle
+                                cx={timerRingSize / 2}
+                                cy={timerRingSize / 2}
+                                r={timerRadius}
+                                stroke="rgba(255, 255, 255, 0.08)"
+                                strokeWidth={timerStroke}
+                                fill="transparent"
+                              />
+                              <circle
+                                cx={timerRingSize / 2}
+                                cy={timerRingSize / 2}
+                                r={timerRadius}
+                                stroke="var(--adaptive-accent, #38BDF8)"
+                                strokeWidth={timerStroke}
+                                strokeDasharray={timerCircumference}
+                                strokeDashoffset={timerDashoffset}
+                                strokeLinecap="round"
+                                fill="transparent"
+                                style={{ transition: 'stroke-dashoffset 0.5s linear' }}
+                              />
+                            </svg>
+                            <div className="companion-timer-readout" style={{ fontSize: '17px', fontWeight: 800 }}>
+                              {String(Math.floor(timerSeconds / 60)).padStart(2, '0')}:
+                              {String(timerSeconds % 60).padStart(2, '0')}
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                            <div style={{ display: 'flex', gap: '5px' }}>
+                              {(['15m', '25m', '45m'] as const).map((p) => {
+                                const isActive = timerPreset === p;
+                                return (
+                                  <button
+                                    key={p}
+                                    onClick={() => {
+                                      setTimerPreset(p);
+                                      const secs = parseInt(p, 10) * 60;
+                                      setTimerSeconds(secs);
+                                      setTimerTotalSeconds(secs);
+                                      setIsTimerRunning(false);
+                                      setTimerAlarmRinging(false);
+                                    }}
+                                    className={`companion-preset-chip ${isActive ? 'active' : ''}`}
+                                    style={{ flex: 1, padding: '5px 0', fontSize: '11px', textAlign: 'center' }}
+                                  >
+                                    {p}
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                              <button
+                                onClick={() => {
+                                  setTimerAlarmRinging(false);
+                                  setIsTimerRunning(!isTimerRunning);
+                                }}
+                                className="timer-start-btn"
+                                style={{ padding: '8px 0', fontSize: '12px' }}
                               >
-                                <span style={{ fontSize: '9.5px', color: '#71717A', fontWeight: 600 }}>
-                                  {item.day}
-                                </span>
-                                <span className={`companion-day-squircle ${isSelected ? 'selected' : ''}`}>
-                                  {item.num}
-                                </span>
-                              </div>
-                            );
-                          })}
+                                {isTimerRunning ? 'Pause' : 'Start'}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setIsTimerRunning(false);
+                                  setTimerAlarmRinging(false);
+                                  setTimerSeconds(timerTotalSeconds);
+                                }}
+                                className="timer-reset-btn"
+                                style={{ padding: '8px 0', fontSize: '12px' }}
+                              >
+                                Reset
+                              </button>
+                            </div>
+                          </div>
                         </div>
 
+                        {/* Routine Banner / Next Schedule */}
                         <div
                           className="companion-event-banner"
                           onClick={() => {
@@ -5802,197 +5919,109 @@ export const KiboApp: React.FC = () => {
                               executeVoiceCommand(routines[0].command);
                             }
                           }}
-                          style={{ cursor: routines.length > 0 ? 'pointer' : 'default' }}
+                          style={{ cursor: routines.length > 0 ? 'pointer' : 'default', padding: '8px 12px', margin: 0 }}
                         >
                           <div className="companion-event-bar" />
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: '11.5px', fontWeight: 700, color: '#ffffff' }}>
-                              {routines.length > 0 ? routines[0].timeLabel : 'No scheduled routines'}
+                            <div style={{ fontSize: '11px', fontWeight: 700, color: '#ffffff' }}>
+                              {routines.length > 0 ? routines[0].timeLabel : 'Autopilot Routines'}
                             </div>
-                            <div className="companion-truncate" style={{ fontSize: '10.5px', color: '#8A8A93' }}>
-                              {routines.length > 0 ? routines[0].title : 'Ask Kibo to schedule any task'}
+                            <div className="companion-truncate" style={{ fontSize: '10px', color: '#8A8A93' }}>
+                              {routines.length > 0 ? routines[0].title : 'Say "Set a routine" to schedule tasks'}
                             </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="companion-glass-card" style={{ padding: '14px 16px', flexDirection: 'row', alignItems: 'center', gap: '16px', flex: 1 }}>
-                        <div style={{ position: 'relative', width: `${timerRingSize}px`, height: `${timerRingSize}px`, flexShrink: 0 }}>
-                          <svg width={timerRingSize} height={timerRingSize} style={{ transform: 'rotate(-90deg)' }}>
-                            <circle
-                              cx={timerRingSize / 2}
-                              cy={timerRingSize / 2}
-                              r={timerRadius}
-                              stroke="rgba(238, 155, 39, 0.16)"
-                              strokeWidth={timerStroke}
-                              fill="transparent"
-                            />
-                            <circle
-                              cx={timerRingSize / 2}
-                              cy={timerRingSize / 2}
-                              r={timerRadius}
-                              stroke="var(--adaptive-secondary)"
-                              strokeWidth={timerStroke}
-                              strokeDasharray={timerCircumference}
-                              strokeDashoffset={timerDashoffset}
-                              strokeLinecap="round"
-                              fill="transparent"
-                              style={{ transition: 'stroke-dashoffset 0.5s linear' }}
-                            />
-                          </svg>
-                          <div className="companion-timer-readout">
-                            {String(Math.floor(timerSeconds / 60)).padStart(2, '0')}:
-                            {String(timerSeconds % 60).padStart(2, '0')}
-                          </div>
-                        </div>
-
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                            <div className="timer-unit-box">
-                              <strong>0</strong> <span>h</span>
-                            </div>
-                            <div className="timer-unit-box">
-                              <strong>{String(Math.floor(timerSeconds / 60)).padStart(2, '0')}</strong> <span>min</span>
-                            </div>
-                          </div>
-
-                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '4px' }}>
-                            {(['1m', '5m', '10m', '15m', '20m'] as const).map((p) => {
-                              const isActive = timerPreset === p;
-                              return (
-                                <button
-                                  key={p}
-                                  onClick={() => {
-                                    setTimerPreset(p);
-                                    const secs = parseInt(p, 10) * 60;
-                                    setTimerSeconds(secs);
-                                    setTimerTotalSeconds(secs);
-                                    setIsTimerRunning(false);
-                                    setTimerAlarmRinging(false);
-                                  }}
-                                  className={`companion-preset-chip ${isActive ? 'active' : ''}`}
-                                >
-                                  {p}
-                                </button>
-                              );
-                            })}
-                          </div>
-
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                            <button
-                              onClick={() => {
-                                setTimerAlarmRinging(false);
-                                setIsTimerRunning(!isTimerRunning);
-                              }}
-                              className="timer-start-btn"
-                            >
-                              {isTimerRunning ? 'Pause' : 'Start'}
-                            </button>
-                            <button
-                              onClick={() => {
-                                setIsTimerRunning(false);
-                                setTimerAlarmRinging(false);
-                                setTimerSeconds(timerTotalSeconds);
-                              }}
-                              className="timer-reset-btn"
-                            >
-                              Reset
-                            </button>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="companion-glass-card today-todo-card" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexShrink: 0 }}>
-                          <span style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff' }}>Today</span>
-                          <div style={{ position: 'relative', width: `${todoRingSize}px`, height: `${todoRingSize}px` }}>
-                            <svg width={todoRingSize} height={todoRingSize} style={{ transform: 'rotate(-90deg)' }}>
-                              <circle
-                                cx={todoRingSize / 2}
-                                cy={todoRingSize / 2}
-                                r={todoRingRadius}
-                                stroke="rgba(255, 255, 255, 0.12)"
-                                strokeWidth={todoRingStroke}
-                                fill="transparent"
-                              />
-                              <circle
-                                cx={todoRingSize / 2}
-                                cy={todoRingSize / 2}
-                                r={todoRingRadius}
-                                stroke="#8ED92F"
-                                strokeWidth={todoRingStroke}
-                                strokeDasharray={todoRingCircumference}
-                                strokeDashoffset={todoRingDashoffset}
-                                strokeLinecap="round"
-                                fill="transparent"
-                                style={{ transition: 'stroke-dashoffset 0.35s ease' }}
-                              />
-                            </svg>
-                            <span className="todo-ring-center-label">
-                              {completedTodosCount}/{todos.length}
-                            </span>
-                          </div>
+                    <div className="companion-glass-card today-todo-card" style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexShrink: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff' }}>Priorities</span>
+                          <span style={{ fontSize: '11px', color: '#94A3B8', background: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: '999px' }}>
+                            {completedTodosCount}/{todos.length} done
+                          </span>
                         </div>
+                        <div style={{ position: 'relative', width: `${todoRingSize}px`, height: `${todoRingSize}px` }}>
+                          <svg width={todoRingSize} height={todoRingSize} style={{ transform: 'rotate(-90deg)' }}>
+                            <circle
+                              cx={todoRingSize / 2}
+                              cy={todoRingSize / 2}
+                              r={todoRingRadius}
+                              stroke="rgba(255, 255, 255, 0.1)"
+                              strokeWidth={todoRingStroke}
+                              fill="transparent"
+                            />
+                            <circle
+                              cx={todoRingSize / 2}
+                              cy={todoRingSize / 2}
+                              r={todoRingRadius}
+                              stroke="var(--adaptive-accent, #38BDF8)"
+                              strokeWidth={todoRingStroke}
+                              strokeDasharray={todoRingCircumference}
+                              strokeDashoffset={todoRingDashoffset}
+                              strokeLinecap="round"
+                              fill="transparent"
+                              style={{ transition: 'stroke-dashoffset 0.35s ease' }}
+                            />
+                          </svg>
+                          <span className="todo-ring-center-label" style={{ fontSize: '9px' }}>
+                            {Math.round((completedTodosCount / Math.max(1, todos.length)) * 100)}%
+                          </span>
+                        </div>
+                      </div>
 
-                        <div className="today-todo-scroll-list">
-                          {todos.map((todo) => (
-                            <div
-                              key={todo.id}
-                              onClick={() => handleToggleTodo(todo.id)}
-                              className={`companion-todo-row ${todo.completed ? 'completed' : ''}`}
-                              style={{ position: 'relative', flexShrink: 0 }}
-                            >
-                              {sparkleBurstId === todo.id && (
-                                <div key={sparkleAnimKey} className="todo-sparkle-burst">
-                                  <span className="sparkle-dot left-dot">
-                                    <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor">
-                                      <polygon points="12 2 15 9 22 12 15 15 12 22 9 15 2 12 9 9" />
-                                    </svg>
-                                  </span>
-                                  <span className="sparkle-plus">+4</span>
-                                  <span className="sparkle-dot right-dot">
-                                    <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor">
-                                      <polygon points="12 2 15 9 22 12 15 15 12 22 9 15 2 12 9 9" />
-                                    </svg>
-                                  </span>
-                                </div>
-                              )}
-
-                              <span className={`companion-todo-check ${todo.completed ? 'checked' : ''}`}>
-                                {todo.completed && (
-                                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                                    <polyline points="20 6 9 17 4 12" />
+                      <div className="today-todo-scroll-list" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+                        {todos.map((todo) => (
+                          <div
+                            key={todo.id}
+                            onClick={() => handleToggleTodo(todo.id)}
+                            className={`companion-todo-row ${todo.completed ? 'completed' : ''}`}
+                            style={{ position: 'relative', flexShrink: 0, padding: '8px 10px', borderRadius: '10px' }}
+                          >
+                            {sparkleBurstId === todo.id && (
+                              <div key={sparkleAnimKey} className="todo-sparkle-burst">
+                                <span className="sparkle-dot left-dot">
+                                  <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor">
+                                    <polygon points="12 2 15 9 22 12 15 15 12 22 9 15 2 12 9 9" />
                                   </svg>
-                                )}
-                              </span>
-
-                              <span className="companion-todo-text">{todo.text}</span>
-
-                              {!todo.completed && (
-                                <span className="todo-inline-ember-gain">
-                                  <SvgIcon name="ember" size={10} color="#FFA94D" />
-                                  <span>+4</span>
                                 </span>
-                              )}
+                                <span className="sparkle-plus">+4</span>
+                                <span className="sparkle-dot right-dot">
+                                  <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor">
+                                    <polygon points="12 2 15 9 22 12 15 15 12 22 9 15 2 12 9 9" />
+                                  </svg>
+                                </span>
+                              </div>
+                            )}
 
-                              <button
-                                onClick={(e) => handleDeleteTodo(todo.id, e)}
-                                className="companion-todo-del-btn"
-                                title="Delete task"
-                              >
-                                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                                  <path
-                                    d="M1.5 1.5L8.5 8.5M8.5 1.5L1.5 8.5"
-                                    stroke="currentColor"
-                                    strokeWidth="1.5"
-                                    strokeLinecap="round"
-                                  />
+                            <span className={`companion-todo-check ${todo.completed ? 'checked' : ''}`}>
+                              {todo.completed && (
+                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="20 6 9 17 4 12" />
                                 </svg>
-                              </button>
-                            </div>
-                          ))}
-                        </div>
+                              )}
+                            </span>
+
+                            <span className="companion-todo-text" style={{ fontSize: '12.5px' }}>{todo.text}</span>
+
+                            <button
+                              onClick={(e) => handleDeleteTodo(todo.id, e)}
+                              className="companion-todo-del-btn"
+                              title="Delete task"
+                            >
+                              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                                <path
+                                  d="M1.5 1.5L8.5 8.5M8.5 1.5L1.5 8.5"
+                                  stroke="currentColor"
+                                  strokeWidth="1.5"
+                                  strokeLinecap="round"
+                                />
+                              </svg>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
 
                       <div className="todo-bottom-input-bar">
                         <span style={{ color: '#71717A', fontSize: '14px', marginLeft: '4px' }}>+</span>
@@ -6853,8 +6882,8 @@ export const KiboApp: React.FC = () => {
                           </div>
 
                           <div className="kibo-settings-card">
-                            <div className="kibo-settings-row-label" style={{ marginBottom: 4 }}>Select Droid Core</div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+                            <div className="kibo-settings-row-label" style={{ marginBottom: 12 }}>Chassis Pods</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
                               {SOUL_SKINS.slice(0, 4).map((skin) => {
                                 const isSelected = skin.key === selectedSkinKey;
                                 return (
@@ -6865,24 +6894,36 @@ export const KiboApp: React.FC = () => {
                                       localStorage.setItem('kibo_soul_skin', skin.key);
                                       window.kiboAPI?.updateTrayColor?.(skin.primaryColor);
                                     }}
+                                    className={`kibo-core-model-card ${isSelected ? 'selected' : ''}`}
                                     style={{
                                       display: 'flex',
+                                      flexDirection: 'column',
                                       alignItems: 'center',
-                                      gap: 12,
-                                      padding: '12px 14px',
-                                      borderRadius: 12,
+                                      justifyContent: 'center',
+                                      padding: '16px 12px 14px',
+                                      borderRadius: 16,
                                       background: isSelected ? 'rgba(56, 189, 248, 0.12)' : '#141519',
                                       border: isSelected ? '1.5px solid #38BDF8' : '1px solid rgba(255,255,255,0.08)',
                                       cursor: 'pointer',
-                                      textAlign: 'left',
-                                      transition: 'all 0.18s ease',
+                                      position: 'relative',
+                                      transition: 'all 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
+                                      boxShadow: isSelected ? `0 8px 24px ${skin.primaryColor}26` : 'none',
                                     }}
                                   >
-                                    <div style={{ width: 14, height: 14, borderRadius: '50%', background: skin.primaryColor, boxShadow: `0 0 8px ${skin.primaryColor}` }} />
-                                    <div>
-                                      <div style={{ fontSize: 13, fontWeight: 700, color: '#F8FAFC' }}>{skin.name}</div>
-                                      <div style={{ fontSize: 11, color: '#94A3B8' }}>{skin.primaryColor}</div>
+                                    <div style={{ height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                      <SoulCanvas soul={skin} width={68} height={52} scale={0.92} mode="LISTENING" />
                                     </div>
+                                    <div
+                                      style={{
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: '50%',
+                                        background: isSelected ? skin.primaryColor : 'rgba(255,255,255,0.2)',
+                                        boxShadow: isSelected ? `0 0 10px ${skin.primaryColor}` : 'none',
+                                        marginTop: 8,
+                                        transition: 'all 0.2s ease',
+                                      }}
+                                    />
                                   </button>
                                 );
                               })}

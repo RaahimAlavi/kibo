@@ -363,71 +363,69 @@ function refreshTrayIconAndTooltip() {
 
 
 function updateTrayMenu() {
-
   if (!tray) return;
 
-
-
   const contextMenu = Menu.buildFromTemplate([
-
     {
-
-      label: 'Open Kibo Studio',
-
+      label: 'Open Preferences',
       click: () => {
-
         if (mainWindow && !mainWindow.isDestroyed()) {
-
-          mainWindow.show();
-
-          mainWindow.focus();
-
-          mainWindow.webContents.send('open-settings', 'soul');
-
-        }
-
-      },
-
-    },
-
-    {
-
-      label: 'Settings & API Keys...',
-
-      click: () => {
-
-        if (mainWindow && !mainWindow.isDestroyed()) {
-
-          mainWindow.show();
-
-          mainWindow.focus();
-
-          mainWindow.webContents.send('open-settings', 'settings');
-
-        }
-
-      },
-
-    },
-
-    {
-
-      label: 'Show Kibo Notch',
-
-      click: () => {
-
-        if (mainWindow && !mainWindow.isDestroyed()) {
-
           mainWindow.showInactive();
-
           mainWindow.setAlwaysOnTop(true, 'pop-up-menu');
-
+          mainWindow.webContents.send('open-settings', 'Account');
+        }
+      },
+    },
+    {
+      label: 'Pause Audio & SFX',
+      click: () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('toggle-mute-sfx');
+        }
+      },
+    },
+    {
+      label: 'Show Kibo Notch',
+      click: () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.showInactive();
+          mainWindow.setAlwaysOnTop(true, 'pop-up-menu');
           mainWindow.webContents.send('expand-island');
         }
       },
     },
+    { type: 'separator' },
     {
-      label: 'Run Kibo on Startup',
+      label: 'Report a Bug...',
+      click: () => {
+        shell.openExternal('https://github.com/RaahimAlavi/Hitodama/issues');
+      },
+    },
+    {
+      label: 'Request a Feature...',
+      click: () => {
+        shell.openExternal('https://github.com/RaahimAlavi/Hitodama/discussions');
+      },
+    },
+    {
+      label: 'What’s New',
+      click: () => {
+        shell.openExternal('https://github.com/RaahimAlavi/Hitodama/releases');
+      },
+    },
+    {
+      label: 'Check for Updates...',
+      click: () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.showInactive();
+          mainWindow.setAlwaysOnTop(true, 'pop-up-menu');
+          mainWindow.webContents.send('open-settings', 'System');
+        }
+      },
+    },
+    { type: 'separator' },
+    {
+      label: 'Run on Windows Startup',
       type: 'checkbox',
       checked: app.getLoginItemSettings().openAtLogin,
       click: (menuItem) => {
@@ -439,24 +437,16 @@ function updateTrayMenu() {
       },
     },
     { type: 'separator' },
-
     {
-
       label: 'Quit Kibo',
-
       click: () => {
-
         app.quit();
-
       },
-
     },
-
   ]);
 
-
-
   tray.setContextMenu(contextMenu);
+}
 
 }
 

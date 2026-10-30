@@ -13,15 +13,12 @@ export interface SpeakOptions {
 
 const LIVE_AUDIO_MODELS = [
   'models/gemini-2.0-flash-exp',
-  'models/gemini-2.5-flash',
   'models/gemini-2.0-flash',
 ];
 
 const REST_TTS_MODELS = [
-  'gemini-2.5-flash-preview-tts',
-  'gemini-3.8-flash-tts',
-  'gemini-3.8-flash-lite-tts',
-  'gemini-3.1-flash-tts-preview',
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-exp',
 ];
 
 class KiboVoiceEngine {
@@ -384,16 +381,12 @@ class KiboVoiceEngine {
       this.setSpeaking(true);
       options.onStart?.();
 
-      // Chromium keep-alive to bypass 15-second speech synthesis cutoff bug
       if (this.keepAliveTimer) clearInterval(this.keepAliveTimer);
       this.keepAliveTimer = setInterval(() => {
-        if (window.speechSynthesis && window.speechSynthesis.speaking) {
-          window.speechSynthesis.pause();
-          window.speechSynthesis.resume();
-        } else {
+        if (!window.speechSynthesis || !window.speechSynthesis.speaking) {
           finish();
         }
-      }, 7000);
+      }, 500);
     };
 
     utterance.onend = () => {
