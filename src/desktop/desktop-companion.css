@@ -4140,3 +4140,40 @@ kbd,
   letter-spacing: -0.01em !important;
 }
 
+
+/* Tucked Hover-Hold Wake Indicator */
+.tucked-hover-dock {
+  position: absolute;
+  top: 7px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 30;
+}
+
+.tucked-hold-pill {
+  width: 44px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+  transition: width 0.22s cubic-bezier(0.22, 1, 0.36, 1), background 0.2s ease, box-shadow 0.25s ease;
+}
+
+.tucked-hold-pill.charging {
+  width: 76px;
+  background: rgba(255, 255, 255, 0.24);
+  box-shadow: 0 0 14px var(--adaptive-accent, #38BDF8);
+}
+
+.tucked-hold-fill {
+  height: 100%;
+  background: var(--adaptive-accent, #38BDF8);
+  border-radius: 999px;
+  box-shadow: 0 0 10px var(--adaptive-accent, #38BDF8);
+  transition: width 0.04s linear;
+}

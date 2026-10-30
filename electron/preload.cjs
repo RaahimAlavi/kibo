@@ -197,6 +197,7 @@ const kiboAPI = {
   },
   getStoredSettings: () => ipcRenderer.invoke('get-stored-settings'),
   saveStoredSettings: (patch) => ipcRenderer.invoke('save-stored-settings', patch),
+  getCurrentWallpaperTheme: () => ipcRenderer.invoke('get-current-wallpaper-theme'),
   // Kibo Watts Economy Aliases
   syncWattsState: (data) => ipcRenderer.invoke('update-embers-state', data),
   setWattsCount: (count) => {

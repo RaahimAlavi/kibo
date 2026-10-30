@@ -30,6 +30,7 @@ class KiboVoiceEngine {
   private activeSources: AudioBufferSourceNode[] = [];
   private isSpeakingState: boolean = false;
   private listeners: Set<(speaking: boolean) => void> = new Set();
+  private keepAliveTimer: any = null;
 
   private getAudioContext(): AudioContext {
     if (!this.audioCtx) {
@@ -59,6 +60,10 @@ class KiboVoiceEngine {
 
   // Stop any currently playing speech immediately (barge-in support)
   public stop() {
+    if (this.keepAliveTimer) {
+      clearInterval(this.keepAliveTimer);
+      this.keepAliveTimer = null;
+    }
     this.activeSources.forEach((src) => {
       try {
         src.stop();
@@ -69,6 +74,7 @@ class KiboVoiceEngine {
     this.nextStartTime = 0;
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
+      (window as any)._kiboSpeechUtterance = null;
     }
     this.setSpeaking(false);
   }
@@ -303,39 +309,85 @@ class KiboVoiceEngine {
 
   // Tier 3: Offline / No-Key Native OS Neural Voice Fallback
   private speakViaNativeOS(text: string, options: SpeakOptions = {}) {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      options.onEnd?.();
+      return;
+    }
 
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
+    if (this.keepAliveTimer) {
+      clearInterval(this.keepAliveTimer);
+      this.keepAliveTimer = null;
+    }
+
+    const cleanText = text
+      .replace(/[*_#`~[\]]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!cleanText) {
+      options.onEnd?.();
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    // Retain global reference so Chromium garbage collection never kills speech mid-sentence
+    (window as any)._kiboSpeechUtterance = utterance;
+
     const voices = window.speechSynthesis.getVoices();
 
-    // Pick high-quality Windows 11 Natural voice if available
+    // Pick high-quality Windows 11 Natural / Online voice if available
     const preferred = voices.find(
       (v) =>
         v.name.includes('Natural') ||
         v.name.includes('Online') ||
         v.name.includes('David') ||
-        v.name.includes('Zira')
+        v.name.includes('Zira') ||
+        v.name.includes('Mark')
     );
     if (preferred) utterance.voice = preferred;
 
     // Match pitch subtly to selected Kibo voice profile
     const voiceProfile = options.voice || 'Charon';
     utterance.pitch =
-      voiceProfile === 'Charon' ? 0.92 : voiceProfile === 'Fenrir' ? 0.85 : voiceProfile === 'Aoede' ? 1.08 : 1.02;
-    utterance.rate = 1.04;
+      voiceProfile === 'Charon' ? 0.95 : voiceProfile === 'Fenrir' ? 0.88 : voiceProfile === 'Aoede' ? 1.08 : 1.02;
+    utterance.rate = 1.05;
+
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      if (this.keepAliveTimer) {
+        clearInterval(this.keepAliveTimer);
+        this.keepAliveTimer = null;
+      }
+      this.setSpeaking(false);
+      options.onEnd?.();
+      (window as any)._kiboSpeechUtterance = null;
+    };
 
     utterance.onstart = () => {
       this.setSpeaking(true);
       options.onStart?.();
+
+      // Chromium keep-alive to bypass 15-second speech synthesis cutoff bug
+      if (this.keepAliveTimer) clearInterval(this.keepAliveTimer);
+      this.keepAliveTimer = setInterval(() => {
+        if (window.speechSynthesis && window.speechSynthesis.speaking) {
+          window.speechSynthesis.pause();
+          window.speechSynthesis.resume();
+        } else {
+          finish();
+        }
+      }, 7000);
     };
+
     utterance.onend = () => {
-      this.setSpeaking(false);
-      options.onEnd?.();
+      finish();
     };
-    utterance.onerror = () => {
-      this.setSpeaking(false);
-      options.onEnd?.();
+
+    utterance.onerror = (e) => {
+      console.warn('[Kibo Voice] Speech error or canceled:', e);
+      finish();
     };
 
     window.speechSynthesis.speak(utterance);
@@ -343,15 +395,13 @@ class KiboVoiceEngine {
 
   // Main Public Method 1: Speak exact text aloud
   public async speak(text: string, options: SpeakOptions = {}) {
-    if (!text.trim()) return;
+    if (!text || !text.trim()) {
+      options.onEnd?.();
+      return;
+    }
     this.stop();
 
-    const usedLive = await this.speakViaLiveAPI(text, 'SAY_EXACT', options);
-    if (usedLive) return;
-
-    const usedRest = await this.speakViaRestTTS(text, options);
-    if (usedRest) return;
-
+    // Instant, zero-lag Native OS TTS
     this.speakViaNativeOS(text, options);
   }
 

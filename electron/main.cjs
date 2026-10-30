@@ -965,6 +965,83 @@ ipcMain.handle('save-stored-settings', (_event, patch) => {
   return writeKiboSettings(patch);
 });
 
+function getWindowsWallpaperPath() {
+  try {
+    const stdout = execSync(
+      `powershell -NoProfile -Command "(Get-ItemProperty -Path 'HKCU:\\Control Panel\\Desktop' -Name Wallpaper).Wallpaper"`,
+      { encoding: 'utf8', timeout: 3000 }
+    ).trim();
+    if (stdout && fs.existsSync(stdout)) {
+      return stdout;
+    }
+  } catch (_) {}
+
+  try {
+    const transcoded = path.join(process.env.APPDATA || '', 'Microsoft/Windows/Themes/TranscodedWallpaper');
+    if (fs.existsSync(transcoded)) return transcoded;
+  } catch (_) {}
+
+  return null;
+}
+
+function extractPaletteFromWallpaper() {
+  const wpPath = getWindowsWallpaperPath();
+  if (!wpPath) return null;
+
+  try {
+    const img = nativeImage.createFromPath(wpPath);
+    if (img.isEmpty()) return null;
+
+    const small = img.resize({ width: 32, height: 32, quality: 'good' });
+    const buffer = small.getBitmap(); // Windows BGRA buffer
+
+    let bestScore = -1;
+    let bestR = 56, bestG = 189, bestB = 248; // fallback sky blue
+
+    for (let i = 0; i < buffer.length; i += 4) {
+      const b = buffer[i];
+      const g = buffer[i + 1];
+      const r = buffer[i + 2];
+
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const lum = (max + min) / 510;
+      const sat = max === 0 ? 0 : (max - min) / max;
+
+      const score = sat * 1.5 + (0.5 - Math.abs(lum - 0.5));
+      if (score > bestScore && sat > 0.2 && lum > 0.2 && lum < 0.88) {
+        bestScore = score;
+        bestR = r;
+        bestG = g;
+        bestB = b;
+      }
+    }
+
+    const toHex = (n) => n.toString(16).padStart(2, '0');
+    const accent = `#${toHex(bestR)}${toHex(bestG)}${toHex(bestB)}`;
+    const accentSecondary = `#${toHex(Math.round(bestR * 0.75))}${toHex(Math.round(bestG * 0.75))}${toHex(Math.round(bestG * 0.75))}`;
+    const pillBg = `rgba(${bestR}, ${bestG}, ${bestB}, 0.18)`;
+    const rowBg = `rgba(${bestR}, ${bestG}, ${bestB}, 0.08)`;
+
+    return {
+      wallpaperPath: wpPath,
+      accent,
+      accentSecondary,
+      pillBg,
+      rowBg,
+      darkText: '#F8FAFC',
+      darkSubText: '#94A3B8',
+    };
+  } catch (err) {
+    console.error('[Kibo] Wallpaper palette extraction error:', err);
+    return null;
+  }
+}
+
+ipcMain.handle('get-current-wallpaper-theme', () => {
+  return extractPaletteFromWallpaper();
+});
+
 ipcMain.handle('update-embers-state', (_event, payload) => {
   if (payload && typeof payload === 'object') {
     if (typeof payload.count === 'number') emberState.count = payload.count;

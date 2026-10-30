@@ -370,7 +370,7 @@ const SvgIcon: React.FC<{ name: string; size?: number; color?: string }> = ({
   color = 'currentColor',
 }) => {
   switch (name) {
-        case 'ember':
+    case 'ember':
       return (
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
           <path
@@ -518,6 +518,7 @@ const SvgIcon: React.FC<{ name: string; size?: number; color?: string }> = ({
           <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
         </svg>
       );
+    case 'settings':
     case 'gear':
       return (
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -965,6 +966,29 @@ export const KiboApp: React.FC = () => {
     }).catch(() => {});
   }, []);
 
+  // Extract dynamic color theme from active Windows desktop wallpaper
+  useEffect(() => {
+    const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
+    if (api?.getCurrentWallpaperTheme) {
+      api.getCurrentWallpaperTheme().then((theme: any) => {
+        if (theme && theme.accent) {
+          setAdaptiveWallpaperTheme({
+            id: 9999,
+            title: 'Current Desktop Wallpaper',
+            url: theme.wallpaperPath ? `file://${theme.wallpaperPath.replace(/\\/g, '/')}` : '',
+            thumb: theme.wallpaperPath ? `file://${theme.wallpaperPath.replace(/\\/g, '/')}` : '',
+            accent: theme.accent,
+            accentSecondary: theme.accentSecondary,
+            pillBg: theme.pillBg,
+            rowBg: theme.rowBg,
+            darkText: theme.darkText || '#F8FAFC',
+            darkSubText: theme.darkSubText || '#94A3B8',
+          });
+        }
+      }).catch(() => {});
+    }
+  }, []);
+
   const [onboardingStep, setOnboardingStep] = useState<number | null>(null);
   const [lastHotkeyAction, setLastHotkeyAction] = useState<string | null>(null);
 
@@ -990,6 +1014,7 @@ export const KiboApp: React.FC = () => {
   const [autoTuckEnabled, setAutoTuckEnabled] = useState<boolean>(() => localStorage.getItem('kibo_autotuck') !== 'false');
   const [voiceFeedbackEnabled, setVoiceFeedbackEnabled] = useState<boolean>(() => localStorage.getItem('kibo_voice_tts') !== 'false');
   const [launchAtStartup, setLaunchAtStartup] = useState<boolean>(() => localStorage.getItem('kibo_startup') !== 'false');
+  const [sfxEnabled, setSfxEnabled] = useState<boolean>(() => soundFX.isEnabled());
 
   // Embers Economy
   const [embers, setEmbers] = useState<number>(() => {
@@ -1131,7 +1156,11 @@ export const KiboApp: React.FC = () => {
   }, []);
 
   const speakAsKibo = useCallback(
-    (text: string) => {
+    (text: string, onEnd?: () => void) => {
+      if (!voiceFeedbackEnabled || !sfxEnabled) {
+        onEnd?.();
+        return;
+      }
       const voiceCard = LOADOUT_CARDS.find((c) => c.id === equippedCards.Voice);
       const currentVoice = (voiceCard?.name || 'Charon') as KiboVoiceName;
       const persCard = LOADOUT_CARDS.find((c) => c.id === equippedCards.Personality);
@@ -1139,9 +1168,43 @@ export const KiboApp: React.FC = () => {
       voiceEngine.speak(text, {
         voice: currentVoice,
         personality: currentPersonality,
+        onEnd,
       });
     },
-    [equippedCards]
+    [equippedCards, voiceFeedbackEnabled, sfxEnabled]
+  );
+
+  const replyDismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showReplyWithSpeech = useCallback(
+    (text: string, boldHeader?: string) => {
+      setAskNotchPhase('idle');
+      setSoulMode('TALKING');
+      setKiboReply({ bold: boldHeader || text, rest: boldHeader ? text : undefined });
+      if (replyDismissTimerRef.current) {
+        clearTimeout(replyDismissTimerRef.current);
+        replyDismissTimerRef.current = null;
+      }
+
+      speakAsKibo(text, () => {
+        // Lingering window: keep the answer visible for 3.5s after Kibo finishes speaking
+        if (replyDismissTimerRef.current) clearTimeout(replyDismissTimerRef.current);
+        replyDismissTimerRef.current = setTimeout(() => {
+          setSoulMode('LISTENING');
+          setKiboReply(null);
+          setUserBubbleText(null);
+        }, 3500);
+      });
+
+      // Fallback timer in case speech synthesis is blocked or unavailable
+      const fallbackMs = Math.max(5000, text.length * 65);
+      replyDismissTimerRef.current = setTimeout(() => {
+        setSoulMode('LISTENING');
+        setKiboReply(null);
+        setUserBubbleText(null);
+      }, fallbackMs);
+    },
+    [speakAsKibo]
   );
 
   const handleKiboPoke = useCallback(() => {
@@ -1192,6 +1255,12 @@ export const KiboApp: React.FC = () => {
             if (reliefBreathTimerRef.current) clearTimeout(reliefBreathTimerRef.current);
             reliefBreathTimerRef.current = setTimeout(() => {
               setIsBreathingRelief(false);
+              // Once Kibo has fully sighed and cooled back down, if mouse is outside, tuck smoothly
+              if (autoTuckEnabled) {
+                leaveCollapseTimerRef.current = setTimeout(() => {
+                  setIsTucked(true);
+                }, 1400);
+              }
             }, 2600);
             return 0;
           }
@@ -1469,58 +1538,89 @@ export const KiboApp: React.FC = () => {
   const notchShellRef = useRef<HTMLDivElement>(null);
   const leaveCollapseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [isHoverHoldActive, setIsHoverHoldActive] = useState<boolean>(false);
+  const [hoverHoldProgress, setHoverHoldProgress] = useState<number>(0);
+  const hoverHoldRafRef = useRef<number | null>(null);
+
+  const soulAnnoyanceRef = useRef<number>(soulAnnoyance);
+  useEffect(() => {
+    soulAnnoyanceRef.current = soulAnnoyance;
+  }, [soulAnnoyance]);
+
+  const isBreathingReliefRef = useRef<boolean>(isBreathingRelief);
+  useEffect(() => {
+    isBreathingReliefRef.current = isBreathingRelief;
+  }, [isBreathingRelief]);
+
   const handleIslandMouseEnter = useCallback(() => {
     setIsHovered(true);
-    setIsTucked(false);
     if (leaveCollapseTimerRef.current) clearTimeout(leaveCollapseTimerRef.current);
-  }, []);
+
+    if (isTucked) {
+      // Require hold-hovering for 650ms to wake Kibo and drop the notch
+      setIsHoverHoldActive(true);
+      setHoverHoldProgress(0);
+      const startTime = performance.now();
+      const holdDuration = 650;
+
+      const step = (now: number) => {
+        const elapsed = now - startTime;
+        const p = Math.min(1, elapsed / holdDuration);
+        setHoverHoldProgress(p);
+
+        if (p < 1) {
+          hoverHoldRafRef.current = requestAnimationFrame(step);
+        } else {
+          setIsHoverHoldActive(false);
+          setHoverHoldProgress(0);
+          setIsTucked(false);
+          soundFX.playSoulPulse();
+          hoverHoldRafRef.current = null;
+        }
+      };
+
+      if (hoverHoldRafRef.current) cancelAnimationFrame(hoverHoldRafRef.current);
+      hoverHoldRafRef.current = requestAnimationFrame(step);
+    }
+  }, [isTucked]);
 
   const handleIslandMouseLeave = useCallback(() => {
-
     setIsHovered(false);
-
     if (leaveCollapseTimerRef.current) clearTimeout(leaveCollapseTimerRef.current);
 
-
+    // Cancel hover-hold charging if user leaves before hold completes
+    if (hoverHoldRafRef.current) {
+      cancelAnimationFrame(hoverHoldRafRef.current);
+      hoverHoldRafRef.current = null;
+    }
+    setIsHoverHoldActive(false);
+    setHoverHoldProgress(0);
 
     if (isDraggingVolumeRef.current || isDraggingMediaScrubRef.current) {
-
       return;
-
     }
 
-
+    // Do NOT tuck if Kibo is annoyed or actively doing his "phewww" cooldown sigh!
+    if (soulAnnoyanceRef.current > 0.05 || isBreathingReliefRef.current) {
+      return;
+    }
 
     if (isExpanded || showMediaNotch) {
-
       leaveCollapseTimerRef.current = setTimeout(() => {
-
         if (isDraggingVolumeRef.current || isDraggingMediaScrubRef.current) return;
-
         setActiveControlDropdown(null);
-
         setShowMediaNotch(false);
-
         setIsExpanded(false);
-
         setPendingPowerAction(null);
-
         if (autoTuckEnabled) setIsTucked(true);
-
       }, 320);
-
     } else if (autoTuckEnabled) {
-
       leaveCollapseTimerRef.current = setTimeout(() => {
-
         if (isDraggingVolumeRef.current || isDraggingMediaScrubRef.current) return;
-
+        if (soulAnnoyanceRef.current > 0.05 || isBreathingReliefRef.current) return;
         setIsTucked(true);
-
       }, 1500);
-
     }
-
   }, [isExpanded, showMediaNotch, autoTuckEnabled]);
 
   useEffect(() => {
@@ -1551,7 +1651,6 @@ export const KiboApp: React.FC = () => {
     };
   }, [isDraggingMediaScrub, updateMediaScrubFromClientX, handleIslandMouseLeave]);
 
-  const [sfxEnabled, setSfxEnabled] = useState<boolean>(() => soundFX.isEnabled());
   const isFirstRenderRef = useRef<boolean>(true);
 
   // 1. Play liquid expand / collapse sound when island opens or closes
@@ -2095,6 +2194,7 @@ export const KiboApp: React.FC = () => {
   }, [activeTab, mergeClipboardSafely]);
 
   // Official Wallpapers, Dynamic Canvas Color Extraction & Zero-Skip GSAP Iris Reveal
+  const [adaptiveWallpaperTheme, setAdaptiveWallpaperTheme] = useState<WallpaperTheme | null>(null);
   const [wallpapersList, setWallpapersList] = useState<WallpaperTheme[]>(DEFAULT_WALLPAPERS);
   const [wallpaperSourceTab, setWallpaperSourceTab] = useState<'Recent' | 'My folder'>('Recent');
   const [focusedWallpaperIndex, setFocusedWallpaperIndex] = useState<number>(2);
@@ -2151,7 +2251,7 @@ export const KiboApp: React.FC = () => {
     return () => window.removeEventListener('resize', updateDims);
   }, []);
 
-  const activeTheme = wallpapersList[appliedWallpaperIndex] || wallpapersList[2] || DEFAULT_WALLPAPERS[2];
+  const activeTheme = adaptiveWallpaperTheme || wallpapersList[appliedWallpaperIndex] || wallpapersList[2] || DEFAULT_WALLPAPERS[2];
   const prevTheme = wallpapersList[prevAppliedWallpaperIndex] || wallpapersList[2] || DEFAULT_WALLPAPERS[2];
 
   // Real Installed PC Apps & Games with Persistent Starring
@@ -3028,15 +3128,7 @@ export const KiboApp: React.FC = () => {
         );
 
         const replyMsg = actionRes.summary;
-        setSoulMode('TALKING');
-        setKiboReply({ bold: replyMsg });
-        speakAsKibo(replyMsg);
-
-        setTimeout(() => {
-          setSoulMode('LISTENING');
-          setUserBubbleText(null);
-          setKiboReply(null);
-        }, 3200);
+        showReplyWithSpeech(replyMsg);
         return;
       }
 
@@ -3242,15 +3334,15 @@ export const KiboApp: React.FC = () => {
       }
 
       if (speech && speech.trim() && speech !== 'Done.') {
-        speakAsKibo(speech);
+        showReplyWithSpeech(speech);
+      } else {
+        setTimeout(() => {
+          setSoulMode('LISTENING');
+          setUserBubbleText(null);
+          setKiboReply(null);
+          setContextCard(null);
+        }, 3200);
       }
-
-      setTimeout(() => {
-        setSoulMode('LISTENING');
-        setUserBubbleText(null);
-        setKiboReply(null);
-        setContextCard(null);
-      }, 4200);
     },
     [apiKey, nightLightStrength, applyUserVolumeChange, routines, speakAsKibo]
   );
@@ -4314,13 +4406,7 @@ export const KiboApp: React.FC = () => {
                 setSoulMode('TALKING');
                 if (answer) {
                   addEmbers(2);
-                  setKiboReply({ bold: answer });
-                  speakAsKibo(answer);
-                  setTimeout(() => {
-                    setSoulMode('LISTENING');
-                    setKiboReply(null);
-                    setUserBubbleText(null);
-                  }, 6000);
+                  showReplyWithSpeech(answer);
                 }
               }
             } catch (err: any) {
@@ -4843,6 +4929,16 @@ export const KiboApp: React.FC = () => {
                 openCompanionApp('soul', false);
               }}
             >
+              {isTucked && (
+                <div className="tucked-hover-dock">
+                  <div className={`tucked-hold-pill ${isHoverHoldActive ? 'charging' : ''}`}>
+                    <div
+                      className="tucked-hold-fill"
+                      style={{ width: `${Math.round(hoverHoldProgress * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              )}
               <div
                 className="mini-media-album-thumb"
                 style={
@@ -5094,6 +5190,14 @@ export const KiboApp: React.FC = () => {
                   )}
 
                   
+
+                  <button
+                    onClick={() => openCompanionApp('settings', false)}
+                    className="companion-header-circle"
+                    title="Settings & API Keys"
+                  >
+                    <SvgIcon name="gear" size={12} />
+                  </button>
 
                   <button
 
@@ -7578,13 +7682,7 @@ export const KiboApp: React.FC = () => {
                       setSoulMode('TALKING');
                       if (answer) {
                   addEmbers(2);
-                  setKiboReply({ bold: answer });
-                  speakAsKibo(answer);
-                        setTimeout(() => {
-                          setSoulMode('LISTENING');
-                          setKiboReply(null);
-                          setUserBubbleText(null);
-                        }, 6000);
+                  showReplyWithSpeech(answer);
                       }
                     } catch (err: any) {
                       setAskNotchPhase('idle');
