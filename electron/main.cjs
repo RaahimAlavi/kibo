@@ -338,36 +338,22 @@ let emberState = {
   count: 67,
   isWaiting: false,
 };
-let currentTrayTheme = 'auto'; // 'auto' (shows Ember when waiting), 'ember', or 'hito'
+let currentTrayTheme = 'hito'; // Blue Kibo tray icon
+let isKiboPaused = false;
 
 function refreshTrayIconAndTooltip() {
-
   if (!tray) return;
-
-  const shouldUseEmber =
-
-    currentTrayTheme === 'ember' ||
-
-    (currentTrayTheme === 'auto' && emberState.isWaiting);
-
-
-
-  const icon = shouldUseEmber ? createEmberTrayIcon() : createKiboTrayIcon();
-
+  const icon = createKiboTrayIcon('#38BDF8');
   tray.setImage(icon);
-
-  tray.setToolTip(`Kibo · ${emberState.count.toLocaleString()} Sparks`);
-
+  tray.setToolTip('Kibo · Voice Control for Windows');
 }
-
-
 
 function updateTrayMenu() {
   if (!tray) return;
 
   const contextMenu = Menu.buildFromTemplate([
     {
-      label: 'Open Preferences',
+      label: 'Open Settings',
       click: () => {
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.showInactive();
@@ -377,55 +363,49 @@ function updateTrayMenu() {
       },
     },
     {
-      label: 'Pause Audio & SFX',
+      label: isKiboPaused ? 'Resume Kibo' : 'Pause Kibo',
       click: () => {
+        isKiboPaused = !isKiboPaused;
         if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('toggle-mute-sfx');
+          mainWindow.webContents.send('toggle-kibo-pause', isKiboPaused);
         }
-      },
-    },
-    {
-      label: 'Show Kibo Notch',
-      click: () => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.showInactive();
-          mainWindow.setAlwaysOnTop(true, 'pop-up-menu');
-          mainWindow.webContents.send('expand-island');
-        }
+        updateTrayMenu();
       },
     },
     { type: 'separator' },
     {
       label: 'Report a Bug...',
       click: () => {
-        shell.openExternal('https://github.com/RaahimAlavi/Hitodama/issues');
+        shell.openExternal('https://github.com/RaahimAlavi/kibo/issues');
       },
     },
     {
       label: 'Request a Feature...',
       click: () => {
-        shell.openExternal('https://github.com/RaahimAlavi/Hitodama/discussions');
+        shell.openExternal('https://github.com/RaahimAlavi/kibo/discussions');
       },
     },
     {
-      label: 'What’s New',
+      label: 'What\'s New',
       click: () => {
-        shell.openExternal('https://github.com/RaahimAlavi/Hitodama/releases');
+        shell.openExternal('https://github.com/RaahimAlavi/kibo/releases');
       },
     },
     {
       label: 'Check for Updates...',
       click: () => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.showInactive();
-          mainWindow.setAlwaysOnTop(true, 'pop-up-menu');
-          mainWindow.webContents.send('open-settings', 'System');
-        }
+        dialog.showMessageBox(mainWindow || undefined, {
+          type: 'info',
+          title: 'Kibo Update',
+          message: 'You are on the latest version of Kibo (v1.0.0).',
+          detail: 'Automatic background updates are enabled.',
+          buttons: ['OK'],
+        });
       },
     },
     { type: 'separator' },
     {
-      label: 'Run on Windows Startup',
+      label: 'Run Kibo on Startup',
       type: 'checkbox',
       checked: app.getLoginItemSettings().openAtLogin,
       click: (menuItem) => {
@@ -448,8 +428,6 @@ function updateTrayMenu() {
   tray.setContextMenu(contextMenu);
 }
 
-}
-
 
 
 function createSystemTray() {
@@ -461,17 +439,11 @@ function createSystemTray() {
   updateTrayMenu();
 
   tray.on('click', () => {
-
     if (mainWindow && !mainWindow.isDestroyed()) {
-
       mainWindow.show();
-
       mainWindow.focus();
-
-      mainWindow.webContents.send('open-settings', 'soul');
-
+      mainWindow.webContents.send('open-settings', 'Account');
     }
-
   });
 
   tray.on('right-click', () => {
@@ -507,6 +479,7 @@ function createWindow() {
     movable: false,
     hasShadow: false,
     skipTaskbar: true,
+    icon: path.join(__dirname, '../public/icon-256.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -550,6 +523,10 @@ function createWindow() {
       mainWindow.setIgnoreMouseEvents(false);
     } else if (hotkeyAction === 'LASSO_UP') {
       isLassoActive = false;
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        isIgnoringMouse = true;
+        mainWindow.setIgnoreMouseEvents(true, { forward: true });
+      }
     }
     mainWindow.webContents.send('hotkey-event', hotkeyAction);
   });
@@ -1088,10 +1065,11 @@ function extractPaletteFromWallpaper() {
   if (!wpPath) return null;
 
   try {
-    const img = nativeImage.createFromPath(wpPath);
+    const fileBytes = fs.readFileSync(wpPath);
+    const img = nativeImage.createFromBuffer(fileBytes);
     if (img.isEmpty()) return null;
 
-    const small = img.resize({ width: 32, height: 32, quality: 'good' });
+    const small = img.resize({ width: 48, height: 48, quality: 'good' });
     const buffer = small.toBitmap(); // Windows BGRA buffer
 
     let bestScore = -1;
@@ -1284,8 +1262,13 @@ ipcMain.handle('capture-screen', async () => {
 
 ipcMain.handle('set-lasso-active', async (_event, active) => {
   isLassoActive = !!active;
-  if (isLassoActive && mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.setIgnoreMouseEvents(false);
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (isLassoActive) {
+      mainWindow.setIgnoreMouseEvents(false);
+    } else {
+      isIgnoringMouse = true;
+      mainWindow.setIgnoreMouseEvents(true, { forward: true });
+    }
   }
   return { success: true };
 });

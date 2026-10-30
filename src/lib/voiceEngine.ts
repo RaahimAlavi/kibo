@@ -341,13 +341,9 @@ class KiboVoiceEngine {
       return;
     }
 
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    // Retain global reference so Chromium garbage collection never kills speech mid-sentence
-    (window as any)._kiboSpeechUtterance = utterance;
-
+    // Split text into natural sentence chunks to prevent Chromium 15s timeout
+    const sentences = cleanText.match(/[^.!?]+[.!?]+|\s*[^.!?]+$/g)?.map((s) => s.trim()).filter(Boolean) || [cleanText];
     const voices = window.speechSynthesis.getVoices();
-
-    // Pick high-quality Windows 11 Natural / Online voice if available
     const preferred = voices.find(
       (v) =>
         v.name.includes('Natural') ||
@@ -356,15 +352,14 @@ class KiboVoiceEngine {
         v.name.includes('Zira') ||
         v.name.includes('Mark')
     );
-    if (preferred) utterance.voice = preferred;
 
-    // Match pitch subtly to selected Kibo voice profile
     const voiceProfile = options.voice || 'Charon';
-    utterance.pitch =
+    const pitch =
       voiceProfile === 'Charon' ? 0.95 : voiceProfile === 'Fenrir' ? 0.88 : voiceProfile === 'Aoede' ? 1.08 : 1.02;
-    utterance.rate = 1.05;
 
+    let currentIdx = 0;
     let finished = false;
+
     const finish = () => {
       if (finished) return;
       finished = true;
@@ -377,28 +372,56 @@ class KiboVoiceEngine {
       (window as any)._kiboSpeechUtterance = null;
     };
 
-    utterance.onstart = () => {
-      this.setSpeaking(true);
-      options.onStart?.();
+    // Chromium keepalive heartbeat: resume every 8s so it never freezes on long sentences
+    this.keepAliveTimer = setInterval(() => {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis.speaking) {
+        window.speechSynthesis.pause();
+        window.speechSynthesis.resume();
+      }
+    }, 8000);
 
-      if (this.keepAliveTimer) clearInterval(this.keepAliveTimer);
-      this.keepAliveTimer = setInterval(() => {
-        if (!window.speechSynthesis || !window.speechSynthesis.speaking) {
+    const speakNextChunk = () => {
+      if (currentIdx >= sentences.length) {
+        finish();
+        return;
+      }
+
+      const chunk = sentences[currentIdx++];
+      const utterance = new SpeechSynthesisUtterance(chunk);
+      (window as any)._kiboSpeechUtterance = utterance;
+
+      if (preferred) utterance.voice = preferred;
+      utterance.pitch = pitch;
+      utterance.rate = 1.05;
+
+      utterance.onstart = () => {
+        this.setSpeaking(true);
+        if (currentIdx === 1) {
+          options.onStart?.();
+        }
+      };
+
+      utterance.onend = () => {
+        if (currentIdx < sentences.length) {
+          speakNextChunk();
+        } else {
           finish();
         }
-      }, 500);
+      };
+
+      utterance.onerror = (e) => {
+        console.warn('[Kibo Voice] Chunk error or canceled:', e);
+        if (currentIdx < sentences.length) {
+          speakNextChunk();
+        } else {
+          finish();
+        }
+      };
+
+      window.speechSynthesis.speak(utterance);
     };
 
-    utterance.onend = () => {
-      finish();
-    };
-
-    utterance.onerror = (e) => {
-      console.warn('[Kibo Voice] Speech error or canceled:', e);
-      finish();
-    };
-
-    window.speechSynthesis.speak(utterance);
+    speakNextChunk();
   }
 
   // Main Public Method 1: Speak exact text aloud

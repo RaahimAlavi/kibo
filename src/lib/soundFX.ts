@@ -189,7 +189,7 @@ class KiboSoundEngine {
   // 5. Subtle Micro-Hover Tick (Throttled so it never spams)
   public playHover() {
     const nowMs = performance.now();
-    if (nowMs - this.lastHoverTime < 55) return;
+    if (nowMs - this.lastHoverTime < 125) return;
     this.lastHoverTime = nowMs;
 
     const ctx = this.getContext();

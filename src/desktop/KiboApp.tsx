@@ -120,7 +120,7 @@ declare global {
       onTriggerLasso: (cb: () => void) => () => void;
       onTriggerDictation: (cb: () => void) => () => void;
       onTriggerAsk?: (cb: () => void) => () => void;
-      onOpenSettings?: (cb: (section?: 'soul' | 'settings' | 'connect' | 'shortcuts') => void) => () => void;
+      onOpenSettings?: (cb: (section?: string) => void) => () => void;
       onClipboardItemAdded?: (cb: (item: ClipboardItem) => void) => () => void;
       syncEmbersState?: (data: { count: number; isWaiting: boolean }) => Promise<{ success: boolean }>;
       onClaimDailyEmber?: (callback: () => void) => () => void;
@@ -746,7 +746,56 @@ const DEFAULT_WALLPAPERS: WallpaperTheme[] = [
     darkText: '#201303',
     darkSubText: 'rgba(32, 19, 3, 0.72)',
   },
+  {
+    id: 9,
+    title: 'Solar Flare',
+    url: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=2560&q=90',
+    thumb: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80',
+    accent: '#F97316',
+    accentSecondary: '#E11D48',
+    pillBg: 'rgba(249, 115, 22, 0.22)',
+    rowBg: 'rgba(249, 115, 22, 0.14)',
+    darkText: '#220803',
+    darkSubText: 'rgba(34, 8, 3, 0.72)',
+  },
+  {
+    id: 10,
+    title: 'Bioluminescent Reef',
+    url: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=2560&q=90',
+    thumb: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=600&q=80',
+    accent: '#06B6D4',
+    accentSecondary: '#8B5CF6',
+    pillBg: 'rgba(6, 182, 212, 0.22)',
+    rowBg: 'rgba(6, 182, 212, 0.14)',
+    darkText: '#04181D',
+    darkSubText: 'rgba(4, 24, 29, 0.72)',
+  },
+  {
+    id: 11,
+    title: 'Neon Tokyo Alley',
+    url: 'https://images.unsplash.com/photo-1514565131-fce0801e5785?auto=format&fit=crop&w=2560&q=90',
+    thumb: 'https://images.unsplash.com/photo-1514565131-fce0801e5785?auto=format&fit=crop&w=600&q=80',
+    accent: '#D946EF',
+    accentSecondary: '#06B6D4',
+    pillBg: 'rgba(217, 70, 239, 0.22)',
+    rowBg: 'rgba(217, 70, 239, 0.14)',
+    darkText: '#1F0624',
+    darkSubText: 'rgba(31, 6, 36, 0.72)',
+  },
+  {
+    id: 12,
+    title: 'Starlight Glacier',
+    url: 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=2560&q=90',
+    thumb: 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=600&q=80',
+    accent: '#38BDF8',
+    accentSecondary: '#6366F1',
+    pillBg: 'rgba(56, 189, 248, 0.22)',
+    rowBg: 'rgba(56, 189, 248, 0.14)',
+    darkText: '#06131D',
+    darkSubText: 'rgba(6, 19, 29, 0.72)',
+  },
 ];
+
 
 const LOADOUT_CARDS: LoadoutCardItem[] = [
   {
@@ -991,23 +1040,23 @@ export const KiboApp: React.FC = () => {
 
   // Elegant startup sequence: notch descends smoothly from bezel as pure soul, chimes, then fluidly morphs
   useEffect(() => {
+    const chimeTimer = setTimeout(() => {
+      soundFX.playSoulPulse();
+    }, 280);
+
     const morphTimer = setTimeout(() => {
       setBootPhase('morphing');
-    }, 700);
+    }, 850);
 
     const readyTimer = setTimeout(() => {
       setBootPhase('ready');
       setIsBooting(false);
-    }, 1250);
-
-    const chimeTimer = setTimeout(() => {
-      soundFX.playSoulPulse();
-    }, 380);
+    }, 1400);
 
     return () => {
+      clearTimeout(chimeTimer);
       clearTimeout(morphTimer);
       clearTimeout(readyTimer);
-      clearTimeout(chimeTimer);
     };
   }, []);
 
@@ -1792,6 +1841,9 @@ export const KiboApp: React.FC = () => {
   useEffect(() => {
     let lastHoveredElement: Element | null = null;
     const handleMouseOver = (e: MouseEvent) => {
+      if (lastHoveredElement && lastHoveredElement.contains(e.target as Node)) {
+        return;
+      }
       const target = (e.target as HTMLElement)?.closest(
         'button, .companion-control-tile, .companion-list-row, .companion-wallpaper-card, .companion-day-col, .companion-adaptive-tile, .companion-nav-btn'
       );
@@ -2218,22 +2270,24 @@ export const KiboApp: React.FC = () => {
         })
       : () => {};
 
-    // 3. Subscribe to tray menu "open-settings" commands (Shortcuts, Chassis Bay, API Keys)
+    // 3. Subscribe to tray menu "open-settings" commands (Account, Shortcuts, Core Models)
     const unregSettings = window.kiboAPI?.onOpenSettings
       ? window.kiboAPI.onOpenSettings((section) => {
-          setIsExpanded(false);
-          setShowCompanionWindow(true);
-          if (section === 'soul') {
-            setCompanionDockTab('soul');
+          setIsTucked(false);
+          setShowMediaNotch(false);
+          setShowCompanionWindow(false);
+          setIsExpanded(true);
+          setActiveTab('Settings');
+          if (section === 'Core' || section === 'soul') {
+            setSettingsCategory('Core');
+          } else if (section === 'Voice') {
+            setSettingsCategory('Voice');
+          } else if (section === 'Shortcuts') {
+            setSettingsCategory('Shortcuts');
+          } else if (section === 'System') {
+            setSettingsCategory('System');
           } else {
-            setCompanionDockTab('settings');
-            if (section === 'shortcuts') {
-              setSettingsSection('Shortcuts');
-            } else if (section === 'connect') {
-              setShowConnectModal(true);
-            } else {
-              setSettingsSection('API keys');
-            }
+            setSettingsCategory('Account');
           }
         })
       : () => {};
@@ -2671,16 +2725,7 @@ export const KiboApp: React.FC = () => {
     []
   );
 
-  useEffect(() => {
-    if (!window.kiboAPI?.onOpenSettings) return;
-    const unreg = window.kiboAPI.onOpenSettings((section) => {
-      if (section === 'soul') openCompanionApp('soul', false);
-      else if (section === 'connect') openCompanionApp('connect', true);
-      else if (section === 'shortcuts') openCompanionApp('shortcuts', false);
-      else openCompanionApp('settings', false);
-    });
-    return () => unreg();
-  }, [openCompanionApp]);
+
 
   useEffect(() => {
     if (!window.kiboAPI?.setAppWindowRect) return;
@@ -2785,7 +2830,7 @@ export const KiboApp: React.FC = () => {
       Clipboard: { w: 860, h: 444 },
       Apps:      { w: 708, h: 560 },
       Agents:    { w: 860, h: 440 },
-      Wallpaper: { w: 960, h: 316 },
+      Wallpaper: { w: 708, h: 228 },
       Power:     { w: 708, h: 168 },
       Settings:  { w: 880, h: 540 },
     };
@@ -2795,7 +2840,7 @@ export const KiboApp: React.FC = () => {
   const showProactiveBanner = !isExpanded && !showCompanionWindow && Boolean(detectedAppId);
   const isCompactAskBar = !showProactiveBanner && (askNotchPhase === 'speaking' || askNotchPhase === 'thinking');
   const isTimerNotchActive = !isExpanded && !showProactiveBanner && !showMediaNotch && !isCompactAskBar && (isTimerRunning || timerAlarmRinging);
-  const isMiniMediaPill = bootPhase !== 'descending' && !isExpanded && !showProactiveBanner && !showMediaNotch && !isCompactAskBar && !isTimerNotchActive && !notchApiAlert && hasMediaSession;
+  const isMiniMediaPill = bootPhase === 'ready' && !isExpanded && !showProactiveBanner && !showMediaNotch && !isCompactAskBar && !isTimerNotchActive && !notchApiAlert && hasMediaSession;
   const isTuckedSliver = isTucked && !isExpanded && !showProactiveBanner && !showMediaNotch && !isTimerNotchActive && !isCompactAskBar && !isMiniMediaPill && !notchApiAlert;
 
   const archSize = isTuckedSliver ? 9 : showProactiveBanner ? 20 : isMiniMediaPill || isCompactAskBar || isTimerNotchActive || notchApiAlert ? 16 : 22;
@@ -3871,84 +3916,36 @@ export const KiboApp: React.FC = () => {
   const applyWallpaperByIndex = useCallback(
     async (index: number) => {
       const targetWp = wallpapersList[index];
-      if (!targetWp || isApplyingWallpaper) return;
+      if (!targetWp) return;
 
-      setIsApplyingWallpaper(true);
-
-      // Instantly apply the vibrant color palette of the target wallpaper to the entire UI
-      setAdaptiveWallpaperTheme(targetWp);
-      setAppliedWallpaperIndex(index);
-      localStorage.setItem('kibo_wallpaper_idx', String(index));
-
-      extractAndApplyPaletteForIndex(index, wallpapersList);
-
-      try {
-        const img = new Image();
-        img.src = targetWp.url;
-        if (img.decode) {
-          await img.decode();
-        } else {
-          await new Promise<void>((res) => {
-            img.onload = () => res();
-            img.onerror = () => res();
-          });
-        }
-      } catch (_) {}
-
+      // Start shockwave transition with the NEW wallpaper
       setRipplingWallpaperUrl(targetWp.url);
       setPrevAppliedWallpaperIndex(appliedWallpaperIndex);
+      setAppliedWallpaperIndex(index);
+      setFocusedWallpaperIndex(index);
+      setAdaptiveWallpaperTheme(targetWp);
       setIsWallpaperRippling(true);
+      localStorage.setItem('kibo_wallpaper_idx', String(index));
+      extractAndApplyPaletteForIndex(index, wallpapersList);
+      soundFX.playToggle(true);
 
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          const el = irisOverlayRef.current;
-          const maxRadius = Math.ceil(Math.hypot(fullScreenDims.w, fullScreenDims.h));
+      const sourcePathOrUrl = targetWp.filePath || targetWp.url;
+      if (window.kiboAPI?.setWallpaper) {
+        try {
+          window.kiboAPI.setWallpaper(sourcePathOrUrl);
+        } catch (_) {}
+      }
+      if (targetWp.accent) {
+        window.kiboAPI?.updateTrayColor?.(targetWp.accent);
+      }
 
-          if (!el) {
-            const sourcePathOrUrl = targetWp.filePath || targetWp.url;
-            window.kiboAPI?.setWallpaper?.(sourcePathOrUrl).finally(() => {
-              setIsWallpaperRippling(false);
-              setIsApplyingWallpaper(false);
-            });
-            return;
-          }
-
-          gsap.killTweensOf(el);
-          gsap.fromTo(
-            el,
-            {
-              clipPath: 'circle(22px at 50% 330px)',
-              opacity: 1,
-            },
-            {
-              clipPath: `circle(${maxRadius}px at 50% 330px)`,
-              opacity: 1,
-              duration: 1.15,
-              ease: 'power2.inOut',
-              onComplete: async () => {
-                const sourcePathOrUrl = targetWp.filePath || targetWp.url;
-                if (window.kiboAPI?.setWallpaper) {
-                  try {
-                    await window.kiboAPI.setWallpaper(sourcePathOrUrl);
-                  } catch (_) {}
-                }
-                gsap.to(el, {
-                  opacity: 0,
-                  duration: 0.34,
-                  ease: 'power1.out',
-                  onComplete: () => {
-                    setIsWallpaperRippling(false);
-                    setRipplingWallpaperUrl('');
-                    setIsApplyingWallpaper(false);
-                  },
-                });
-              },
-            }
-          );
-        });
-      });
+      // Automatically complete shockwave fade after animation finishes
+      setTimeout(() => {
+        setIsWallpaperRippling(false);
+        setRipplingWallpaperUrl('');
+      }, 920);
     },
-    [wallpapersList, appliedWallpaperIndex, isApplyingWallpaper, fullScreenDims, extractAndApplyPaletteForIndex]
+    [wallpapersList, appliedWallpaperIndex, extractAndApplyPaletteForIndex]
   );
 
   const handleWallpaperStripClick = useCallback(
@@ -4873,6 +4870,24 @@ export const KiboApp: React.FC = () => {
       }}
       
     >
+      {/* Shockwave Wallpaper Transition (Emerging smoothly from Top Notch) */}
+      {isWallpaperRippling && ripplingWallpaperUrl && (
+        <div
+          className="wallpaper-radial-iris-overlay is-shockwave"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            width: '100vw',
+            height: '100vh',
+            backgroundImage: `url("${resolveWallpaperDisplayUrl(ripplingWallpaperUrl)}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            pointerEvents: 'none',
+            zIndex: 1,
+          }}
+        />
+      )}
+
       {/* Glowing Blue Desktop Border ONLY when Kibo is actively working / controlling the PC */}
       <div
         className={`kibo-screen-edge-glow ${
@@ -4881,19 +4896,6 @@ export const KiboApp: React.FC = () => {
             : ''
         }`}
       />
-      {isWallpaperRippling && (
-        <div
-          ref={irisOverlayRef}
-          className="wallpaper-radial-iris-overlay"
-          style={{
-            width: `${fullScreenDims.w}px`,
-            height: `${fullScreenDims.h}px`,
-            backgroundImage: `url("${resolveWallpaperDisplayUrl(ripplingWallpaperUrl || activeTheme.url)}")`,
-            clipPath: 'circle(22px at 50% 330px)',
-            willChange: 'clip-path, opacity',
-          }}
-        />
-      )}
 
       {/* =====================================================================
           TOP HARDWARE NOTCH SHELL
@@ -6550,16 +6552,21 @@ export const KiboApp: React.FC = () => {
 
                 {activeTab === 'Wallpaper' && (
                   <div
-                    style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}
-                    onWheel={handleWallpaperWheel}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      flex: 1,
+                      justifyContent: 'space-between',
+                      minHeight: 0,
+                    }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <button
                           onClick={() => setWallpaperSourceTab('Recent')}
                           className={`companion-filter-pill ${wallpaperSourceTab === 'Recent' ? 'active' : ''}`}
                         >
-                          Recent
+                          Curated 4K
                         </button>
                         <button
                           onClick={handlePickLocalWallpapers}
@@ -6567,30 +6574,86 @@ export const KiboApp: React.FC = () => {
                         >
                           My folder
                         </button>
-                        <span className="companion-mono-tiny" style={{ marginLeft: '6px' }}>
+                        <span className="companion-mono-tiny" style={{ marginLeft: 6, color: '#71717A' }}>
                           {wallpapersList.length} pictures
                         </span>
                       </div>
+                      <span style={{ fontSize: 11, color: '#71717A', fontWeight: 500 }}>
+                        Click to apply & adapt UI palette
+                      </span>
                     </div>
 
-                    <div className="wallpaper-slanted-gallery">
-                      <div ref={wallpaperTrackRef} className="wallpaper-slanted-track">
-                        {trackWallpapers.map(({ wp, originalIndex, isCenter, isApplied }) => (
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(4, 1fr)',
+                        gap: 8,
+                        flex: 1,
+                        overflowY: 'auto',
+                        paddingRight: 4,
+                      }}
+                    >
+                      {wallpapersList.map((wp, idx) => {
+                        const isApplied = idx === appliedWallpaperIndex;
+                        return (
                           <div
-                            key={wp.id}
-                            onClick={() => handleWallpaperStripClick(originalIndex)}
-                            className={`wallpaper-slanted-strip ${isCenter ? 'selected' : ''} ${isApplied ? 'applied' : ''}`}
+                            key={wp.id || idx}
+                            onClick={() => applyWallpaperByIndex(idx)}
+                            style={{
+                              position: 'relative',
+                              borderRadius: 12,
+                              overflow: 'hidden',
+                              cursor: 'pointer',
+                              border: isApplied ? '2px solid var(--adaptive-accent, #38BDF8)' : '1px solid rgba(255,255,255,0.08)',
+                              background: '#141519',
+                              height: 68,
+                              boxShadow: isApplied ? '0 0 12px rgba(var(--adaptive-accent-rgb, 56, 189, 248), 0.35)' : 'none',
+                              transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
+                            }}
                           >
                             <div
-                              className="wallpaper-slanted-image"
-                              style={{ backgroundImage: `url("${resolveWallpaperDisplayUrl(wp.thumb)}")` }}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                backgroundImage: `url("${resolveWallpaperDisplayUrl(wp.thumb || wp.url)}")`,
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center',
+                                filter: isApplied ? 'none' : 'brightness(0.85)',
+                              }}
                             />
+                            <div
+                              style={{
+                                position: 'absolute',
+                                inset: 0,
+                                background: 'linear-gradient(to top, rgba(12,13,18,0.85) 0%, transparent 60%)',
+                                display: 'flex',
+                                alignItems: 'flex-end',
+                                justifyContent: 'space-between',
+                                padding: '5px 7px',
+                              }}
+                            >
+                              <span style={{ fontSize: 10.5, fontWeight: 700, color: '#FFFFFF', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
+                                {wp.title}
+                              </span>
+                              {isApplied && (
+                                <span
+                                  style={{
+                                    fontSize: 9,
+                                    fontWeight: 800,
+                                    padding: '1.5px 6px',
+                                    borderRadius: 999,
+                                    background: 'var(--adaptive-accent, #38BDF8)',
+                                    color: '#0A0E17',
+                                  }}
+                                >
+                                  Applied
+                                </span>
+                              )}
+                            </div>
                           </div>
-                        ))}
-                      </div>
+                        );
+                      })}
                     </div>
-
-                    <div style={{ height: '4px' }} />
                   </div>
                 )}
 
@@ -6877,14 +6940,14 @@ export const KiboApp: React.FC = () => {
                       {settingsCategory === 'Core' && (
                         <>
                           <div>
-                            <h2 className="kibo-settings-header-title">Core & Appearance</h2>
+                            <h2 className="kibo-settings-header-title">Core & Skins</h2>
                             <p className="kibo-settings-header-sub">Choose your droid chassis skin and taskbar tray tint.</p>
                           </div>
 
-                          <div className="kibo-settings-card">
-                            <div className="kibo-settings-row-label" style={{ marginBottom: 12 }}>Chassis Pods</div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
-                              {SOUL_SKINS.slice(0, 4).map((skin) => {
+                          <div className="kibo-settings-card" style={{ padding: '16px' }}>
+                            <div className="kibo-settings-row-label" style={{ marginBottom: 12 }}>Select Droid Chassis</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                              {SOUL_SKINS.map((skin) => {
                                 const isSelected = skin.key === selectedSkinKey;
                                 return (
                                   <button
@@ -6898,32 +6961,42 @@ export const KiboApp: React.FC = () => {
                                     style={{
                                       display: 'flex',
                                       flexDirection: 'column',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      padding: '16px 12px 14px',
-                                      borderRadius: 16,
-                                      background: isSelected ? 'rgba(56, 189, 248, 0.12)' : '#141519',
-                                      border: isSelected ? '1.5px solid #38BDF8' : '1px solid rgba(255,255,255,0.08)',
+                                      alignItems: 'flex-start',
+                                      padding: '14px 14px 12px',
+                                      borderRadius: 14,
+                                      background: isSelected ? 'rgba(255, 255, 255, 0.07)' : '#141519',
+                                      border: isSelected ? `1.5px solid ${skin.primaryColor}` : '1px solid rgba(255,255,255,0.08)',
                                       cursor: 'pointer',
+                                      textAlign: 'left',
                                       position: 'relative',
-                                      transition: 'all 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
-                                      boxShadow: isSelected ? `0 8px 24px ${skin.primaryColor}26` : 'none',
+                                      transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                                      boxShadow: isSelected ? `0 6px 20px ${skin.primaryColor}22` : 'none',
                                     }}
                                   >
-                                    <div style={{ height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                      <SoulCanvas soul={skin} width={68} height={52} scale={0.92} mode="LISTENING" />
+                                    <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                                      <SoulCanvas soul={skin} width={42} height={34} scale={0.78} mode="LISTENING" />
+                                      <span
+                                        style={{
+                                          fontSize: 10.5,
+                                          fontWeight: 700,
+                                          padding: '2px 8px',
+                                          borderRadius: 999,
+                                          background: isSelected ? skin.primaryColor : 'rgba(255,255,255,0.06)',
+                                          color: isSelected ? '#0A0E17' : '#94A3B8',
+                                        }}
+                                      >
+                                        {isSelected ? 'Equipped' : 'Equip'}
+                                      </span>
                                     </div>
-                                    <div
-                                      style={{
-                                        width: 8,
-                                        height: 8,
-                                        borderRadius: '50%',
-                                        background: isSelected ? skin.primaryColor : 'rgba(255,255,255,0.2)',
-                                        boxShadow: isSelected ? `0 0 10px ${skin.primaryColor}` : 'none',
-                                        marginTop: 8,
-                                        transition: 'all 0.2s ease',
-                                      }}
-                                    />
+                                    <div style={{ fontSize: 13.5, fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.01em', marginBottom: 2 }}>
+                                      {skin.name}
+                                    </div>
+                                    <div style={{ fontSize: 11, fontWeight: 600, color: skin.primaryColor, marginBottom: 4 }}>
+                                      {skin.primaryColor}
+                                    </div>
+                                    <div style={{ fontSize: 11, color: '#71717A', lineHeight: 1.4 }}>
+                                      {skin.blurb || 'Chassis module calibrated for desktop telemetry.'}
+                                    </div>
                                   </button>
                                 );
                               })}
@@ -7088,7 +7161,7 @@ export const KiboApp: React.FC = () => {
                               <button
                                 onClick={() => {
                                   if (window.kiboAPI?.openUrl) {
-                                    window.kiboAPI.openUrl('https://github.com/RaahimAlavi/Hitodama/issues');
+                                    window.kiboAPI.openUrl('https://github.com/RaahimAlavi/kibo/issues');
                                   }
                                 }}
                                 className="config-pill-btn"

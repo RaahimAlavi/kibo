@@ -60,37 +60,33 @@
 
 .wallpaper-radial-iris-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
   background-size: cover;
   background-position: center center;
   background-repeat: no-repeat;
-  pointer-events: none;
+  pointer-events: none !important;
   z-index: 1;
 }
 
-.wallpaper-radial-iris-overlay.is-expanding {
-  animation: wallpaperCircleExpand 1.25s cubic-bezier(0.25, 1, 0.35, 1) forwards;
+.wallpaper-radial-iris-overlay.is-shockwave {
+  animation: wallpaperShockwaveExpand 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
+  pointer-events: none !important;
 }
 
-.wallpaper-radial-iris-overlay.is-fading {
-  clip-path: circle(150vmax at 50% 340px);
-  opacity: 0;
-  transition: opacity 0.32s ease-out;
-}
-
-@keyframes wallpaperCircleExpand {
+@keyframes wallpaperShockwaveExpand {
   0% {
-    clip-path: circle(24px at 50% 340px);
+    clip-path: circle(24px at 50% 0px);
     opacity: 1;
   }
-  18% {
-    clip-path: circle(68px at 50% 340px);
+  65% {
+    clip-path: circle(150vmax at 50% 0px);
     opacity: 1;
   }
   100% {
-    clip-path: circle(150vmax at 50% 340px);
-    opacity: 1;
+    clip-path: circle(150vmax at 50% 0px);
+    opacity: 0;
   }
 }
 
@@ -158,6 +154,17 @@
    NOTCH STATES: AWAKE SOUL, COMPACT ASK BAR, TIMER COUNTDOWN & ALARM
    ========================================================================== */
 
+@keyframes kiboFadeIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .kibo-notch-soul, .kibo-notch-soul {
   position: relative;
   width: 100%;
@@ -166,6 +173,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  animation: kiboFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .kibo-soul-underglow, .kibo-soul-underglow {
@@ -2924,6 +2932,7 @@
   cursor: pointer;
   transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease;
   user-select: none;
+  animation: kiboFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .kibo-notch-mini-media:hover {

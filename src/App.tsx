@@ -307,25 +307,17 @@ export function App() {
 
   const activeScene = STORY_SCENES[sceneIdx];
   const activeFeature = NOTCH_FEATURES[featureIdx];
-  const headlineWords = 'A quiet companion that lives in your top bezel.'.split(' ');
+  const headlineWords = 'Control your PC with your voice.'.split(' ');
 
   return (
     <div ref={pageRef} className="kibo-web-root">
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@1,6..72,400;1,6..72,500;1,6..72,600&display=swap');
-
         .kibo-web-root {
           min-height: 100vh;
           background: #F7F7F4;
           color: #121316;
           font-family: 'Figtree', -apple-system, BlinkMacSystemFont, sans-serif;
           -webkit-font-smoothing: antialiased;
-        }
-        .kibo-serif-italic {
-          font-family: 'Newsreader', 'Playfair Display', Georgia, serif !important;
-          font-style: italic !important;
-          font-weight: 500 !important;
-          letter-spacing: -0.01em;
         }
         .kibo-web-nav {
           position: sticky;
@@ -672,30 +664,22 @@ export function App() {
           justify-content: space-between;
           flex-wrap: wrap;
           gap: 24px;
-          margin-bottom: 64px;
+          margin-bottom: 48px;
           box-shadow: 0 24px 60px rgba(18, 19, 22, 0.12);
         }
-        .kibo-footer-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 36px;
+        .kibo-footer-nav-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 20px;
           position: relative;
           z-index: 1;
-        }
-        .kibo-footer-col-title {
-          font-size: 13px;
-          font-weight: 700;
-          color: #121316;
-          margin-bottom: 16px;
-          letter-spacing: -0.01em;
-        }
-        .kibo-footer-list {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
+          padding-bottom: 24px;
         }
         .kibo-footer-link {
-          font-size: 13.5px;
+          font-size: 14px;
+          font-weight: 500;
           color: #68707C;
           text-decoration: none;
           transition: color 0.18s ease;
@@ -748,7 +732,7 @@ export function App() {
           </nav>
 
           <a
-            href="/download/Kibo-Setup.exe"
+            href="./download/Kibo-Setup.exe"
             download="Kibo-Setup.exe"
             className="kibo-web-pill-cta"
             style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
@@ -764,15 +748,15 @@ export function App() {
         <section className="kibo-hero">
           <div className="kibo-hero-tag kibo-hero-fade">
             <span className="kibo-hero-tag-dot" />
-            <span>The Desktop Companion for Windows</span>
+            <span>The voice assistant that actually does things for you</span>
           </div>
 
           <h1 className="kibo-hero-h1">
-            <span className="kibo-word-mask"><span className="kibo-reveal-word">Control</span></span>{' '}
-            <span className="kibo-word-mask"><span className="kibo-reveal-word">your</span></span>{' '}
-            <span className="kibo-word-mask"><span className="kibo-reveal-word">PC</span></span>{' '}
-            <span className="kibo-word-mask"><span className="kibo-reveal-word">with</span></span>{' '}
-            <span className="kibo-word-mask"><span className="kibo-reveal-word kibo-serif-italic">your voice.</span></span>
+            {headlineWords.map((word, idx) => (
+              <span key={idx} className="kibo-word-mask">
+                <span className="kibo-reveal-word">{word}</span>
+              </span>
+            ))}
           </h1>
 
           <p className="kibo-hero-sub kibo-hero-fade">
@@ -783,7 +767,7 @@ export function App() {
 
           <div className="kibo-hero-cta-row kibo-hero-fade" style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '26px 0 42px' }}>
             <a
-              href="/download/Kibo-Setup.exe"
+              href="./download/Kibo-Setup.exe"
               download="Kibo-Setup.exe"
               className="kibo-web-pill-cta"
               style={{ display: 'inline-flex', alignItems: 'center', gap: 9, padding: '12px 26px', fontSize: 14.5 }}
@@ -866,9 +850,7 @@ export function App() {
         <section id="how-it-works" className="kibo-section kibo-scroll-section">
           <div className="kibo-section-header">
             <span className="kibo-eyebrow">Interaction</span>
-            <h2 className="kibo-h2">
-              Three shortcuts. <span className="kibo-serif-italic">Zero window switching.</span>
-            </h2>
+            <h2 className="kibo-h2">Three shortcuts. Zero window switching.</h2>
             <p className="kibo-lead">
               Kibo works directly over whichever application you are already using.
               Hold a shortcut, speak naturally, and release.
@@ -884,7 +866,7 @@ export function App() {
                   <kbd className="kibo-kbd">Alt</kbd>
                 </div>
                 <h3 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 10px' }}>
-                  Control apps with <span className="kibo-serif-italic">your voice</span>
+                  Control apps with your voice
                 </h3>
                 <p style={{ fontSize: 14.5, lineHeight: 1.6, color: '#5A5E68', margin: 0 }}>
                   Ask Kibo to click buttons on screen, open installed apps, search
@@ -902,7 +884,7 @@ export function App() {
                   <kbd className="kibo-kbd">Shift</kbd>
                 </div>
                 <h3 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 10px' }}>
-                  Inspect your screen with <span className="kibo-serif-italic">your eyes</span>
+                  Inspect your screen with your eyes
                 </h3>
                 <p style={{ fontSize: 14.5, lineHeight: 1.6, color: '#5A5E68', margin: 0 }}>
                   Draw a loop around any chart, error log, or UI element on your
@@ -920,7 +902,7 @@ export function App() {
                   <kbd className="kibo-kbd">Win</kbd>
                 </div>
                 <h3 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 10px' }}>
-                  Type with <span className="kibo-serif-italic">clean speech</span>
+                  Type with clean speech
                 </h3>
                 <p style={{ fontSize: 14.5, lineHeight: 1.6, color: '#5A5E68', margin: 0 }}>
                   Speak freely with false starts or mid-sentence changes. Kibo
@@ -936,9 +918,7 @@ export function App() {
         <section id="workspace" className="kibo-section kibo-scroll-section">
           <div className="kibo-section-header">
             <span className="kibo-eyebrow">Top Bezel Workspace</span>
-            <h2 className="kibo-h2">
-              Everything you reach for, <span className="kibo-serif-italic">one scroll away.</span>
-            </h2>
+            <h2 className="kibo-h2">Everything you reach for, one scroll away.</h2>
             <p className="kibo-lead">
               Scroll down on the top bezel to expand Kibo’s workspace. When you
               move your mouse away, it smoothly tucks back into the top edge.
@@ -1065,7 +1045,7 @@ export function App() {
                   Run <code style={{ fontFamily: "'JetBrains Mono', monospace", background: '#F1F2EE', padding: '2px 6px', borderRadius: 5 }}>npm run app</code> to start, or build your standalone Windows installer with <code style={{ fontFamily: "'JetBrains Mono', monospace", background: '#F1F2EE', padding: '2px 6px', borderRadius: 5 }}>npm run dist</code>.
                 </p>
                 <a
-                  href="/download/Kibo-Setup.exe"
+                  href="./download/Kibo-Setup.exe"
                   download="Kibo-Setup.exe"
                   className="kibo-web-pill-cta"
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, textDecoration: 'none' }}
@@ -1106,7 +1086,7 @@ export function App() {
           <div className="kibo-section-header">
             <span className="kibo-eyebrow">Questions & Answers</span>
             <h2 className="kibo-h2">
-              Everything you need to know about <span className="kibo-serif-italic">Kibo.</span>
+              Everything you need to know about Kibo.
             </h2>
             <p className="kibo-lead">
               Clear answers regarding privacy, gaming performance, hotkey control, and local execution.
@@ -1160,7 +1140,7 @@ export function App() {
               </p>
             </div>
             <a
-              href="/download/Kibo-Setup.exe"
+              href="./download/Kibo-Setup.exe"
               download="Kibo-Setup.exe"
               className="kibo-web-pill-cta"
               style={{
@@ -1180,61 +1160,46 @@ export function App() {
             </a>
           </div>
 
-          {/* 4 Clean Columns */}
-          <div className="kibo-footer-grid">
-            <div>
-              <div className="kibo-footer-col-title">Product</div>
-              <div className="kibo-footer-list">
-                <a href="#how-it-works" onClick={(e) => handleNavClick(e, '#how-it-works')} className="kibo-footer-link">Voice Control</a>
-                <a href="#how-it-works" onClick={(e) => handleNavClick(e, '#how-it-works')} className="kibo-footer-link">Screen Vision</a>
-                <a href="#how-it-works" onClick={(e) => handleNavClick(e, '#how-it-works')} className="kibo-footer-link">Clean Dictation</a>
-                <a href="#workspace" onClick={(e) => handleNavClick(e, '#workspace')} className="kibo-footer-link">Notch Workspace</a>
-                <a href="#workspace" onClick={(e) => handleNavClick(e, '#workspace')} className="kibo-footer-link">Autonomous Workers</a>
-                <a href="#workspace" onClick={(e) => handleNavClick(e, '#workspace')} className="kibo-footer-link">Dynamic 4K Wallpapers</a>
-              </div>
+          {/* Minimal Navigation & Brand Row */}
+          <div className="kibo-footer-nav-row">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <SoulCanvas
+                soul={SOUL_SKINS[0]}
+                width={28}
+                height={26}
+                scale={0.75}
+                mode="LISTENING"
+                interactive={false}
+              />
+              <span style={{ fontSize: 16, fontWeight: 800, color: '#121316', letterSpacing: '-0.02em' }}>
+                Kibo
+              </span>
+              <span style={{ fontSize: 13, color: '#71717A', fontWeight: 500 }}>
+                · The voice assistant that actually does things for you
+              </span>
             </div>
 
-            <div>
-              <div className="kibo-footer-col-title">Details</div>
-              <div className="kibo-footer-list">
-                <span className="kibo-footer-link">Windows 11 Ready</span>
-                <span className="kibo-footer-link">Win32 Automation</span>
-                <span className="kibo-footer-link">Direct Audio Hook</span>
-                <span className="kibo-footer-link">Dual-Engine Vision</span>
-                <span className="kibo-footer-link">Fast Computer Use</span>
-                <span className="kibo-footer-link">Zero Cloud Telemetry</span>
-              </div>
-            </div>
-
-            <div>
-              <div className="kibo-footer-col-title">Architecture</div>
-              <div className="kibo-footer-list">
-                <span className="kibo-footer-link">Local-First Storage</span>
-                <span className="kibo-footer-link">Personal API Keys</span>
-                <span className="kibo-footer-link">Hardware Accelerated</span>
-                <span className="kibo-footer-link">Figtree Typography</span>
-                <span className="kibo-footer-link">Direct OS Synthesizer</span>
-                <span className="kibo-footer-link">Adaptive Wallpaper Palette</span>
-              </div>
-            </div>
-
-            <div>
-              <div className="kibo-footer-col-title">Creator</div>
-              <div className="kibo-footer-list">
-                <span className="kibo-footer-link" style={{ color: '#121316', fontWeight: 600 }}>Crafted with obsession by Raahim Alavi</span>
-                <a href="https://github.com/RaahimAlavi/Hitodama" target="_blank" rel="noreferrer" className="kibo-footer-link">GitHub Repository</a>
-                <a href="https://github.com/RaahimAlavi/Hitodama/releases" target="_blank" rel="noreferrer" className="kibo-footer-link">Release Notes</a>
-                <a href="https://github.com/RaahimAlavi/Hitodama/issues" target="_blank" rel="noreferrer" className="kibo-footer-link">Report a Bug</a>
-                <a href="https://github.com/RaahimAlavi/Hitodama/discussions" target="_blank" rel="noreferrer" className="kibo-footer-link">Request a Feature</a>
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+              <a href="#how-it-works" onClick={(e) => handleNavClick(e, '#how-it-works')} className="kibo-footer-link">
+                How it works
+              </a>
+              <a href="#workspace" onClick={(e) => handleNavClick(e, '#workspace')} className="kibo-footer-link">
+                Workspace
+              </a>
+              <a href="#faq" onClick={(e) => handleNavClick(e, '#faq')} className="kibo-footer-link">
+                FAQ
+              </a>
+              <a href="https://github.com/RaahimAlavi/kibo" target="_blank" rel="noreferrer" className="kibo-footer-link">
+                GitHub
+              </a>
             </div>
           </div>
 
           {/* Bottom Bar */}
           <div
             style={{
-              marginTop: 64,
-              paddingTop: 28,
+              marginTop: 32,
+              paddingTop: 24,
               borderTop: '1px solid rgba(18, 19, 22, 0.08)',
               display: 'flex',
               alignItems: 'center',
@@ -1246,7 +1211,7 @@ export function App() {
             }}
           >
             <div>
-              © 2026 Kibo by <strong style={{ color: '#121316', fontWeight: 700 }}>Raahim Alavi</strong>. All rights reserved.
+              Designed & built by <strong style={{ color: '#121316', fontWeight: 700 }}>Raahim Alavi</strong>. Open source under MIT.
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
               <span>Built for Windows 10 & 11</span>
