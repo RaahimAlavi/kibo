@@ -39,7 +39,7 @@ const STORY_SCENES: StoryScene[] = [
     id: 'dictate',
     tag: 'Clean Dictation',
     shortcut: ['Ctrl', 'Win'],
-    spokenPrompt: 'uh let us move the sync to Thursday at 3—actually make it Friday at 10am',
+    spokenPrompt: 'uh let us move the sync to Thursday at 3, actually make it Friday at 10am',
     kiboReply: 'Let’s move the sync to Friday at 10:00 AM.',
     soulMode: 'LISTENING',
     soulExpr: 'NORMAL',
@@ -54,6 +54,12 @@ const STORY_SCENES: StoryScene[] = [
     soulExpr: 'EXCITED',
   },
 ];
+
+const WindowsLogoIcon = ({ size = 14 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" style={{ flexShrink: 0 }}>
+    <path d="M0 2.263L6.545 1.37v6.236H0V2.263zm0 5.942h6.545v6.257L0 13.568V8.205zm7.364-6.953L16 0v7.606H7.364V1.252zm0 6.953H16v7.618l-8.636-1.229V8.205z"/>
+  </svg>
+);
 
 const NOTCH_FEATURES = [
   {
@@ -135,6 +141,21 @@ export function App() {
       });
     } else {
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
+    e.preventDefault();
+    const targetEl = document.querySelector(targetId);
+    if (!targetEl) return;
+    if (lenisRef.current) {
+      lenisRef.current.scrollTo(targetEl as HTMLElement, {
+        offset: -64,
+        duration: 1.25,
+        easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      });
+    } else {
+      targetEl.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
@@ -590,13 +611,19 @@ export function App() {
           </a>
 
           <nav className="kibo-web-links">
-            <a href="#how-it-works" className="kibo-web-link">How it works</a>
-            <a href="#workspace" className="kibo-web-link">Notch Workspace</a>
-            <a href="#download" className="kibo-web-link">Download</a>
+            <a href="#how-it-works" onClick={(e) => handleNavClick(e, '#how-it-works')} className="kibo-web-link">How it works</a>
+            <a href="#workspace" onClick={(e) => handleNavClick(e, '#workspace')} className="kibo-web-link">Notch Workspace</a>
+            <a href="#download" onClick={(e) => handleNavClick(e, '#download')} className="kibo-web-link">Download</a>
           </nav>
 
-          <a href="#download" className="kibo-web-pill-cta">
-            Download for Windows
+          <a
+            href="/download/Kibo-Setup.exe"
+            download="Kibo-Setup.exe"
+            className="kibo-web-pill-cta"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
+          >
+            <WindowsLogoIcon size={13} />
+            <span>Download for Windows</span>
           </a>
         </div>
       </header>
@@ -606,7 +633,7 @@ export function App() {
         <section className="kibo-hero">
           <div className="kibo-hero-tag kibo-hero-fade">
             <span className="kibo-hero-tag-dot" />
-            <span>Native Windows Desktop Companion</span>
+            <span>Top Bezel Desktop Companion for Windows</span>
           </div>
 
           <h1 className="kibo-hero-h1">
@@ -620,12 +647,18 @@ export function App() {
           <p className="kibo-hero-sub kibo-hero-fade">
             Kibo rests unobtrusively at the top of your screen, expanding when you
             need media controls, quick tools, screen vision, clean voice dictation,
-            or background agents—and tucking away when you don’t.
+            or background agents, and tucking away when you don’t.
           </p>
 
           <div className="kibo-hero-cta-row kibo-hero-fade" style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '26px 0 42px' }}>
-            <a href="#download" className="kibo-web-pill-cta" style={{ padding: '12px 26px', fontSize: 14.5 }}>
-              Download for Windows
+            <a
+              href="/download/Kibo-Setup.exe"
+              download="Kibo-Setup.exe"
+              className="kibo-web-pill-cta"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 9, padding: '12px 26px', fontSize: 14.5 }}
+            >
+              <WindowsLogoIcon size={15} />
+              <span>Download for Windows</span>
             </a>
             <span style={{ fontSize: 13, color: '#68707C', fontWeight: 500 }}>
               Windows 10 / 11 · Free & Local-First
@@ -685,7 +718,7 @@ export function App() {
                       className={`kibo-stage-tab ${isActive ? 'active' : ''}`}
                     >
                       <div style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", opacity: 0.7 }}>
-                        0{idx + 1} · {sc.shortcut.join('+')}
+                        {sc.shortcut.join(' + ')}
                       </div>
                       <div style={{ fontSize: 13.5, fontWeight: 700, marginTop: 3 }}>
                         {sc.tag}
@@ -701,7 +734,7 @@ export function App() {
         {/* Section 1: Three Shortcuts */}
         <section id="how-it-works" className="kibo-section kibo-scroll-section">
           <div className="kibo-section-header">
-            <span className="kibo-eyebrow">01 / Interaction</span>
+            <span className="kibo-eyebrow">Interaction</span>
             <h2 className="kibo-h2">Three shortcuts. Zero window switching.</h2>
             <p className="kibo-lead">
               Kibo works directly over whichever application you are already using.
@@ -769,7 +802,7 @@ export function App() {
         {/* Section 2: The Notch Workspace */}
         <section id="workspace" className="kibo-section kibo-scroll-section">
           <div className="kibo-section-header">
-            <span className="kibo-eyebrow">02 / Top Bezel Workspace</span>
+            <span className="kibo-eyebrow">Top Bezel Workspace</span>
             <h2 className="kibo-h2">Everything you reach for, one scroll away.</h2>
             <p className="kibo-lead">
               Scroll down on the top bezel to expand Kibo’s workspace. When you
@@ -789,9 +822,6 @@ export function App() {
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <strong style={{ fontSize: 16, color: '#121316' }}>{feat.name}</strong>
-                      <span style={{ fontSize: 12, fontFamily: "'JetBrains Mono', monospace", color: '#68707C' }}>
-                        0{idx + 1}
-                      </span>
                     </div>
                     {isActive && (
                       <p style={{ fontSize: 14, lineHeight: 1.55, color: '#5A5E68', margin: '8px 0 0' }}>
@@ -881,11 +911,11 @@ export function App() {
         {/* Section 3: Local-First Setup & Download */}
         <section id="download" className="kibo-section kibo-scroll-section">
           <div className="kibo-section-header">
-            <span className="kibo-eyebrow">03 / Download & Setup</span>
+            <span className="kibo-eyebrow">Download & Setup</span>
             <h2 className="kibo-h2">Runs directly on your machine with your own keys.</h2>
             <p className="kibo-lead">
               Kibo connects straight from your PC to Google Gemini and Tavily using
-              your own free API keys—stored locally on your device with no middleman
+              your own free API keys, stored locally on your device with no middleman
               servers.
             </p>
           </div>
@@ -893,7 +923,6 @@ export function App() {
           <div className="kibo-grid-3">
             <div className="kibo-card">
               <div>
-                <span className="kibo-eyebrow">Step 01</span>
                 <h3 style={{ fontSize: 19, fontWeight: 700, margin: '6px 0 10px' }}>
                   Download & Launch
                 </h3>
@@ -901,10 +930,12 @@ export function App() {
                   Run <code style={{ fontFamily: "'JetBrains Mono', monospace", background: '#F1F2EE', padding: '2px 6px', borderRadius: 5 }}>npm run app</code> to start, or build your standalone Windows installer with <code style={{ fontFamily: "'JetBrains Mono', monospace", background: '#F1F2EE', padding: '2px 6px', borderRadius: 5 }}>npm run dist</code>.
                 </p>
                 <a
-                  href="/download/Kibo-Setup-1.0.0.exe"
+                  href="/download/Kibo-Setup.exe"
+                  download="Kibo-Setup.exe"
                   className="kibo-web-pill-cta"
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, textDecoration: 'none' }}
                 >
+                  <WindowsLogoIcon size={13} />
                   <span>Download Installer (.exe)</span>
                   <span style={{ opacity: 0.6 }}>↓</span>
                 </a>
@@ -913,7 +944,6 @@ export function App() {
 
             <div className="kibo-card">
               <div>
-                <span className="kibo-eyebrow">Step 02</span>
                 <h3 style={{ fontSize: 19, fontWeight: 700, margin: '6px 0 10px' }}>
                   Paste Your Gemini Key
                 </h3>
@@ -925,7 +955,6 @@ export function App() {
 
             <div className="kibo-card">
               <div>
-                <span className="kibo-eyebrow">Step 03</span>
                 <h3 style={{ fontSize: 19, fontWeight: 700, margin: '6px 0 10px' }}>
                   Ready to Companion
                 </h3>
@@ -958,34 +987,8 @@ export function App() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '4px 10px',
-                borderRadius: 999,
-                background: '#FFFFFF',
-                border: '1px solid rgba(18, 19, 22, 0.08)',
-                fontSize: 11.5,
-                fontWeight: 600,
-                color: '#121316',
-                fontFamily: 'JetBrains Mono, monospace',
-              }}
-            >
-              <span
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: '50%',
-                  background: '#10B981',
-                  boxShadow: '0 0 6px rgba(16, 185, 129, 0.6)',
-                }}
-              />
-              v1.0.0 · Win32 x64
-            </span>
             <span style={{ fontSize: 13, color: '#5A5E68', fontWeight: 500 }}>
-              Kibo — Ambient Top Bezel Companion for Windows
+              Kibo · Ambient Top Bezel Companion for Windows
             </span>
           </div>
 

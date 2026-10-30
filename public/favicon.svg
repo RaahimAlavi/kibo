@@ -1,7 +1,48 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-    <circle cx="32" cy="34" r="24" fill="#1C222E" stroke="#38BDF8" stroke-width="4"/>
-    <rect x="29" y="4" width="6" height="7" rx="3" fill="#38BDF8"/>
-    <rect x="14" y="24" width="36" height="20" rx="10" fill="#070A10" stroke="#38BDF8" stroke-opacity="0.4" stroke-width="2"/>
-    <rect x="21" y="29" width="6" height="10" rx="3" fill="#E0F2FE"/>
-    <rect x="37" y="29" width="6" height="10" rx="3" fill="#E0F2FE"/>
-  </svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none">
+  <defs>
+    <linearGradient id="kiboBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284C7"/>
+      <stop offset="100%" stop-color="#0369A1"/>
+    </linearGradient>
+    <linearGradient id="droidBody" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#0284C7"/>
+    </linearGradient>
+    <filter id="eyeGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- App Rounded Squircle Container -->
+  <rect width="256" height="256" rx="54" fill="#0C0D12"/>
+
+  <!-- Subtle Cyan Ambient Halo -->
+  <ellipse cx="128" cy="138" rx="84" ry="76" fill="#38BDF8" fill-opacity="0.14"/>
+
+  <!-- Antenna -->
+  <rect x="123" y="36" width="10" height="28" rx="5" fill="#0284C7"/>
+  <circle cx="128" cy="36" r="9" fill="#38BDF8" filter="url(#eyeGlow)"/>
+  <circle cx="128" cy="36" r="4.5" fill="#FFFFFF"/>
+
+  <!-- Droid Head / Chassis -->
+  <rect x="44" y="62" width="168" height="150" rx="75" fill="url(#droidBody)" stroke="#38BDF8" stroke-width="3"/>
+  <ellipse cx="128" cy="78" rx="56" ry="12" fill="#FFFFFF" fill-opacity="0.22"/>
+
+  <!-- Dark Glossy Visor -->
+  <rect x="64" y="104" width="128" height="76" rx="38" fill="#090D15" stroke="#38BDF8" stroke-width="2" stroke-opacity="0.45"/>
+
+  <!-- Left Cyan LED Eye -->
+  <rect x="88" y="122" width="20" height="36" rx="10" fill="#E0F2FE" filter="url(#eyeGlow)"/>
+  <rect x="91" y="125" width="7" height="14" rx="3.5" fill="#FFFFFF"/>
+
+  <!-- Right Cyan LED Eye -->
+  <rect x="148" y="122" width="20" height="36" rx="10" fill="#E0F2FE" filter="url(#eyeGlow)"/>
+  <rect x="151" y="125" width="7" height="14" rx="3.5" fill="#FFFFFF"/>
+
+  <!-- Smile LED Arc -->
+  <path d="M 121 158 Q 128 165 135 158" stroke="#38BDF8" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+</svg>

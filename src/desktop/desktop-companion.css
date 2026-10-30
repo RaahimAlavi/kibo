@@ -21,8 +21,8 @@
   --soul-gold: #FFC24A;
   --notch-black: #0C0C0E;
   --card-dark: #17171A;
-  --ease-hitodama: cubic-bezier(0.33, 1, 0.68, 1);
-  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-hitodama: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 * {
@@ -98,29 +98,50 @@
    TOP HARDWARE NOTCH SHELL & VECTOR SVG TOP-BEZEL ARCHES
    ========================================================================== */
 
-.kibo-bezel-shell, .kibo-bezel-shell {
+@keyframes kiboBootEntrance {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  65% {
+    transform: translateY(3px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.kibo-bezel-shell {
   position: relative;
   background: var(--notch-black);
   border: none;
   transition:
-    width 0.28s var(--ease-hitodama),
-    height 0.28s var(--ease-hitodama),
-    border-radius 0.28s var(--ease-hitodama);
-  will-change: width, height;
+    width 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+    height 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+    border-radius 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.32s ease;
+  will-change: width, height, transform;
   z-index: 10;
 }
 
-.kibo-svg-arch, .kibo-svg-arch {
+.kibo-bezel-shell.is-booting {
+  animation: kiboBootEntrance 0.88s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+.kibo-svg-arch {
   position: absolute;
   top: 0;
   pointer-events: none;
   z-index: 10;
   display: block;
   transition:
-    width 0.28s var(--ease-hitodama),
-    height 0.28s var(--ease-hitodama),
-    left 0.28s var(--ease-hitodama),
-    right 0.28s var(--ease-hitodama);
+    width 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+    height 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+    left 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+    right 0.36s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: width, height, left, right;
 }
 
@@ -4194,4 +4215,189 @@ kbd,
   border-radius: 999px;
   box-shadow: 0 0 10px var(--adaptive-accent, #38BDF8);
   transition: width 0.04s linear;
+}
+
+/* ==========================================================================
+   IN-NOTCH SETTINGS DASHBOARD (NATIVE HEYCLICKY-INSPIRED UX)
+   ========================================================================== */
+
+.kibo-notch-settings-panel {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0F1014;
+  border-radius: 16px;
+  color: #F8FAFC;
+}
+
+.kibo-settings-sidebar {
+  width: 200px;
+  background: #141519;
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.kibo-settings-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kibo-settings-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: transparent;
+  border: none;
+  color: #94A3B8;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.18s ease;
+}
+
+.kibo-settings-nav-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #FFFFFF;
+}
+
+.kibo-settings-nav-item.active {
+  background: rgba(56, 189, 248, 0.14);
+  color: #38BDF8;
+}
+
+.kibo-settings-sidebar-bottom {
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kibo-settings-version {
+  font-size: 11px;
+  color: #64748B;
+  font-family: var(--kibo-font-mono);
+  padding: 0 4px;
+}
+
+.kibo-settings-quit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #EF4444;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.kibo-settings-quit-btn:hover {
+  background: rgba(239, 68, 68, 0.18);
+  color: #F87171;
+}
+
+.kibo-settings-content {
+  flex: 1;
+  padding: 22px 28px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.kibo-settings-header-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #FFFFFF;
+  margin: 0 0 4px;
+  letter-spacing: -0.02em;
+}
+
+.kibo-settings-header-sub {
+  font-size: 13px;
+  color: #94A3B8;
+  margin: 0 0 16px;
+}
+
+.kibo-settings-card {
+  background: #181920;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.kibo-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+}
+
+.kibo-settings-row:not(:last-child) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 12px;
+}
+
+.kibo-settings-row-label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #F1F5F9;
+}
+
+.kibo-settings-row-desc {
+  font-size: 12px;
+  color: #64748B;
+  margin-top: 2px;
+}
+
+.kibo-switch {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  background: #2D3139;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  flex-shrink: 0;
+  border: none;
+  padding: 0;
+}
+
+.kibo-switch.is-on {
+  background: #38BDF8;
+}
+
+.kibo-switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.kibo-switch.is-on .kibo-switch-knob {
+  transform: translateX(18px);
 }

@@ -176,7 +176,27 @@ function startHitTestLoop() {
   }, 16);
 }
 
-function createKiboTrayIcon() {
+let currentTrayColorHex = '#38BDF8';
+
+function parseHexColor(hex) {
+  try {
+    let c = String(hex || '#38BDF8').replace('#', '').trim();
+    if (c.length === 3) c = c.split('').map((x) => x + x).join('');
+    const num = parseInt(c, 16);
+    if (isNaN(num)) return { r: 56, g: 189, b: 248 };
+    return {
+      r: (num >> 16) & 255,
+      g: (num >> 8) & 255,
+      b: num & 255,
+    };
+  } catch (_) {
+    return { r: 56, g: 189, b: 248 };
+  }
+}
+
+function createKiboTrayIcon(overrideHex) {
+  const hex = overrideHex || currentTrayColorHex;
+  const rgb = parseHexColor(hex);
   const size = 32;
   const buf = Buffer.alloc(size * size * 4, 0);
 
@@ -189,9 +209,9 @@ function createKiboTrayIcon() {
 
       // Top antenna tip
       if (y >= 2 && y <= 5 && x >= 14 && x <= 17) {
-        buf[idx] = 255;     // B
-        buf[idx + 1] = 210; // G
-        buf[idx + 2] = 92;  // R
+        buf[idx] = rgb.b;     // B
+        buf[idx + 1] = rgb.g; // G
+        buf[idx + 2] = rgb.r; // R
         buf[idx + 3] = 255;
         continue;
       }
@@ -203,10 +223,10 @@ function createKiboTrayIcon() {
         const isRightEye = y >= 14 && y <= 19 && x >= 18 && x <= 21;
 
         if (isLeftEye || isRightEye) {
-          // Bright Cyan LED Eyes
-          buf[idx] = 255;     // B
-          buf[idx + 1] = 230; // G
-          buf[idx + 2] = 180; // R
+          // Bright glowing LED Eyes
+          buf[idx] = Math.min(255, rgb.b + 60);
+          buf[idx + 1] = Math.min(255, rgb.g + 60);
+          buf[idx + 2] = Math.min(255, rgb.r + 60);
           buf[idx + 3] = 255;
         } else if (inVisor) {
           // Dark Glass Visor
@@ -214,11 +234,11 @@ function createKiboTrayIcon() {
           buf[idx + 1] = 10;
           buf[idx + 2] = 8;
           buf[idx + 3] = 255;
-        } else if (dist >= 0.86) {
-          // Cyan Rim Border
-          buf[idx] = 248;
-          buf[idx + 1] = 189;
-          buf[idx + 2] = 56;
+        } else if (dist >= 0.85) {
+          // Dynamic Rim Border matching equipped core
+          buf[idx] = rgb.b;
+          buf[idx + 1] = rgb.g;
+          buf[idx + 2] = rgb.r;
           buf[idx + 3] = 255;
         } else {
           // Matte Titanium Chassis
@@ -600,6 +620,30 @@ function createWindow() {
   const localServer = http.createServer((req, res) => {
     try {
       const parsedUrl = new URL(req.url || '/', `http://127.0.0.1:${KIBO_LOCAL_PORT}`);
+
+      // Native Windows Installer Direct Chrome Download Endpoint
+      if (parsedUrl.pathname.startsWith('/download/')) {
+        const candidates = [
+          path.join(__dirname, '../release/Kibo Setup 1.0.0.exe'),
+          path.join(__dirname, '../release/Kibo-Setup-1.0.0.exe'),
+          path.join(__dirname, '../release/win-unpacked/Kibo.exe'),
+          path.join(__dirname, '../release/Kibo.exe'),
+        ];
+        const exePath = candidates.find((p) => fs.existsSync(p));
+        if (exePath) {
+          const stat = fs.statSync(exePath);
+          res.writeHead(200, {
+            'Content-Type': 'application/vnd.microsoft.portable-executable',
+            'Content-Disposition': 'attachment; filename="Kibo-Setup.exe"',
+            'Content-Length': stat.size,
+            'Cache-Control': 'no-cache',
+          });
+          return fs.createReadStream(exePath).pipe(res);
+        } else {
+          res.writeHead(404, { 'Content-Type': 'text/plain' });
+          return res.end('Kibo installer executable not found.');
+        }
+      }
 
       // Safely stream local Windows wallpaper and user image files over HTTP
       if (parsedUrl.pathname === '/api/wallpaper') {
@@ -1015,6 +1059,19 @@ ipcMain.handle('set-startup-setting', (_event, enabled) => {
   });
   updateTrayMenu();
   return app.getLoginItemSettings().openAtLogin;
+});
+
+ipcMain.handle('update-tray-color', (_event, hexColor) => {
+  if (typeof hexColor === 'string' && hexColor.startsWith('#')) {
+    currentTrayColorHex = hexColor;
+    refreshTrayIconAndTooltip();
+  }
+  return true;
+});
+
+ipcMain.handle('quit-app', () => {
+  app.quit();
+  return true;
 });
 
 function getWindowsWallpaperPath() {

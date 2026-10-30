@@ -104,6 +104,8 @@ declare global {
       pickWallpaperFiles?: () => Promise<{ success: boolean; files?: Array<{ title: string; url: string; filePath: string }> }>;
       getStartupSetting?: () => Promise<boolean>;
       setStartupSetting?: (enabled: boolean) => Promise<boolean>;
+      updateTrayColor?: (hexColor: string) => Promise<boolean>;
+      quitApp?: () => Promise<boolean>;
       updateShortcuts?: (shortcuts: { ask?: string; circle?: string; dictate?: string }) => Promise<{ success: boolean; shortcuts: any }>;
       getShortcuts?: () => Promise<{ ask: string; circle: string; dictate: string }>;
       setLassoActive?: (active: boolean) => Promise<{ success: boolean }>;
@@ -129,7 +131,7 @@ declare global {
   }
 }
 
-type NavTab = 'Controls' | 'Today' | 'Agents' | 'Clipboard' | 'Apps' | 'Wallpaper' | 'Power';
+type NavTab = 'Controls' | 'Today' | 'Agents' | 'Clipboard' | 'Apps' | 'Wallpaper' | 'Power' | 'Settings';
 type CompanionSection = 'Kibo' | 'Shortcuts' | 'Behavior' | 'System' | 'API keys' | 'Your data' | 'Privacy';
 type LoadoutSlotType = 'Soul' | 'Voice' | 'Personality' | 'Abilities';
 type ControlDropdownType = 'wifi' | 'bluetooth' | 'audio' | 'nightlight' | null;
@@ -946,6 +948,23 @@ export const KiboApp: React.FC = () => {
   const [tavilyDraftKey, setTavilyDraftKey] = useState<string>(() => localStorage.getItem('kibo_tavily_key') || '');
   const [showConnectModal, setShowConnectModal] = useState<boolean>(false);
   const [notchApiAlert, setNotchApiAlert] = useState<{ type: 'missing_key' | 'rate_limit'; text: string } | null>(null);
+  const [settingsCategory, setSettingsCategory] = useState<'Account' | 'General' | 'Core' | 'Voice' | 'Shortcuts' | 'System'>('Account');
+  const [updateCheckStatus, setUpdateCheckStatus] = useState<string | null>(null);
+  const [isBooting, setIsBooting] = useState<boolean>(true);
+
+  // Elegant startup sequence: notch descends smoothly from bezel, eyes awaken, soft harmonic tone
+  useEffect(() => {
+    const bootTimer = setTimeout(() => {
+      setIsBooting(false);
+    }, 1000);
+    const chimeTimer = setTimeout(() => {
+      soundFX.playSoulPulse();
+    }, 450);
+    return () => {
+      clearTimeout(bootTimer);
+      clearTimeout(chimeTimer);
+    };
+  }, []);
 
   // Synchronize keys and settings with persistent disk storage in userData
   useEffect(() => {
@@ -1119,11 +1138,12 @@ export const KiboApp: React.FC = () => {
 
   const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
   const initialExpanded = urlParams?.get('expanded') === 'true';
-  const initialTab = (urlParams?.get('tab') as NavTab) || 'Controls';
+  const initialTab =
+    urlParams?.get('settings') === 'true' || urlParams?.get('loadout') === 'true'
+      ? 'Settings'
+      : (urlParams?.get('tab') as NavTab) || 'Controls';
 
-  const [showCompanionWindow, setShowCompanionWindow] = useState<boolean>(
-    () => urlParams?.get('settings') === 'true' || urlParams?.get('loadout') === 'true'
-  );
+  const [showCompanionWindow, setShowCompanionWindow] = useState<boolean>(false);
   const [companionDockTab, setCompanionDockTab] = useState<'soul' | 'settings'>(
     () => (urlParams?.get('loadout') === 'true' ? 'soul' : 'settings')
   );
@@ -2362,6 +2382,12 @@ export const KiboApp: React.FC = () => {
     [selectedSkinKey]
   );
 
+  // Synchronize system tray icon color with equipped core skin or wallpaper accent
+  useEffect(() => {
+    const targetColor = activeTheme?.accent || currentSoul?.primaryColor || '#38BDF8';
+    window.kiboAPI?.updateTrayColor?.(targetColor);
+  }, [selectedSkinKey, activeTheme?.accent, currentSoul?.primaryColor]);
+
   const isVoidEquipped = useMemo(
     () => currentSoul.key === 'flame_void' || equippedCards.Soul === 'soul_void' || selectedSkinKey === 'flame_void',
     [currentSoul.key, equippedCards.Soul, selectedSkinKey]
@@ -2564,32 +2590,34 @@ export const KiboApp: React.FC = () => {
   }, []);
 
   const openCompanionApp = useCallback(
-    (tab: 'soul' | 'settings', openKeyModal = false) => {
-      setIsExpanded(false);
+    (tab: 'soul' | 'settings' | string, openKeyModal = false) => {
+      setIsExpanded(true);
+      setActiveTab('Settings');
       setShowMediaNotch(false);
-      setActiveDeckSlot(null);
-      setCompanionDockTab(tab);
-      setShowCompanionWindow(true);
-      if (openKeyModal) {
-        setGeminiDraftKey(apiKey);
-        setShowConnectModal(true);
+      setShowCompanionWindow(false);
+      if (tab === 'soul') {
+        setSettingsCategory('Core');
+      } else if (tab === 'shortcuts') {
+        setSettingsCategory('Shortcuts');
+      } else if (openKeyModal || tab === 'connect') {
+        setSettingsCategory('Account');
+      } else {
+        setSettingsCategory('General');
       }
     },
-    [apiKey]
+    []
   );
 
   useEffect(() => {
     if (!window.kiboAPI?.onOpenSettings) return;
     const unreg = window.kiboAPI.onOpenSettings((section) => {
       if (section === 'soul') openCompanionApp('soul', false);
-      else if (section === 'connect') openCompanionApp('settings', true);
-      else if (section === 'shortcuts') {
-        openCompanionApp('settings', false);
-        setSettingsSection('Shortcuts');
-      } else openCompanionApp('settings', false);
+      else if (section === 'connect') openCompanionApp('connect', true);
+      else if (section === 'shortcuts') openCompanionApp('shortcuts', false);
+      else openCompanionApp('settings', false);
     });
     return () => unreg();
-  }, [openCompanionApp, setSettingsSection]);
+  }, [openCompanionApp]);
 
   useEffect(() => {
     if (!window.kiboAPI?.setAppWindowRect) return;
@@ -2696,6 +2724,7 @@ export const KiboApp: React.FC = () => {
       Agents:    { w: 860, h: 440 },
       Wallpaper: { w: 960, h: 316 },
       Power:     { w: 708, h: 168 },
+      Settings:  { w: 880, h: 540 },
     };
     return dims[activeTab];
   }, [activeTab, hasMediaSession]);
@@ -3532,15 +3561,18 @@ export const KiboApp: React.FC = () => {
   }, [activeTab, isExpanded]);
 
   const activeNavMetrics = useMemo(() => {
+    if (activeTab === 'Settings') {
+      return { left: 0, width: 0, opacity: 0 };
+    }
     let offsetLeft = 0;
     const gap = 4;
     for (const item of NAV_TABS) {
       if (item.id === activeTab) {
-        return { left: offsetLeft, width: item.width };
+        return { left: offsetLeft, width: item.width, opacity: 1 };
       }
       offsetLeft += item.width + gap;
     }
-    return { left: 0, width: 68 };
+    return { left: 0, width: 68, opacity: 1 };
   }, [activeTab]);
 
   useEffect(() => {
@@ -4733,6 +4765,9 @@ export const KiboApp: React.FC = () => {
     if (nowMs - wheelLockRef.current < 220) return;
     wheelLockRef.current = nowMs;
 
+    // Scroll down MUST NOT wake or expand when the notch is small and Kibo is hidden
+    if (isTucked) return;
+
     if (timerAlarmRinging) {
       setTimerAlarmRinging(false);
       setSoulMode('LISTENING');
@@ -4741,10 +4776,7 @@ export const KiboApp: React.FC = () => {
 
     if (!isExpanded) {
       if (hasMediaSession && !showMediaNotch) {
-        setIsTucked(false);
         setShowMediaNotch(true);
-      } else if (isTucked) {
-        setIsTucked(false);
       } else {
         setActiveTab('Controls');
         setShowMediaNotch(false);
@@ -4793,7 +4825,7 @@ export const KiboApp: React.FC = () => {
           ===================================================================== */}
       <div
         ref={notchShellRef}
-        className={`kibo-bezel-shell ${isExpanded ? 'is-expanded' : ''} ${isTuckedSliver ? 'is-tucked' : ''}`}
+        className={`kibo-bezel-shell ${isExpanded ? 'is-expanded' : ''} ${isTuckedSliver ? 'is-tucked' : ''} ${isBooting ? 'is-booting' : ''}`}
         style={{
           width: `${notchShellWidth}px`,
           height: `${notchShellHeight}px`,
@@ -5190,11 +5222,9 @@ export const KiboApp: React.FC = () => {
                     className="companion-nav-glider"
 
                     style={{
-
                       width: `${activeNavMetrics.width}px`,
-
                       transform: `translate3d(${activeNavMetrics.left}px, 0, 0)`,
-
+                      opacity: (activeNavMetrics as any).opacity ?? 1,
                     }}
 
                   />
@@ -5252,9 +5282,16 @@ export const KiboApp: React.FC = () => {
                   
 
                   <button
-                    onClick={() => openCompanionApp('settings', false)}
-                    className="companion-header-circle"
-                    title="Settings & API Keys"
+                    onClick={() => {
+                      if (activeTab === 'Settings') {
+                        setActiveTab('Controls');
+                      } else {
+                        setActiveTab('Settings');
+                      }
+                    }}
+                    className={`companion-header-circle ${activeTab === 'Settings' ? 'active' : ''}`}
+                    title={activeTab === 'Settings' ? 'Return to Controls' : 'Settings & Preferences'}
+                    style={activeTab === 'Settings' ? { background: 'rgba(56, 189, 248, 0.22)', color: '#38BDF8' } : undefined}
                   >
                     <SvgIcon name="gear" size={12} />
                   </button>
@@ -6562,6 +6599,454 @@ export const KiboApp: React.FC = () => {
                         {powerFeedback}
                       </div>
                     )}
+                  </div>
+                )}
+
+                {activeTab === 'Settings' && (
+                  <div className="kibo-notch-settings-panel">
+                    {/* Left Sidebar */}
+                    <div className="kibo-settings-sidebar">
+                      <div className="kibo-settings-nav-list">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 6px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: '8px' }}>
+                          <SoulCanvas soul={currentSoul} width={28} height={24} scale={0.72} mode="LISTENING" />
+                          <span style={{ fontSize: '14px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.02em' }}>Preferences</span>
+                        </div>
+
+                        {[
+                          { id: 'Account', label: 'Account' },
+                          { id: 'General', label: 'General' },
+                          { id: 'Core', label: 'Core & Skin' },
+                          { id: 'Voice', label: 'Voice & AI' },
+                          { id: 'Shortcuts', label: 'Shortcuts' },
+                          { id: 'System', label: 'System' },
+                        ].map((item) => {
+                          const isActive = settingsCategory === item.id;
+                          return (
+                            <button
+                              key={item.id}
+                              onClick={() => setSettingsCategory(item.id as any)}
+                              className={`kibo-settings-nav-item ${isActive ? 'active' : ''}`}
+                            >
+                              <span>{item.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div className="kibo-settings-sidebar-bottom">
+                        <div className="kibo-settings-version">Kibo v1.0.0 (Win32)</div>
+                        <button
+                          onClick={() => {
+                            if (window.kiboAPI?.quitApp) {
+                              window.kiboAPI.quitApp();
+                            } else {
+                              window.close();
+                            }
+                          }}
+                          className="kibo-settings-quit-btn"
+                          title="Quit Kibo completely"
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+                            <line x1="12" y1="2" x2="12" y2="12" />
+                          </svg>
+                          <span>Quit Kibo</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Right Content Area */}
+                    <div className="kibo-settings-content">
+                      {settingsCategory === 'Account' && (
+                        <>
+                          <div>
+                            <h2 className="kibo-settings-header-title">Account & Keys</h2>
+                            <p className="kibo-settings-header-sub">Manage your local API credentials and energy balance.</p>
+                          </div>
+
+                          <div className="kibo-settings-card">
+                            <div className="kibo-settings-row">
+                              <div>
+                                <div className="kibo-settings-row-label">Sparks Balance</div>
+                                <div className="kibo-settings-row-desc">Read-only companion energy pool</div>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#141519', padding: '6px 14px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.08)' }}>
+                                <LivingEmberIcon size={14} isDull={isSoulDull} />
+                                <strong style={{ fontSize: '13px', color: '#F8FAFC' }}>{embers.toLocaleString()} Sparks</strong>
+                              </div>
+                            </div>
+
+                            <div className="kibo-settings-row">
+                              <div>
+                                <div className="kibo-settings-row-label">Local-First Storage</div>
+                                <div className="kibo-settings-row-desc">No external accounts or telemetry required</div>
+                              </div>
+                              <span style={{ fontSize: '12px', color: '#10B981', fontWeight: 600 }}>Active</span>
+                            </div>
+                          </div>
+
+                          <div className="kibo-settings-card">
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                              <label className="kibo-settings-row-label">Google Gemini API Key</label>
+                              <div style={{ display: 'flex', gap: 8 }}>
+                                <input
+                                  type="password"
+                                  value={geminiDraftKey}
+                                  onChange={(e) => setGeminiDraftKey(e.target.value)}
+                                  placeholder="Paste AI Studio API key (AIzaSy...)"
+                                  style={{
+                                    flex: 1,
+                                    background: '#141519',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    borderRadius: 8,
+                                    padding: '8px 12px',
+                                    color: '#F8FAFC',
+                                    fontSize: 13,
+                                    fontFamily: 'var(--kibo-font-mono)',
+                                  }}
+                                />
+                                <button
+                                  onClick={handleSaveGeminiKey}
+                                  className="config-pill-btn"
+                                  style={{ background: '#38BDF8', color: '#0A0E17', fontWeight: 700, padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer' }}
+                                >
+                                  Save
+                                </button>
+                              </div>
+                              <span style={{ fontSize: 11, color: '#64748B' }}>
+                                Used for Voice Assistant, Screen Vision, and Clean Dictation.
+                              </span>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                              <label className="kibo-settings-row-label">Tavily Search API Key (Optional)</label>
+                              <div style={{ display: 'flex', gap: 8 }}>
+                                <input
+                                  type="password"
+                                  value={tavilyDraftKey}
+                                  onChange={(e) => setTavilyDraftKey(e.target.value)}
+                                  placeholder="Paste Tavily key (tvly-...)"
+                                  style={{
+                                    flex: 1,
+                                    background: '#141519',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    borderRadius: 8,
+                                    padding: '8px 12px',
+                                    color: '#F8FAFC',
+                                    fontSize: 13,
+                                    fontFamily: 'var(--kibo-font-mono)',
+                                  }}
+                                />
+                                <button
+                                  onClick={() => {
+                                    const trimmed = tavilyDraftKey.trim();
+                                    setTavilyKey(trimmed);
+                                    const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
+                                    if (trimmed) {
+                                      localStorage.setItem('kibo_tavily_key', trimmed);
+                                      api?.saveStoredSettings?.({ kibo_tavily_key: trimmed });
+                                    } else {
+                                      localStorage.removeItem('kibo_tavily_key');
+                                      api?.saveStoredSettings?.({ kibo_tavily_key: '' });
+                                    }
+                                  }}
+                                  className="config-pill-btn"
+                                  style={{ background: '#38BDF8', color: '#0A0E17', fontWeight: 700, padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer' }}
+                                >
+                                  Save
+                                </button>
+                              </div>
+                              <span style={{ fontSize: 11, color: '#64748B' }}>
+                                Powers autonomous web research in the background Agents tab.
+                              </span>
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {settingsCategory === 'General' && (
+                        <>
+                          <div>
+                            <h2 className="kibo-settings-header-title">General Preferences</h2>
+                            <p className="kibo-settings-header-sub">Control startup behavior, notch tucking, and feedback.</p>
+                          </div>
+
+                          <div className="kibo-settings-card">
+                            <div className="kibo-settings-row">
+                              <div>
+                                <div className="kibo-settings-row-label">Launch Kibo on Windows Startup</div>
+                                <div className="kibo-settings-row-desc">Automatically launch into top bezel when logging in</div>
+                              </div>
+                              <button
+                                type="button"
+                                className={`kibo-switch ${launchAtStartup ? 'is-on' : ''}`}
+                                onClick={async () => {
+                                  const next = !launchAtStartup;
+                                  setLaunchAtStartup(next);
+                                  localStorage.setItem('kibo_startup', String(next));
+                                  if (window.kiboAPI?.setStartupSetting) {
+                                    await window.kiboAPI.setStartupSetting(next);
+                                  }
+                                }}
+                              >
+                                <span className="kibo-switch-knob" />
+                              </button>
+                            </div>
+
+                            <div className="kibo-settings-row">
+                              <div>
+                                <div className="kibo-settings-row-label">Auto-Tuck Notch When Inactive</div>
+                                <div className="kibo-settings-row-desc">Glides smoothly up into the top bezel when you move your mouse away</div>
+                              </div>
+                              <button
+                                type="button"
+                                className={`kibo-switch ${autoTuckEnabled ? 'is-on' : ''}`}
+                                onClick={() => {
+                                  const next = !autoTuckEnabled;
+                                  setAutoTuckEnabled(next);
+                                  localStorage.setItem('kibo_autotuck', next ? 'true' : 'false');
+                                }}
+                              >
+                                <span className="kibo-switch-knob" />
+                              </button>
+                            </div>
+
+                            <div className="kibo-settings-row">
+                              <div>
+                                <div className="kibo-settings-row-label">Sound Effects (SFX)</div>
+                                <div className="kibo-settings-row-desc">Play gentle feedback pulses on mode transitions and hotkeys</div>
+                              </div>
+                              <button
+                                type="button"
+                                className={`kibo-switch ${sfxEnabled ? 'is-on' : ''}`}
+                                onClick={() => {
+                                  const next = !sfxEnabled;
+                                  setSfxEnabled(next);
+                                  soundFX.setEnabled(next);
+                                }}
+                              >
+                                <span className="kibo-switch-knob" />
+                              </button>
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {settingsCategory === 'Core' && (
+                        <>
+                          <div>
+                            <h2 className="kibo-settings-header-title">Core & Appearance</h2>
+                            <p className="kibo-settings-header-sub">Choose your droid chassis skin and taskbar tray tint.</p>
+                          </div>
+
+                          <div className="kibo-settings-card">
+                            <div className="kibo-settings-row-label" style={{ marginBottom: 4 }}>Select Droid Core</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+                              {SOUL_SKINS.slice(0, 4).map((skin) => {
+                                const isSelected = skin.key === selectedSkinKey;
+                                return (
+                                  <button
+                                    key={skin.key}
+                                    onClick={() => {
+                                      setSelectedSkinKey(skin.key);
+                                      localStorage.setItem('kibo_soul_skin', skin.key);
+                                      window.kiboAPI?.updateTrayColor?.(skin.primaryColor);
+                                    }}
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: 12,
+                                      padding: '12px 14px',
+                                      borderRadius: 12,
+                                      background: isSelected ? 'rgba(56, 189, 248, 0.12)' : '#141519',
+                                      border: isSelected ? '1.5px solid #38BDF8' : '1px solid rgba(255,255,255,0.08)',
+                                      cursor: 'pointer',
+                                      textAlign: 'left',
+                                      transition: 'all 0.18s ease',
+                                    }}
+                                  >
+                                    <div style={{ width: 14, height: 14, borderRadius: '50%', background: skin.primaryColor, boxShadow: `0 0 8px ${skin.primaryColor}` }} />
+                                    <div>
+                                      <div style={{ fontSize: 13, fontWeight: 700, color: '#F8FAFC' }}>{skin.name}</div>
+                                      <div style={{ fontSize: 11, color: '#94A3B8' }}>{skin.primaryColor}</div>
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          <div className="kibo-settings-card">
+                            <div className="kibo-settings-row">
+                              <div>
+                                <div className="kibo-settings-row-label">Adaptive Wallpaper Palette</div>
+                                <div className="kibo-settings-row-desc">Automatically tint Kibo accents to match your current desktop wallpaper</div>
+                              </div>
+                              <span style={{ fontSize: 12, color: '#38BDF8', fontWeight: 600 }}>Enabled</span>
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {settingsCategory === 'Voice' && (
+                        <>
+                          <div>
+                            <h2 className="kibo-settings-header-title">Voice & Dictation</h2>
+                            <p className="kibo-settings-header-sub">Configure spoken model voice and dictation parameters.</p>
+                          </div>
+
+                          <div className="kibo-settings-card">
+                            <div className="kibo-settings-row">
+                              <div>
+                                <div className="kibo-settings-row-label">Voice Model Voice</div>
+                                <div className="kibo-settings-row-desc">Synthesized voice module for Kibo responses</div>
+                              </div>
+                              <select
+                                value={equippedCards.Voice || 'voice_charon'}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setEquippedCards((prev) => ({ ...prev, Voice: val as any }));
+                                  localStorage.setItem('kibo_loadout_voice', val);
+                                }}
+                                style={{
+                                  background: '#141519',
+                                  color: '#F8FAFC',
+                                  border: '1px solid rgba(255,255,255,0.12)',
+                                  borderRadius: 8,
+                                  padding: '6px 12px',
+                                  fontSize: 13,
+                                  outline: 'none',
+                                }}
+                              >
+                                <option value="voice_puck">Puck (Warm & Friendly)</option>
+                                <option value="voice_charon">Charon (Deep & Calming)</option>
+                                <option value="voice_aoede">Aoede (Melodic)</option>
+                                <option value="voice_fenrir">Fenrir (Authoritative)</option>
+                              </select>
+                            </div>
+
+                            <div className="kibo-settings-row">
+                              <div>
+                                <div className="kibo-settings-row-label">Spoken Voice Responses</div>
+                                <div className="kibo-settings-row-desc">Play synthesized voice when Kibo replies to queries</div>
+                              </div>
+                              <button
+                                type="button"
+                                className={`kibo-switch ${voiceFeedbackEnabled ? 'is-on' : ''}`}
+                                onClick={() => {
+                                  const next = !voiceFeedbackEnabled;
+                                  setVoiceFeedbackEnabled(next);
+                                  localStorage.setItem('kibo_voice_tts', next ? 'true' : 'false');
+                                }}
+                              >
+                                <span className="kibo-switch-knob" />
+                              </button>
+                            </div>
+
+                            <div className="kibo-settings-row">
+                              <div>
+                                <div className="kibo-settings-row-label">Real-Time Speech Cleanup</div>
+                                <div className="kibo-settings-row-desc">Automatically eliminates stutters, filler words, and mid-sentence corrections</div>
+                              </div>
+                              <span style={{ fontSize: 12, color: '#10B981', fontWeight: 600 }}>Active</span>
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {settingsCategory === 'Shortcuts' && (
+                        <>
+                          <div>
+                            <h2 className="kibo-settings-header-title">Shortcuts & Gestures</h2>
+                            <p className="kibo-settings-header-sub">Hardware hotkeys that work over any running Windows application.</p>
+                          </div>
+
+                          <div className="kibo-settings-card">
+                            <div className="kibo-settings-row">
+                              <div>
+                                <div className="kibo-settings-row-label">Ask & Control</div>
+                                <div className="kibo-settings-row-desc">Hold, speak your command, release</div>
+                              </div>
+                              <div style={{ display: 'flex', gap: 4 }}>
+                                <kbd className="kibo-kbd" style={{ background: '#141519', color: '#F8FAFC', border: '1px solid rgba(255,255,255,0.15)', padding: '4px 8px', borderRadius: 6, fontSize: 12 }}>Win</kbd>
+                                <span style={{ color: '#64748B' }}>+</span>
+                                <kbd className="kibo-kbd" style={{ background: '#141519', color: '#F8FAFC', border: '1px solid rgba(255,255,255,0.15)', padding: '4px 8px', borderRadius: 6, fontSize: 12 }}>Alt</kbd>
+                              </div>
+                            </div>
+
+                            <div className="kibo-settings-row">
+                              <div>
+                                <div className="kibo-settings-row-label">Circle to Ask (Screen Vision)</div>
+                                <div className="kibo-settings-row-desc">Draw a lasso around any screen region</div>
+                              </div>
+                              <div style={{ display: 'flex', gap: 4 }}>
+                                <kbd className="kibo-kbd" style={{ background: '#141519', color: '#F8FAFC', border: '1px solid rgba(255,255,255,0.15)', padding: '4px 8px', borderRadius: 6, fontSize: 12 }}>Ctrl</kbd>
+                                <span style={{ color: '#64748B' }}>+</span>
+                                <kbd className="kibo-kbd" style={{ background: '#141519', color: '#F8FAFC', border: '1px solid rgba(255,255,255,0.15)', padding: '4px 8px', borderRadius: 6, fontSize: 12 }}>Shift</kbd>
+                              </div>
+                            </div>
+
+                            <div className="kibo-settings-row">
+                              <div>
+                                <div className="kibo-settings-row-label">Clean Dictation</div>
+                                <div className="kibo-settings-row-desc">Hold to speak, types clean text into cursor</div>
+                              </div>
+                              <div style={{ display: 'flex', gap: 4 }}>
+                                <kbd className="kibo-kbd" style={{ background: '#141519', color: '#F8FAFC', border: '1px solid rgba(255,255,255,0.15)', padding: '4px 8px', borderRadius: 6, fontSize: 12 }}>Ctrl</kbd>
+                                <span style={{ color: '#64748B' }}>+</span>
+                                <kbd className="kibo-kbd" style={{ background: '#141519', color: '#F8FAFC', border: '1px solid rgba(255,255,255,0.15)', padding: '4px 8px', borderRadius: 6, fontSize: 12 }}>Win</kbd>
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {settingsCategory === 'System' && (
+                        <>
+                          <div>
+                            <h2 className="kibo-settings-header-title">System & Updates</h2>
+                            <p className="kibo-settings-header-sub">Software maintenance and feedback reporting.</p>
+                          </div>
+
+                          <div className="kibo-settings-card">
+                            <div className="kibo-settings-row">
+                              <div>
+                                <div className="kibo-settings-row-label">Check for Updates</div>
+                                <div className="kibo-settings-row-desc">Verify local installation against release builds</div>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  setUpdateCheckStatus('Checking...');
+                                  setTimeout(() => setUpdateCheckStatus('You are on the latest version · v1.0.0'), 600);
+                                }}
+                                className="config-pill-btn"
+                                style={{ background: '#1E293B', color: '#F8FAFC', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 12.5 }}
+                              >
+                                {updateCheckStatus || 'Check for updates'}
+                              </button>
+                            </div>
+
+                            <div className="kibo-settings-row">
+                              <div>
+                                <div className="kibo-settings-row-label">Feedback & Bug Reporting</div>
+                                <div className="kibo-settings-row-desc">Submit issues or request new companion features</div>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  if (window.kiboAPI?.openUrl) {
+                                    window.kiboAPI.openUrl('https://github.com/RaahimAlavi/Hitodama/issues');
+                                  }
+                                }}
+                                className="config-pill-btn"
+                                style={{ background: '#1E293B', color: '#F8FAFC', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 12.5 }}
+                              >
+                                Report a bug...
+                              </button>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
