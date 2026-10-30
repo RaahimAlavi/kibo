@@ -202,6 +202,12 @@ const kiboAPI = {
   getStoredSettings: () => ipcRenderer.invoke('get-stored-settings'),
   saveStoredSettings: (patch) => ipcRenderer.invoke('save-stored-settings', patch),
   getCurrentWallpaperTheme: () => ipcRenderer.invoke('get-current-wallpaper-theme'),
+  convertFile: (payload) => ipcRenderer.invoke('convert-file', payload),
+  pickFileForConvert: () => ipcRenderer.invoke('pick-file-for-convert'),
+  showItemInFolder: (filePath) => ipcRenderer.invoke('show-item-in-folder', filePath),
+  exportChromeExtension: () => ipcRenderer.invoke('export-chrome-extension'),
+  openChromeExtensionsPage: () => ipcRenderer.invoke('open-chrome-extensions-page'),
+  pickSkillMdFile: () => ipcRenderer.invoke('pick-skill-md-file'),
   // Kibo Watts Economy Aliases
   syncWattsState: (data) => ipcRenderer.invoke('update-embers-state', data),
   setWattsCount: (count) => {

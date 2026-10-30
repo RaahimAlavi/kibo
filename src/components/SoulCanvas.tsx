@@ -8,7 +8,7 @@ export interface SoulCanvasProps {
   width?: number;
   height?: number;
   scale?: number;
-  mode?: 'LISTENING' | 'THINKING' | 'TALKING' | 'MUTED' | 'YAWNING';
+  mode?: 'LISTENING' | 'THINKING' | 'TALKING' | 'MUTED' | 'YAWNING' | 'DANCING';
   interactive?: boolean;
   lookOverride?: { x: number; y: number } | null;
   expression?:
@@ -19,7 +19,8 @@ export interface SoulCanvasProps {
     | 'HAPPY'
     | 'WINK'
     | 'YAWNING'
-    | 'SAD';
+    | 'SAD'
+    | 'DANCING';
   annoyance?: number;
   isHit?: boolean;
   isBreathingRelief?: boolean;
@@ -188,6 +189,7 @@ export const SoulCanvas: React.FC<SoulCanvasProps> = ({
       const isThinking = mode === 'THINKING';
       const isTalking = mode === 'TALKING';
       const isMuted = mode === 'MUTED';
+      const isDancing = mode === 'DANCING' || expr === 'DANCING';
 
       // Smoothly interpolate annoyance and relief ("phewww") so transitions never snap
       smoothAnnoyRef.current +=
@@ -321,19 +323,22 @@ export const SoulCanvas: React.FC<SoulCanvasProps> = ({
 
       const yawnWave = isYawning ? Math.max(0, Math.sin(time * 2.0)) : 0;
       const talkBob = isTalking ? Math.sin(time * 12) * 1.3 * scale : 0;
+      const danceBounce = isDancing ? -Math.abs(Math.sin(time * 8.5)) * 4.2 * scale : 0;
+      const danceSwayX = isDancing ? Math.sin(time * 4.25) * 5.2 * scale : 0;
       const angryTremble =
         annoy > 0.35 ? Math.sin(time * 32) * (annoy - 0.35) * 1.8 * scale : 0;
 
       const floatY =
         Math.sin(time * 2.0) * 1.7 * scale +
-        talkBob -
+        talkBob +
+        danceBounce -
         yawnWave * 3.0 * scale +
         bodyLook.y * 2.0 * scale +
         reliefLiftY;
 
       const maxSafeR = Math.min(width, height) * 0.235;
       const r = Math.min(maxSafeR, 12.4 * scale) * (1 + yawnWave * 0.04);
-      const cx = width / 2 + bodyLook.x * 3.6 * scale + angryTremble;
+      const cx = width / 2 + bodyLook.x * 3.6 * scale + angryTremble + danceSwayX;
       const cy = height * 0.54 + floatY;
 
       ctx.save();
@@ -360,6 +365,7 @@ export const SoulCanvas: React.FC<SoulCanvasProps> = ({
       const pawSpread =
         r * 1.24 +
         (isYawning ? r * 0.18 * yawnWave : 0) +
+        (isDancing ? r * 0.15 : 0) +
         (relief > 0.05 ? r * 0.14 * relief : 0);
       [-1, 1].forEach((side) => {
         let pawY =
@@ -367,7 +373,10 @@ export const SoulCanvas: React.FC<SoulCanvasProps> = ({
           bodyVelRef.current.y * 7;
         let pawRot = side * 0.15 + bodyLook.x * 0.12;
 
-        if (isYawning) {
+        if (isDancing) {
+          pawY = -r * 0.42 + Math.sin(time * 8.5 + side * 1.6) * r * 0.36;
+          pawRot = Math.sin(time * 4.25 + side) * 0.5;
+        } else if (isYawning) {
           pawY = -r * 0.7 * yawnWave;
           pawRot = -side * 0.35 * yawnWave;
         } else if (annoy > 0.3) {
@@ -409,17 +418,19 @@ export const SoulCanvas: React.FC<SoulCanvasProps> = ({
       const headTilt =
         bodyLook.x * 0.13 +
         bodyVelRef.current.x * 0.32 +
+        (isDancing ? Math.sin(time * 4.25) * 0.26 : 0) +
         (isThinking ? 0.13 * Math.sin(time * 2.3) : 0) +
         (expr === 'WINK' ? 0.11 : 0) -
         (relief > 0.1 && rt > 0.85 ? 0.06 * relief : 0);
       ctx.rotate(headTilt);
 
+      const danceSquash = isDancing ? Math.sin(time * 8.5) * 0.07 : 0;
       const sx =
-        (1 - bouncePosRef.current * 0.42 - yawnWave * 0.05) *
+        (1 - bouncePosRef.current * 0.42 - yawnWave * 0.05 + danceSquash) *
         reliefScaleX *
         (1 + annoy * 0.06);
       const sy =
-        (1 + bouncePosRef.current * 0.42 + yawnWave * 0.12) *
+        (1 + bouncePosRef.current * 0.42 + yawnWave * 0.12 - danceSquash) *
         reliefScaleY *
         (1 - annoy * 0.04);
       ctx.scale(sx, sy);
@@ -587,8 +598,8 @@ export const SoulCanvas: React.FC<SoulCanvasProps> = ({
           return;
         }
 
-        // C. HAPPY / YAWNING / HIT Chevron Arcs (^ ^)
-        if (expr === 'HAPPY' || isYawning || isHitRef.current) {
+        // C. HAPPY / DANCING / YAWNING / HIT Chevron Arcs (^ ^)
+        if (expr === 'HAPPY' || isDancing || isYawning || isHitRef.current) {
           ctx.strokeStyle = rgbToStr(coreRgb, 1);
           ctx.shadowColor = rgbToStr(primaryRgb, 0.9);
           ctx.shadowBlur = 6 * scale;

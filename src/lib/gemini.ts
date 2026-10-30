@@ -9,13 +9,16 @@ export interface GeminiFunctionCall {
     | 'get_scheduled_tasks'
     | 'find_and_point'
     | 'computer_action'
-    | 'build_website';
+    | 'build_website'
+    | 'convert_file'
+    | 'start_focus_timer';
   args: Record<string, any>;
 }
 
 export interface GeminiActionResponse {
   speech: string;
   text?: string;
+  transcript?: string;
   functionCall?: GeminiFunctionCall;
   action?: string;
   target?: string;
@@ -23,37 +26,70 @@ export interface GeminiActionResponse {
   modelUsed?: string;
 }
 
-// Waterfall model pools ordered by Free-Tier Quota, Speed & Capability
+// Ordered by highest available Free-Tier Quota & lowest latency from user's Google AI Studio project
 export const VISION_AND_QUERY_MODELS = [
-  'gemini-3.5-flash-lite',    // 15 RPM | 500 RPD (Primary workhorse ~900ms)
-  'gemini-flash-lite-latest', // 15 RPM | 500 RPD (Fast ~560ms fallback)
-  'gemini-3.1-flash-lite',    // 15 RPM | 500 RPD (Secondary workhorse)
-  'gemini-3.6-flash',         // 5 RPM  | 20 RPD  (Fast 950ms)
-  'gemini-3-flash-preview',   // 5 RPM  | 20 RPD  (Multimodal reasoning)
-  'gemini-3.7-flash',         // 5 RPM  | 20 RPD
-  'gemini-3.8-flash',         // 5 RPM  | 20 RPD
-  'gemini-flash-latest',      // Standard Flash pool
+  'gemini-3.1-flash-lite',    // 15 RPM | 250K TPM | 500 RPD (491/500 available!)
+  'gemini-3.5-flash-lite',    // 15 RPM | 250K TPM | 500 RPD (396/500 available!)
+  'gemini-2.5-flash-lite',    // 10 RPM | 250K TPM | 20 RPD  (20/20 available!)
+  'gemini-2.5-flash',         // 5 RPM  | 250K TPM | 20 RPD  (20/20 available!)
+  'gemini-3.8-flash',         // 5 RPM  | 250K TPM | 20 RPD
+  'gemma-4-31b-it',           // 30 RPM | 16K TPM  | 14,400 RPD
+  'gemma-4-26b-a4b-it',       // 30 RPM | 16K TPM  | 14,400 RPD
 ];
 
 export const DICTATION_TEXT_MODELS = [
-  'gemini-3.5-flash-lite',    // 15 RPM | 500 RPD (~800ms clean output)
-  'gemini-flash-lite-latest', // 15 RPM | 500 RPD (~780ms clean output)
-  'gemini-3.1-flash-lite',    // 15 RPM | 500 RPD
-  'gemma-4-31b-it',           // 30 RPM | 14,400 RPD (High-frequency text cleanup)
+  'gemma-4-31b-it',           // 30 RPM | 14,400 RPD (Ultra-high quota text polish)
   'gemma-4-26b-a4b-it',       // 30 RPM | 14,400 RPD
-  'gemini-3.6-flash',         // 5 RPM  | 20 RPD
-  'gemini-3-flash-preview',   // 5 RPM  | 20 RPD
+  'gemini-3.1-flash-lite',    // 15 RPM | 500 RPD
+  'gemini-3.5-flash-lite',    // 15 RPM | 500 RPD
+  'gemini-2.5-flash-lite',    // 10 RPM | 20 RPD
 ];
 
 export const AUDIO_TRANSCRIBE_MODELS = [
-  'gemini-3.5-flash-lite',    // 15 RPM | 500 RPD (multimodal audio ~900ms)
-  'gemini-flash-lite-latest', // 15 RPM | 500 RPD (~700ms)
-  'gemini-3.1-flash-lite',    // 15 RPM | 500 RPD
-  'gemini-3-flash-preview',   // 5 RPM  | 20 RPD (robust audio comprehension)
-  'gemini-3.6-flash',         // 5 RPM  | 20 RPD
-  'gemini-3.7-flash',         // 5 RPM  | 20 RPD
+  'gemini-3.1-flash-lite',    // 15 RPM | 500 RPD (Fast multimodal audio)
+  'gemini-3.5-flash-lite',    // 15 RPM | 500 RPD (Fast multimodal audio)
+  'gemini-2.5-flash-lite',    // 10 RPM | 20 RPD
+  'gemini-2.5-flash',         // 5 RPM  | 20 RPD
   'gemini-3.8-flash',         // 5 RPM  | 20 RPD
 ];
+
+// Cooldown cache so rate-limited (429) or unavailable (404) models are skipped in 0ms
+const cooldownModels = new Map<string, number>();
+
+function isModelCoolingDown(model: string): boolean {
+  const expiry = cooldownModels.get(model);
+  if (!expiry) return false;
+  if (Date.now() > expiry) {
+    cooldownModels.delete(model);
+    return false;
+  }
+  return true;
+}
+
+function setModelCooldown(model: string, ms = 90_000) {
+  cooldownModels.set(model, Date.now() + ms);
+}
+
+/**
+ * Reads active SKILL.md files stored in Kibo's Skills Manager and formats them for prompt injection.
+ */
+export function getActiveSkillsPromptBlock(): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    const raw = localStorage.getItem('kibo_skills_list');
+    if (!raw) return '';
+    const skills = JSON.parse(raw);
+    if (!Array.isArray(skills)) return '';
+    const active = skills.filter((s: any) => s && s.enabled && s.content);
+    if (active.length === 0) return '';
+    const blocks = active.map(
+      (s: any) => `### ACTIVE SKILL: ${s.name} (${s.fileName || 'SKILL.md'})\n${String(s.content).slice(0, 3500)}`
+    );
+    return `\n\n=== USER-ENABLED SKILL.MD INSTRUCTIONS (FOLLOW STRICTLY WHEN APPLICABLE) ===\n${blocks.join('\n\n')}\n=== END OF SKILLS ===`;
+  } catch (_) {
+    return '';
+  }
+}
 
 export const GEMINI_TOOLS = [
   {
@@ -73,14 +109,51 @@ export const GEMINI_TOOLS = [
         },
       },
       {
+        name: 'convert_file',
+        description: 'Convert any file on the user computer (e.g. PDF to Word/DOCX, Word/DOCX to PDF, CSV to JSON, PNG/JPG/WEBP/SVG image conversions, Markdown/TXT/HTML to PDF or DOCX) without deleting the original file.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            fileName: {
+              type: 'STRING',
+              description: 'The name or partial name of the file to convert (e.g. "resume.pdf", "report.docx", "data.csv", "photo.png")',
+            },
+            targetFormat: {
+              type: 'STRING',
+              description: 'The target extension to convert to (e.g. "docx", "pdf", "txt", "md", "html", "json", "csv", "png", "jpg", "webp")',
+            },
+          },
+          required: ['fileName', 'targetFormat'],
+        },
+      },
+      {
+        name: 'start_focus_timer',
+        description: 'Start a focus timer or stopwatch session for the user.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            minutes: {
+              type: 'NUMBER',
+              description: 'Duration in minutes for the timer (e.g. 15, 25, 45). Set to 0 if starting a stopwatch.',
+            },
+            mode: {
+              type: 'STRING',
+              enum: ['timer', 'stopwatch'],
+              description: 'Whether to start a countdown timer or count-up stopwatch.',
+            },
+          },
+          required: ['mode'],
+        },
+      },
+      {
         name: 'find_and_point',
-        description: 'Locate, find, point to, or highlight any desktop icon, app, shortcut, button, file, or UI element on screen using the roaming spirit pointer.',
+        description: 'Locate, find, point to, or highlight any desktop icon, app, shortcut, button, file, or UI element on screen using the roaming pointer.',
         parameters: {
           type: 'OBJECT',
           properties: {
             target: {
               type: 'STRING',
-              description: 'The exact item, icon, app name, file, or button to find and point to on screen (e.g. "Fortnite", "Recycle Bin", "HoYoPlay", "Riot Client", "Mute Button")',
+              description: 'The exact item, icon, app name, file, or button to find and point to on screen',
             },
           },
           required: ['target'],
@@ -88,13 +161,13 @@ export const GEMINI_TOOLS = [
       },
       {
         name: 'play_spotify',
-        description: 'Play any song, artist, album, playlist, or Liked Songs on Spotify (prioritizing the desktop Spotify app, falling back to web if not installed). Use this even if the user omits the word "play", e.g. "please Daniel Caesar on Spotify" or "play liked songs on Spotify".',
+        description: 'Play any song, artist, album, playlist, or Liked Songs on Spotify.',
         parameters: {
           type: 'OBJECT',
           properties: {
             query: {
               type: 'STRING',
-              description: 'The song, artist, album, or playlist to play (e.g. "Daniel Caesar", "Best Part", "Liked Songs")',
+              description: 'The song, artist, album, or playlist to play',
             },
             targetType: {
               type: 'STRING',
@@ -118,15 +191,15 @@ export const GEMINI_TOOLS = [
             },
             target: {
               type: 'STRING',
-              description: 'Visual description of what to click on screen (e.g. "first video thumbnail", "play button", "search bar", "subscribe button"). Leave empty if typing directly into the currently focused window.',
+              description: 'Visual description of what to click on screen. Leave empty if typing directly into the focused window.',
             },
             textToType: {
               type: 'STRING',
-              description: 'The exact text to write or type if the user asked to write, type, or enter text.',
+              description: 'The exact text to write or type.',
             },
             pressEnter: {
               type: 'BOOLEAN',
-              description: 'True if Enter should be pressed after typing (e.g. submitting a search or message).',
+              description: 'True if Enter should be pressed after typing.',
             },
           },
           required: ['actionType'],
@@ -140,7 +213,7 @@ export const GEMINI_TOOLS = [
           properties: {
             topic: {
               type: 'STRING',
-              description: 'The name, brand, topic, or style of the website to build (e.g. "fortnite", "artisan coffee", "saas landing page")',
+              description: 'The name, brand, topic, or style of the website to build',
             },
           },
           required: ['topic'],
@@ -194,7 +267,7 @@ export const GEMINI_TOOLS = [
       },
       {
         name: 'schedule_routine',
-        description: 'Schedule an automated routine or timed task when the user asks to schedule something, or mentions a time or recurring schedule.',
+        description: 'Schedule an automated routine or timed task when the user asks to schedule something.',
         parameters: {
           type: 'OBJECT',
           properties: {
@@ -212,7 +285,7 @@ export const GEMINI_TOOLS = [
       },
       {
         name: 'add_todo',
-        description: 'Add a task or reminder to the user Today To-Do list.',
+        description: 'Add a task or reminder to the user task list.',
         parameters: {
           type: 'OBJECT',
           properties: {
@@ -228,17 +301,20 @@ export const GEMINI_TOOLS = [
   },
 ];
 
-const SYSTEM_INSTRUCTION = `You are Kibo, a fast, tactile anti-gravity cyber-droid living in the user's Windows top notch.
+const BASE_SYSTEM_INSTRUCTION = `You are Kibo, a fast, intelligent desktop companion living in the user's Windows top notch.
+- When the user asks to convert any file (e.g. PDF to Word, Word to PDF, image format, CSV to JSON), ALWAYS call convert_file.
+- When the user asks to start a focus timer or stopwatch, call start_focus_timer.
 - When the user asks to click, play, select, or tap anything on screen OR write/type text on their PC, ALWAYS call computer_action.
 - When the user asks to find, locate, or point to an item without clicking it, call find_and_point.
 - When the user asks to search YouTube/Google/Amazon/GitHub/Spotify, call search_web.
 - When the user asks to play a song, artist, playlist, or music on Spotify, ALWAYS call play_spotify.
-- When the user asks to open an app, change a system setting, view scheduled tasks, schedule a routine, or add a to-do, call the matching tool.
-- Keep spoken replies under 10 words, crisp, loyal, and direct.`;
+- When the user asks to build, create, or update a website, call build_website.
+- When the user asks to open an app or change a system setting, call the matching tool.
+- Keep spoken replies concise, helpful, and natural (1-2 short sentences).`;
 
 /**
- * Universal auto-fallback router across Free-Tier pools (500 RPD Flash-Lite, 14,400 RPD Gemma, and 20 RPD Flash).
- * Automatically cascades to the next model upon 429, 503, 500, 404, 400, or empty responses.
+ * Universal auto-fallback router across high-quota models (500 RPD Flash-Lite, 14,400 RPD Gemma, and 20 RPD Flash).
+ * Skips any rate-limited model immediately via cooldown cache so responses stay fast.
  */
 export async function callGeminiWithFallback(
   apiKey: string,
@@ -250,14 +326,17 @@ export async function callGeminiWithFallback(
 ): Promise<{ modelUsed: string; data: any; text: string }> {
   let lastError: any = null;
 
-  for (const model of models) {
+  // Try non-cooling-down models first; if all are cooling down, try all models
+  const activeModels = models.filter((m) => !isModelCoolingDown(m));
+  const candidatePool = activeModels.length > 0 ? activeModels : models;
+
+  for (const model of candidatePool) {
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey.trim())}`;
       const body: Record<string, any> = { contents };
 
       const isGemma = model.startsWith('gemma-');
 
-      // Gemma models prefer prompt-based system instructions; skip systemInstruction body field
       if (systemInstruction && !isGemma) {
         body.systemInstruction = { parts: [{ text: systemInstruction }] };
       }
@@ -267,7 +346,6 @@ export async function callGeminiWithFallback(
         if (toolConfig) body.toolConfig = toolConfig;
       }
 
-      // Add thinkingBudget: 0 only for gemini-3 thinking models, excluding flash-lite and transcribe
       if (
         model.includes('-3') &&
         !model.includes('flash-lite') &&
@@ -290,9 +368,8 @@ export async function callGeminiWithFallback(
         res.status === 404 ||
         res.status === 400
       ) {
-        console.warn(
-          `[Kibo] ${model} unavailable (${res.status}), cascading to next model...`
-        );
+        setModelCooldown(model, res.status === 404 ? 600_000 : 90_000);
+        console.warn(`[Kibo] ${model} status ${res.status}, cooling down & cascading...`);
         continue;
       }
 
@@ -306,16 +383,13 @@ export async function callGeminiWithFallback(
       const text = parts.map((p: any) => p.text || '').join('').trim();
       const hasFunctionCall = parts.some((p: any) => p.functionCall || p.function_call);
 
-      // If the model produced neither text nor a function call, cascade to the next model!
       if (!text && !hasFunctionCall) {
-        console.warn(`[Kibo] ${model} returned empty response, cascading to next model...`);
         continue;
       }
 
       return { modelUsed: model, data, text };
     } catch (err: any) {
       lastError = err;
-      console.warn(`[Kibo] Model ${model} failed, trying fallback:`, err?.message || err);
     }
   }
 
@@ -323,8 +397,7 @@ export async function callGeminiWithFallback(
 }
 
 /**
- * Voice commands and desktop action execution.
- * Routes to the 500 RPD Flash-Lite pool first, falling back to Flash reasoning models.
+ * Voice commands, chat messages, and desktop action execution.
  */
 export async function queryGemini(
   userPrompt: string,
@@ -352,11 +425,13 @@ export async function queryGemini(
     });
   }
 
+  const fullSystemInstruction = BASE_SYSTEM_INSTRUCTION + getActiveSkillsPromptBlock();
+
   const { modelUsed, data } = await callGeminiWithFallback(
     apiKey,
     VISION_AND_QUERY_MODELS,
     [{ role: 'user', parts }],
-    SYSTEM_INSTRUCTION,
+    fullSystemInstruction,
     GEMINI_TOOLS,
     {
       functionCallingConfig: {
@@ -386,8 +461,12 @@ export async function queryGemini(
   const defaultSpeech = detectedCall
     ? detectedCall.name === 'open_application'
       ? `Opened ${detectedCall.args.appName || 'app'}.`
+      : detectedCall.name === 'convert_file'
+      ? `Converting ${detectedCall.args.fileName} to ${String(detectedCall.args.targetFormat || '').toUpperCase()}.`
+      : detectedCall.name === 'start_focus_timer'
+      ? `Started your ${detectedCall.args.mode === 'stopwatch' ? 'stopwatch' : `${detectedCall.args.minutes || 25} minute focus timer`}.`
       : detectedCall.name === 'build_website'
-      ? `Building website for "${detectedCall.args.topic || 'project'}" in the background.`
+      ? `Building website for "${detectedCall.args.topic || 'project'}" using your active skills.`
       : detectedCall.name === 'search_web'
       ? `Searching ${detectedCall.args.platform || 'the web'} for ${detectedCall.args.query}.`
       : detectedCall.name === 'system_action'
@@ -396,7 +475,7 @@ export async function queryGemini(
       ? "Scheduled. I'll run it on time."
       : detectedCall.name === 'get_scheduled_tasks'
       ? 'Here are your scheduled tasks.'
-      : 'Added to your list.'
+      : 'Done.'
     : 'Done.';
 
   const finalSpeech = spokenText.trim() || defaultSpeech;
@@ -411,7 +490,7 @@ export async function queryGemini(
 
 /**
  * Polishes rough voice dictation ("Talk badly. Send it clean.")
- * Routes to Flash Lite (500 RPD) -> Gemma 4 (14,400 RPD) -> Flash pool.
+ * Routes to Gemma 4 (30 RPM / 14,400 RPD) -> Flash Lite (500 RPD).
  */
 export async function cleanDictation(rawText: string, apiKey: string): Promise<string> {
   if (!apiKey || !apiKey.trim() || !rawText.trim()) return rawText.trim();
@@ -426,7 +505,6 @@ export async function cleanDictation(rawText: string, apiKey: string): Promise<s
     );
 
     let cleaned = text.trim();
-    // If a model returned chain-of-thought or bulleted scratchpad, extract the final quote or text
     if (
       cleaned.includes('\n') &&
       (cleaned.includes('Task:') || cleaned.includes('Input:') || cleaned.includes('* '))
@@ -444,13 +522,12 @@ export async function cleanDictation(rawText: string, apiKey: string): Promise<s
     cleaned = cleaned.replace(/^["']|["']$/g, '').trim();
     return cleaned || rawText.trim();
   } catch (err) {
-    console.warn('[Kibo] cleanDictation fallback exhausted, returning raw transcript:', err);
     return rawText.trim();
   }
 }
 
 /**
- * Transcribes audio recordings with auto-fallback across high-quota models.
+ * Transcribes audio recordings with auto-fallback across 500 RPD Flash-Lite models.
  */
 export async function transcribeAudioWithGeminiAPI(
   audioBase64: string,
@@ -501,7 +578,6 @@ export async function transcribeAudioWithGeminiAPI(
 
 /**
  * "Circle to Ask" screen vision analysis.
- * Routes to the 500 RPD Flash-Lite multimodal pool first.
  */
 export async function askLassoWithGemini(
   query: string,

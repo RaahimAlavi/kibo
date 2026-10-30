@@ -14,6 +14,7 @@ import {
   multitaskAgent,
   AgentTask,
   DetectedAppConfig,
+  APP_INTEGRATIONS,
 } from '../lib/multitaskAgent';
 import { ProactiveContextNotch } from '../components/ProactiveContextNotch';
 import { AgentTopRightDock } from '../components/AgentTopRightDock';
@@ -127,14 +128,90 @@ declare global {
       onGrantCreatorEmbers?: (callback: (amount: number) => void) => () => void;
       getStoredSettings?: () => Promise<Record<string, any>>;
       saveStoredSettings?: (patch: Record<string, any>) => Promise<any>;
+      convertFile?: (payload: {
+        filePath?: string;
+        fileNameQuery?: string;
+        targetFormat: string;
+      }) => Promise<{
+        success: boolean;
+        sourcePath?: string;
+        outputPath?: string;
+        outputFileName?: string;
+        error?: string;
+      }>;
+      pickFileForConvert?: () => Promise<{
+        success: boolean;
+        filePath?: string;
+        fileName?: string;
+        ext?: string;
+        sizeBytes?: number;
+      }>;
+      showItemInFolder?: (filePath: string) => Promise<{ success: boolean }>;
+      exportChromeExtension?: () => Promise<{ success: boolean; extDir?: string; error?: string }>;
+      openChromeExtensionsPage?: () => Promise<{ success: boolean }>;
+      pickSkillMdFile?: () => Promise<{
+        success: boolean;
+        name?: string;
+        description?: string;
+        content?: string;
+        filePath?: string;
+      }>;
     };
   }
 }
 
-type NavTab = 'Controls' | 'Today' | 'Agents' | 'Clipboard' | 'Apps' | 'Wallpaper' | 'Power' | 'Settings';
+type NavTab = 'Chat' | 'Agents' | 'Convert' | 'Focus' | 'Skills' | 'Media' | 'Controls' | 'Today' | 'Clipboard' | 'Apps' | 'Wallpaper' | 'Power' | 'Settings';
 type CompanionSection = 'Kibo' | 'Shortcuts' | 'Behavior' | 'System' | 'API keys' | 'Your data' | 'Privacy';
 type LoadoutSlotType = 'Soul' | 'Voice' | 'Personality' | 'Abilities';
 type ControlDropdownType = 'wifi' | 'bluetooth' | 'audio' | 'nightlight' | null;
+
+interface ChatMessageItem {
+  id: string;
+  role: 'user' | 'kibo';
+  text: string;
+  subText?: string;
+  time: string;
+  actionFilePath?: string;
+  actionLabel?: string;
+}
+
+interface ConvertedFileRecord {
+  id: string;
+  sourceName: string;
+  sourcePath: string;
+  outputFileName: string;
+  outputPath: string;
+  targetFormat: string;
+  timestamp: string;
+}
+
+interface KiboSkillItem {
+  id: string;
+  name: string;
+  description: string;
+  content: string;
+  enabled: boolean;
+  builtIn?: boolean;
+}
+
+interface CustomIntegrationItem {
+  id: string;
+  name: string;
+  category: string;
+  endpointOrId: string;
+  connected: boolean;
+}
+
+interface AgentPermissionState {
+  filesAndFolders: boolean;
+  documents: boolean;
+  pictures: boolean;
+  contacts: boolean;
+  calendar: boolean;
+  microphone: boolean;
+  camera: boolean;
+  location: boolean;
+}
 
 interface InstalledAppItem {
   id: string;
@@ -644,6 +721,141 @@ const SvgIcon: React.FC<{ name: string; size?: number; color?: string }> = ({
           <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
         </svg>
       );
+    case 'chat':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+      );
+    case 'convert':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M17 2.1l4 4-4 4" />
+          <path d="M3 12.2v-2a4 4 0 0 1 4-4h12.8M7 21.9l-4-4 4-4" />
+          <path d="M21 11.8v2a4 4 0 0 1-4 4H4.2" />
+        </svg>
+      );
+    case 'timer':
+    case 'stopwatch':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="13" r="8" />
+          <path d="M12 9v4l2.5 2.5" />
+          <path d="M10 2h4" />
+          <path d="M12 2v3" />
+        </svg>
+      );
+    case 'skill':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polygon points="12 2 2 7 12 12 22 7 12 2" />
+          <polyline points="2 17 12 22 22 17" />
+          <polyline points="2 12 12 17 22 12" />
+        </svg>
+      );
+    case 'music':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M9 18V5l12-2v13" />
+          <circle cx="6" cy="18" r="3" />
+          <circle cx="18" cy="16" r="3" />
+        </svg>
+      );
+    case 'mic':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+          <line x1="12" y1="19" x2="12" y2="22" />
+          <line x1="8" y1="22" x2="16" y2="22" />
+        </svg>
+      );
+    case 'captions':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="4" width="20" height="16" rx="3" />
+          <path d="M10 10.5a2.5 2.5 0 1 0 0 3" />
+          <path d="M17 10.5a2.5 2.5 0 1 0 0 3" />
+        </svg>
+      );
+    case 'integrations':
+    case 'plug':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 22v-5" />
+          <path d="M9 8V2" />
+          <path d="M15 8V2" />
+          <path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z" />
+        </svg>
+      );
+    case 'chrome':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <circle cx="12" cy="12" r="4" />
+          <line x1="21.17" y1="8" x2="12" y2="8" />
+          <line x1="3.95" y1="6.06" x2="8.54" y2="14" />
+          <line x1="10.88" y1="21.94" x2="15.46" y2="14" />
+        </svg>
+      );
+    case 'file':
+    case 'doc':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+          <line x1="16" y1="13" x2="8" y2="13" />
+          <line x1="16" y1="17" x2="8" y2="17" />
+        </svg>
+      );
+    case 'camera':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+          <circle cx="12" cy="13" r="3" />
+        </svg>
+      );
+    case 'location':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+          <circle cx="12" cy="10" r="3" />
+        </svg>
+      );
+    case 'contacts':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+      );
+    case 'calendar':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+          <line x1="16" y1="2" x2="16" y2="6" />
+          <line x1="8" y1="2" x2="8" y2="6" />
+          <line x1="3" y1="10" x2="21" y2="10" />
+        </svg>
+      );
+    case 'upload':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="17 8 12 3 7 8" />
+          <line x1="12" y1="3" x2="12" y2="15" />
+        </svg>
+      );
+    case 'external':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+          <polyline points="15 3 21 3 21 9" />
+          <line x1="10" y1="14" x2="21" y2="3" />
+        </svg>
+      );
     default:
       return null;
   }
@@ -992,15 +1204,50 @@ const LOADOUT_CARDS: LoadoutCardItem[] = [
 const NAV_TABS: ReadonlyArray<{
   id: NavTab;
   label: string;
+  icon: string;
   width: number;
 }> = [
-  { id: 'Controls', label: 'Controls', width: 66 },
-  { id: 'Today', label: 'Today', width: 54 },
-  { id: 'Agents', label: 'Agents', width: 60 },
-  { id: 'Clipboard', label: 'Clipboard', width: 72 },
-  { id: 'Apps', label: 'Apps', width: 50 },
-  { id: 'Wallpaper', label: 'Wallpaper', width: 74 },
-  { id: 'Power', label: 'Power', width: 56 },
+  { id: 'Chat', label: 'Chat', icon: 'chat', width: 62 },
+  { id: 'Agents', label: 'Agents', icon: 'bolt', width: 72 },
+  { id: 'Convert', label: 'Convert', icon: 'convert', width: 76 },
+  { id: 'Focus', label: 'Focus', icon: 'timer', width: 66 },
+  { id: 'Skills', label: 'Skills', icon: 'skill', width: 64 },
+  { id: 'Media', label: 'Media', icon: 'music', width: 66 },
+];
+
+const DEFAULT_KIBO_SKILLS: KiboSkillItem[] = [
+  {
+    id: 'skill_frontend_taste',
+    name: 'design-taste-frontend (SKILL.md)',
+    description: 'High-craft agency web design system: Figtree typography, editorial bento grids, hardware-accelerated motion, and zero generic AI slop when building websites.',
+    content: `# Frontend Design Taste Skill\n- Use Figtree typography, crisp 1px borders, balanced whitespace, and dark obsidian or warm ivory editorial palettes.\n- Avoid generic gradients, cluttered nested cards, or placeholder text.\n- Include interactive micro-states, responsive bento layouts, and complete production-ready HTML/CSS/JS.`,
+    enabled: true,
+    builtIn: true,
+  },
+  {
+    id: 'skill_full_output',
+    name: 'full-output-enforcement (SKILL.md)',
+    description: 'Enforces complete, unabridged code and document generation with zero placeholders or truncated sections.',
+    enabled: true,
+    builtIn: true,
+    content: `# Full Output Enforcement Skill\n- Never truncate code or leave "// TODO" placeholders.\n- Deliver complete, self-contained, immediately runnable implementations.`,
+  },
+  {
+    id: 'skill_file_converter',
+    name: 'universal-document-converter (SKILL.md)',
+    description: 'Non-destructive local document conversion (PDF to Word .docx, Word to PDF, Markdown/HTML/CSV/JSON/Images) while preserving original source files.',
+    enabled: true,
+    builtIn: true,
+    content: `# Universal Document Converter Skill\n- Always preserve the user's original source file when converting.\n- Support voice commands like "Convert my resume.pdf to Word" using the convert_file tool.`,
+  },
+  {
+    id: 'skill_desktop_operator',
+    name: 'precision-desktop-operator (SKILL.md)',
+    description: 'Direct concise voice responses and fast UI automation across Chrome, Notion, GitHub, VS Code, and Windows.',
+    enabled: false,
+    builtIn: true,
+    content: `# Precision Desktop Operator Skill\n- Keep spoken responses under 2 sentences.\n- Prioritize direct execution over lengthy explanations.`,
+  },
 ];
 
 const APP_WIN_W = 880;
@@ -1081,7 +1328,7 @@ export const KiboApp: React.FC = () => {
   const [tavilyDraftKey, setTavilyDraftKey] = useState<string>(() => localStorage.getItem('kibo_tavily_key') || '');
   const [showConnectModal, setShowConnectModal] = useState<boolean>(false);
   const [notchApiAlert, setNotchApiAlert] = useState<{ type: 'missing_key' | 'rate_limit'; text: string } | null>(null);
-  const [settingsCategory, setSettingsCategory] = useState<'Account' | 'General' | 'Core' | 'Voice' | 'Shortcuts' | 'System'>('Account');
+  const [settingsCategory, setSettingsCategory] = useState<'Account' | 'General' | 'Core' | 'Voice' | 'Integrations' | 'Agents' | 'Shortcuts' | 'System'>('Account');
   const [updateCheckStatus, setUpdateCheckStatus] = useState<string | null>(null);
   const [isBooting, setIsBooting] = useState<boolean>(true);
   const [bootPhase, setBootPhase] = useState<'sleeping' | 'awakening' | 'tucking' | 'ready'>('sleeping');
@@ -1300,7 +1547,7 @@ export const KiboApp: React.FC = () => {
   const initialTab =
     urlParams?.get('settings') === 'true' || urlParams?.get('loadout') === 'true'
       ? 'Settings'
-      : (urlParams?.get('tab') as NavTab) || 'Controls';
+      : (urlParams?.get('tab') as NavTab) || 'Chat';
 
   const [showCompanionWindow, setShowCompanionWindow] = useState<boolean>(false);
   const [companionDockTab, setCompanionDockTab] = useState<'soul' | 'settings'>(
@@ -1325,7 +1572,9 @@ export const KiboApp: React.FC = () => {
   const [isHovered, setIsHovered] = useState<boolean>(false);
   const [showMediaNotch, setShowMediaNotch] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<NavTab>(initialTab);
-  const [soulMode, setSoulMode] = useState<'LISTENING' | 'THINKING' | 'TALKING' | 'MUTED'>('LISTENING');
+  const [soulMode, setSoulMode] = useState<'LISTENING' | 'THINKING' | 'TALKING' | 'MUTED' | 'DANCING'>('LISTENING');
+  const [isKiboDancing, setIsKiboDancing] = useState<boolean>(false);
+  const danceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [soulAnnoyance, setSoulAnnoyance] = useState<number>(0);
   const [soulIsHit, setSoulIsHit] = useState<boolean>(false);
   const [isBreathingRelief, setIsBreathingRelief] = useState<boolean>(false);
@@ -1334,13 +1583,284 @@ export const KiboApp: React.FC = () => {
   const annoyanceDecayIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const reliefBreathTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // =========================================================================
+  // NEW STATE: CHAT HISTORY, FILE CONVERTER, STOPWATCH, SKILLS, AUDIO & INTEGRATIONS
+  // =========================================================================
+  const [chatMessages, setChatMessages] = useState<ChatMessageItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('kibo_chat_history');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (_) {}
+    return [
+      {
+        id: 'welcome_1',
+        role: 'kibo',
+        text: "I'm Kibo, your desktop operator. Hold Win + Alt to talk, drop files in Convert, or ask me to build websites, run commands, or control your PC.",
+        time: 'Ready',
+      },
+    ];
+  });
+  const [chatInputText, setChatInputText] = useState<string>('');
+  const chatScrollRef = useRef<HTMLDivElement | null>(null);
+
+  const appendChatMessage = useCallback((msg: Omit<ChatMessageItem, 'id' | 'time'>) => {
+    const nowStr = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const entry: ChatMessageItem = {
+      ...msg,
+      id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      time: nowStr,
+    };
+    setChatMessages((prev) => {
+      const next = [...prev, entry].slice(-80);
+      try {
+        localStorage.setItem('kibo_chat_history', JSON.stringify(next));
+      } catch (_) {}
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'Chat' && chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [chatMessages, activeTab, isExpanded]);
+
+  // Universal Non-Destructive File Converter State
+  const [convertSourceFile, setConvertSourceFile] = useState<{
+    filePath: string;
+    fileName: string;
+    ext: string;
+    sizeBytes?: number;
+  } | null>(null);
+  const [convertTargetFormat, setConvertTargetFormat] = useState<string>('docx');
+  const [isConvertingFile, setIsConvertingFile] = useState<boolean>(false);
+  const [convertStatusMsg, setConvertStatusMsg] = useState<{ type: 'ok' | 'err' | 'info'; text: string; outputPath?: string } | null>(null);
+  const [isConvertDragOver, setIsConvertDragOver] = useState<boolean>(false);
+  const [recentConversions, setRecentConversions] = useState<ConvertedFileRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem('kibo_recent_conversions');
+      if (saved) return JSON.parse(saved);
+    } catch (_) {}
+    return [];
+  });
+
+  // Focus Timer + Stopwatch + Kibo Dance State
+  const [focusSubMode, setFocusSubMode] = useState<'timer' | 'stopwatch'>('timer');
+  const [stopwatchMs, setStopwatchMs] = useState<number>(0);
+  const [stopwatchRunning, setStopwatchRunning] = useState<boolean>(false);
+  const [stopwatchLaps, setStopwatchLaps] = useState<number[]>([]);
+  const stopwatchStartRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (!stopwatchRunning) return;
+    stopwatchStartRef.current = performance.now() - stopwatchMs;
+    const interval = setInterval(() => {
+      setStopwatchMs(Math.floor(performance.now() - stopwatchStartRef.current));
+    }, 35);
+    return () => clearInterval(interval);
+  }, [stopwatchRunning]);
+
+  const triggerKiboCelebrationDance = useCallback((durationMs = 5200) => {
+    if (danceTimeoutRef.current) clearTimeout(danceTimeoutRef.current);
+    setIsKiboDancing(true);
+    setSoulMode('DANCING');
+    soundFX.playDanceMelody();
+    danceTimeoutRef.current = setTimeout(() => {
+      setIsKiboDancing(false);
+      setSoulMode((curr) => (curr === 'DANCING' ? 'LISTENING' : curr));
+    }, durationMs);
+  }, []);
+
+  // Skills (SKILL.md) Manager State
+  const [skillsList, setSkillsList] = useState<KiboSkillItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('kibo_skills_list');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (_) {}
+    localStorage.setItem('kibo_skills_list', JSON.stringify(DEFAULT_KIBO_SKILLS));
+    return DEFAULT_KIBO_SKILLS;
+  });
+  const [isAddingSkill, setIsAddingSkill] = useState<boolean>(false);
+  const [newSkillName, setNewSkillName] = useState<string>('');
+  const [newSkillDesc, setNewSkillDesc] = useState<string>('');
+  const [newSkillContent, setNewSkillContent] = useState<string>('');
+
+  const updateSkillsList = useCallback((updater: (prev: KiboSkillItem[]) => KiboSkillItem[]) => {
+    setSkillsList((prev) => {
+      const next = updater(prev);
+      try {
+        localStorage.setItem('kibo_skills_list', JSON.stringify(next));
+      } catch (_) {}
+      return next;
+    });
+  }, []);
+
+  // Voice Captions & Audio Input/Output + Mic Test State
+  const [captionsEnabled, setCaptionsEnabled] = useState<boolean>(
+    () => localStorage.getItem('kibo_captions_enabled') !== 'false'
+  );
+  const [audioInputDevices, setAudioInputDevices] = useState<Array<{ deviceId: string; label: string }>>([]);
+  const [audioOutputDevices, setAudioOutputDevices] = useState<Array<{ deviceId: string; label: string }>>([]);
+  const [selectedMicDeviceId, setSelectedMicDeviceId] = useState<string>(
+    () => localStorage.getItem('kibo_mic_device_id') || 'default'
+  );
+  const [selectedSpeakerDeviceId, setSelectedSpeakerDeviceId] = useState<string>(
+    () => localStorage.getItem('kibo_output_device_id') || 'default'
+  );
+  const [isTestingMic, setIsTestingMic] = useState<boolean>(false);
+  const [micTestLevel, setMicTestLevel] = useState<number>(0);
+  const micTestStreamRef = useRef<MediaStream | null>(null);
+  const micTestRafRef = useRef<number | null>(null);
+  const micTestAudioCtxRef = useRef<AudioContext | null>(null);
+
+  const refreshAudioDevices = useCallback(async () => {
+    if (!navigator.mediaDevices?.enumerateDevices) return;
+    try {
+      const list = await navigator.mediaDevices.enumerateDevices();
+      const inputs = list
+        .filter((d) => d.kind === 'audioinput')
+        .map((d, idx) => ({
+          deviceId: d.deviceId || `mic_${idx}`,
+          label: d.label || `Microphone ${idx + 1}`,
+        }));
+      const outputs = list
+        .filter((d) => d.kind === 'audiooutput')
+        .map((d, idx) => ({
+          deviceId: d.deviceId || `spk_${idx}`,
+          label: d.label || `Speaker / Headphones ${idx + 1}`,
+        }));
+      setAudioInputDevices(inputs.length > 0 ? inputs : [{ deviceId: 'default', label: 'System Default Microphone' }]);
+      setAudioOutputDevices(outputs.length > 0 ? outputs : [{ deviceId: 'default', label: 'System Default Output' }]);
+    } catch (_) {}
+  }, []);
+
+  useEffect(() => {
+    refreshAudioDevices();
+  }, [refreshAudioDevices]);
+
+  const toggleMicTest = useCallback(async () => {
+    if (isTestingMic) {
+      if (micTestRafRef.current) cancelAnimationFrame(micTestRafRef.current);
+      micTestStreamRef.current?.getTracks().forEach((t) => t.stop());
+      micTestAudioCtxRef.current?.close().catch(() => {});
+      micTestStreamRef.current = null;
+      micTestAudioCtxRef.current = null;
+      setIsTestingMic(false);
+      setMicTestLevel(0);
+      return;
+    }
+    try {
+      const constraints: MediaStreamConstraints = {
+        audio: selectedMicDeviceId && selectedMicDeviceId !== 'default'
+          ? { deviceId: { exact: selectedMicDeviceId } }
+          : true,
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      micTestStreamRef.current = stream;
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const ctx: AudioContext = new AudioCtx();
+      micTestAudioCtxRef.current = ctx;
+      const source = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      setIsTestingMic(true);
+      refreshAudioDevices();
+
+      const updateMeter = () => {
+        analyser.getByteFrequencyData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+        const avg = sum / dataArray.length;
+        const pct = Math.min(100, Math.round((avg / 95) * 100));
+        setMicTestLevel(pct);
+        micTestRafRef.current = requestAnimationFrame(updateMeter);
+      };
+      micTestRafRef.current = requestAnimationFrame(updateMeter);
+    } catch (_) {
+      setIsTestingMic(false);
+    }
+  }, [isTestingMic, selectedMicDeviceId, refreshAudioDevices]);
+
+  useEffect(() => {
+    return () => {
+      if (micTestRafRef.current) cancelAnimationFrame(micTestRafRef.current);
+      micTestStreamRef.current?.getTracks().forEach((t) => t.stop());
+      micTestAudioCtxRef.current?.close().catch(() => {});
+    };
+  }, []);
+
+  // Chrome Extension & Custom Connections (Meta Ads, etc.) State
+  const [chromeExtStatus, setChromeExtStatus] = useState<string | null>(null);
+  const [customIntegrations, setCustomIntegrations] = useState<CustomIntegrationItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('kibo_custom_integrations');
+      if (saved) return JSON.parse(saved);
+    } catch (_) {}
+    return [
+      {
+        id: 'conn_meta_ads',
+        name: 'Meta Ads Manager',
+        category: 'Marketing & Ad Telemetry',
+        endpointOrId: 'graph.facebook.com/v19.0/act_kibo',
+        connected: true,
+      },
+      {
+        id: 'conn_linear',
+        name: 'Linear Issue Tracker',
+        category: 'Product & Sprint Sync',
+        endpointOrId: 'api.linear.app/graphql',
+        connected: false,
+      },
+    ];
+  });
+  const [newConnName, setNewConnName] = useState<string>('');
+  const [newConnCategory, setNewConnCategory] = useState<string>('');
+  const [newConnEndpoint, setNewConnEndpoint] = useState<string>('');
+
+  // Agent Reach & Granular OS Permissions State
+  const [agentPermissions, setAgentPermissions] = useState<AgentPermissionState>(() => {
+    try {
+      const saved = localStorage.getItem('kibo_agent_permissions');
+      if (saved) return JSON.parse(saved);
+    } catch (_) {}
+    return {
+      filesAndFolders: true,
+      documents: true,
+      pictures: true,
+      contacts: false,
+      calendar: true,
+      microphone: true,
+      camera: false,
+      location: false,
+    };
+  });
+
+  const toggleAgentPermission = useCallback((key: keyof AgentPermissionState) => {
+    setAgentPermissions((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      try {
+        localStorage.setItem('kibo_agent_permissions', JSON.stringify(next));
+      } catch (_) {}
+      soundFX.playToggle(next[key]);
+      return next;
+    });
+  }, []);
+
   // Sync SoulCanvas speaking animation with voiceEngine speech state
   useEffect(() => {
     const unsub = voiceEngine.onSpeakingStateChange((isTalking) => {
       if (isTalking) {
         setSoulMode('TALKING');
       } else {
-        setSoulMode('LISTENING');
+        setSoulMode((curr) => (curr === 'DANCING' ? 'DANCING' : 'LISTENING'));
       }
     });
     return unsub;
@@ -1368,10 +1888,16 @@ export const KiboApp: React.FC = () => {
   const replyDismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showReplyWithSpeech = useCallback(
-    (text: string, boldHeader?: string) => {
+    (text: string, boldHeader?: string, actionFilePath?: string, actionLabel?: string) => {
       setAskNotchPhase('idle');
       setSoulMode('TALKING');
       setKiboReply({ bold: boldHeader || text, rest: boldHeader ? text : undefined });
+      appendChatMessage({
+        role: 'kibo',
+        text: boldHeader ? `${boldHeader} — ${text}` : text,
+        actionFilePath,
+        actionLabel,
+      });
 
       // Guarantee lasso lock is released so user can multitask freely across apps
       setLassoActive(false);
@@ -1388,7 +1914,7 @@ export const KiboApp: React.FC = () => {
         if (replyDismissTimerRef.current) clearTimeout(replyDismissTimerRef.current);
         replyDismissTimerRef.current = setTimeout(() => {
           if (!voiceEngine.isSpeaking()) {
-            setSoulMode('LISTENING');
+            setSoulMode((curr) => (curr === 'DANCING' ? 'DANCING' : 'LISTENING'));
             setKiboReply(null);
             setUserBubbleText(null);
           } else {
@@ -1411,7 +1937,7 @@ export const KiboApp: React.FC = () => {
         }
       }, expectedDurationMs);
     },
-    [speakAsKibo]
+    [speakAsKibo, appendChatMessage]
   );
 
   const handleKiboPoke = useCallback(() => {
@@ -2890,17 +3416,85 @@ export const KiboApp: React.FC = () => {
       return { w: 708, h: hasMediaSession ? 396 : 268 };
     }
     const dims: Record<NavTab, { w: number; h: number }> = {
+      Chat:      { w: 720, h: 460 },
+      Agents:    { w: 860, h: 440 },
+      Convert:   { w: 780, h: 450 },
+      Focus:     { w: 780, h: 440 },
+      Skills:    { w: 820, h: 460 },
+      Media:     { w: 708, h: 360 },
       Controls:  { w: 708, h: 396 },
       Today:     { w: 860, h: 440 },
       Clipboard: { w: 860, h: 444 },
       Apps:      { w: 708, h: 560 },
-      Agents:    { w: 860, h: 440 },
       Wallpaper: { w: 680, h: 168 },
       Power:     { w: 708, h: 168 },
       Settings:  { w: 880, h: 540 },
     };
-    return dims[activeTab];
+    return dims[activeTab] || { w: 740, h: 450 };
   }, [activeTab, hasMediaSession]);
+
+  const handleRunFileConversion = useCallback(
+    async (opts: { filePath?: string; fileNameQuery?: string; targetFormat: string }) => {
+      if (!window.kiboAPI?.convertFile) {
+        setConvertStatusMsg({
+          type: 'err',
+          text: 'Desktop file converter requires running inside the Kibo Electron app.',
+        });
+        return null;
+      }
+      setIsConvertingFile(true);
+      setConvertStatusMsg({
+        type: 'info',
+        text: `Converting to .${opts.targetFormat.toUpperCase()} (original file will not be deleted)...`,
+      });
+      try {
+        const res = await window.kiboAPI.convertFile(opts);
+        setIsConvertingFile(false);
+        if (res?.success && res.outputPath) {
+          const srcName = (res.sourcePath || opts.filePath || opts.fileNameQuery || 'File').split(/[\\/]/).pop() || 'File';
+          const outName = res.outputFileName || res.outputPath.split(/[\\/]/).pop() || 'Converted';
+          const record: ConvertedFileRecord = {
+            id: `${Date.now()}`,
+            sourceName: srcName,
+            sourcePath: res.sourcePath || opts.filePath || '',
+            outputFileName: outName,
+            outputPath: res.outputPath,
+            targetFormat: opts.targetFormat.toUpperCase(),
+            timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+          };
+          setRecentConversions((prev) => {
+            const next = [record, ...prev].slice(0, 20);
+            try {
+              localStorage.setItem('kibo_recent_conversions', JSON.stringify(next));
+            } catch (_) {}
+            return next;
+          });
+          setConvertStatusMsg({
+            type: 'ok',
+            text: `Converted to ${outName} · Original file preserved untouched`,
+            outputPath: res.outputPath,
+          });
+          soundFX.playTaskSuccess();
+          addEmbers(4);
+          return res;
+        } else {
+          setConvertStatusMsg({
+            type: 'err',
+            text: res?.error || 'Could not convert file.',
+          });
+          return res;
+        }
+      } catch (err: any) {
+        setIsConvertingFile(false);
+        setConvertStatusMsg({
+          type: 'err',
+          text: String(err?.message || 'Conversion failed'),
+        });
+        return null;
+      }
+    },
+    [addEmbers]
+  );
 
   const showProactiveBanner = !isExpanded && !showCompanionWindow && Boolean(detectedAppId);
   const isCompactAskBar = !showProactiveBanner && (askNotchPhase === 'speaking' || askNotchPhase === 'thinking');
@@ -3022,6 +3616,8 @@ export const KiboApp: React.FC = () => {
       const text = rawSpeech.trim();
       if (!text) return;
 
+      appendChatMessage({ role: 'user', text });
+
       setIsTucked(false);
       setAskNotchPhase('thinking');
       setSoulMode('THINKING');
@@ -3052,6 +3648,73 @@ export const KiboApp: React.FC = () => {
       }
 
       const lower = text.toLowerCase().trim();
+
+      // 0A. Voice-Triggered Non-Destructive File Conversion ("Convert resume.pdf to Word")
+      const convertRegexMatch = text.match(
+        /\bconvert\s+(?:my\s+|the\s+|file\s+)?["']?([^"']+?)["']?\s+(?:to|into)\s+(pdf|word|docx|doc|txt|text|md|markdown|html|json|csv|png|jpg|jpeg|webp)\b/i
+      );
+      if (fc?.name === 'convert_file' || convertRegexMatch) {
+        const rawSource = String(fc?.args?.sourceFileName || (convertRegexMatch ? convertRegexMatch[1] : '') || '').trim();
+        let rawTarget = String(fc?.args?.targetFormat || (convertRegexMatch ? convertRegexMatch[2] : 'pdf')).toLowerCase().trim();
+        if (rawTarget === 'word' || rawTarget === 'doc') rawTarget = 'docx';
+        if (rawTarget === 'text') rawTarget = 'txt';
+        if (rawTarget === 'markdown') rawTarget = 'md';
+
+        setAskNotchPhase('idle');
+        setKiboReply({
+          bold: `Converting ${rawSource || 'file'} to .${rawTarget.toUpperCase()}...`,
+          rest: 'Original file will be preserved',
+        });
+
+        const convRes = await handleRunFileConversion({
+          filePath: convertSourceFile?.filePath && !rawSource ? convertSourceFile.filePath : undefined,
+          fileNameQuery: rawSource || convertSourceFile?.fileName || 'document',
+          targetFormat: rawTarget,
+        });
+
+        if (convRes?.success && convRes.outputPath) {
+          const msg = `Converted ${rawSource || 'your file'} to ${convRes.outputFileName || rawTarget.toUpperCase()} without deleting the original.`;
+          showReplyWithSpeech(msg, 'Conversion Complete', convRes.outputPath, 'Show in Folder');
+        } else {
+          showReplyWithSpeech(
+            convRes?.error || `I couldn't locate "${rawSource}" to convert. You can also drop it directly into the Convert tab.`
+          );
+        }
+        return;
+      }
+
+      // 0B. Voice-Triggered Focus Timer or Stopwatch ("Set a focus timer for 20 minutes", "Start stopwatch")
+      const timerRegexMatch = lower.match(/\b(?:set|start)\s+(?:a\s+)?(?:focus\s+)?timer\s+(?:for\s+)?(\d+)\s*(minute|min|second|sec)/i);
+      if (fc?.name === 'start_focus_timer' || timerRegexMatch || /\bstart\s+(?:the\s+)?stopwatch\b/i.test(lower)) {
+        if (fc?.args?.mode === 'stopwatch' || lower.includes('stopwatch')) {
+          setFocusSubMode('stopwatch');
+          setStopwatchMs(0);
+          setStopwatchLaps([]);
+          setStopwatchRunning(true);
+          setIsExpanded(true);
+          setActiveTab('Focus');
+          showReplyWithSpeech('Stopwatch started.', 'Stopwatch Running');
+          return;
+        }
+        const mins = fc?.args?.minutes
+          ? Number(fc.args.minutes)
+          : timerRegexMatch
+          ? timerRegexMatch[2].startsWith('sec')
+            ? Math.max(0.2, Number(timerRegexMatch[1]) / 60)
+            : Number(timerRegexMatch[1])
+          : 25;
+        const totalSecs = Math.max(5, Math.round(mins * 60));
+        setFocusSubMode('timer');
+        setTimerTotalSeconds(totalSecs);
+        setTimerSeconds(totalSecs);
+        setTimerAlarmRinging(false);
+        setIsTimerRunning(true);
+        showReplyWithSpeech(
+          `Focus timer started for ${mins >= 1 ? `${Math.round(mins)} minutes` : `${totalSecs} seconds`}. I'll dance when time is up!`,
+          'Focus Session Active'
+        );
+        return;
+      }
 
       // 1. Check Notion Database / Workspace Task FIRST so "create a database in Notion with websites" never triggers BUILD_PAGE!
       const isNotionDatabaseTask =
@@ -3090,22 +3753,12 @@ export const KiboApp: React.FC = () => {
             lower
           ));
 
-      
-
       if (isNotionDatabaseTask) {
         multitaskAgent.spawnTask(text, 'notion', { kind: 'NOTION_DATABASE' });
-        setAskNotchPhase('idle');
-        setSoulMode('TALKING');
-        setKiboReply({
-          bold: 'Building Notion database in background...',
-          rest: 'Curating websites & syncing to Notion',
-        });
-        speakAsKibo('Curating those websites and building your Notion database now.');
-        setTimeout(() => {
-          setSoulMode('LISTENING');
-          setKiboReply(null);
-          setUserBubbleText(null);
-        }, 2600);
+        showReplyWithSpeech(
+          'Curating those websites and building your Notion database now.',
+          'Building Notion database in background...'
+        );
         return;
       }
 
@@ -3124,66 +3777,37 @@ export const KiboApp: React.FC = () => {
 
       if (isEditPage) {
         multitaskAgent.spawnTask(text, undefined, { kind: 'EDIT_PAGE' });
-        setAskNotchPhase('idle');
-        setSoulMode('TALKING');
-        setKiboReply({
-          bold: 'Updating your website file...',
-          rest: 'Applying changes & refreshing browser',
-        });
-        speakAsKibo('Updating your website with those changes right now.');
-        setTimeout(() => {
-          setSoulMode('LISTENING');
-          setKiboReply(null);
-          setUserBubbleText(null);
-          setContextCard(null);
-        }, 2600);
+        showReplyWithSpeech(
+          'Updating your website with those changes right now.',
+          'Updating your website file...'
+        );
         return;
       }
 
       if (isClonePage) {
         multitaskAgent.spawnTask(text, undefined, { kind: 'CLONE_PAGE' });
-        setAskNotchPhase('idle');
-        setSoulMode('TALKING');
-        setKiboReply({
-          bold: 'Cloning active website in background...',
-          rest: 'Analyzing screen layout, colors & typography',
-        });
-        speakAsKibo('Scanning the website on your screen and building an exact replica.');
-        setTimeout(() => {
-          setSoulMode('LISTENING');
-          setKiboReply(null);
-          setUserBubbleText(null);
-        }, 2600);
+        showReplyWithSpeech(
+          'Scanning the website on your screen and building an exact replica.',
+          'Cloning active website in background...'
+        );
         return;
       }
 
       if (isSaveInspo) {
         multitaskAgent.spawnTask(text, undefined, { kind: 'SAVE_INSPO' });
-        setAskNotchPhase('idle');
-        setSoulMode('TALKING');
-        setKiboReply({ bold: 'Saving to Inspiration DB...', rest: 'Track progress in top-right dock' });
-        speakAsKibo('Saving design to your inspiration database.');
-        setTimeout(() => {
-          setSoulMode('LISTENING');
-          setKiboReply(null);
-          setUserBubbleText(null);
-          setContextCard(null);
-        }, 2200);
+        showReplyWithSpeech(
+          'Saving design to your inspiration database.',
+          'Saving to Inspiration DB...'
+        );
         return;
       }
 
       if (isBuildWebsite) {
         multitaskAgent.spawnTask(text, undefined, { kind: 'BUILD_PAGE' });
-        setAskNotchPhase('idle');
-        setSoulMode('TALKING');
-        setKiboReply({ bold: 'Building website in background...', rest: 'Track progress in top-right dock' });
-        speakAsKibo('Building your website in the background.');
-        setTimeout(() => {
-          setSoulMode('LISTENING');
-          setKiboReply(null);
-          setUserBubbleText(null);
-          setContextCard(null);
-        }, 2200);
+        showReplyWithSpeech(
+          'Building your website in the background using your active design skills.',
+          'Building website in background...'
+        );
         return;
       }
 
@@ -3775,10 +4399,9 @@ export const KiboApp: React.FC = () => {
       setTimerSeconds((prev) => {
         if (prev <= 1) {
           setIsTimerRunning(false);
-          setIsExpanded(false);
           setIsTucked(false);
           setTimerAlarmRinging(true);
-          setSoulMode('TALKING');
+          triggerKiboCelebrationDance(8500);
           addEmbers(5);
           return 0;
         }
@@ -3786,7 +4409,7 @@ export const KiboApp: React.FC = () => {
       });
     }, 1000);
     return () => clearInterval(interval);
-  }, [isTimerRunning, timerSeconds, addEmbers]);
+  }, [isTimerRunning, timerSeconds, addEmbers, triggerKiboCelebrationDance]);
 
   // Only advance media timer while song is actively playing (pauses when song is paused!)
   useEffect(() => {
@@ -4467,7 +5090,12 @@ export const KiboApp: React.FC = () => {
       }
 
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const micConstraints: MediaStreamConstraints = {
+          audio: selectedMicDeviceId && selectedMicDeviceId !== 'default'
+            ? { deviceId: { exact: selectedMicDeviceId } }
+            : true,
+        };
+        const stream = await navigator.mediaDevices.getUserMedia(micConstraints);
         audioChunksRef.current = [];
         const recorder = new MediaRecorder(stream);
 
@@ -4588,9 +5216,11 @@ export const KiboApp: React.FC = () => {
                   setLassoQuery(cleanQ);
                   setUserBubbleText(cleanQ);
                   setAskWords(cleanQ.split(/\s+/));
+                  appendChatMessage({ role: 'user', text: `[Screen Vision] ${cleanQ}` });
                 } else {
                   setUserBubbleText('Analyzing circled area...');
                   setAskWords(['Analyzing', 'circled', 'area...']);
+                  appendChatMessage({ role: 'user', text: '[Screen Vision] Analyzing circled area...' });
                 }
 
                 let shotImage = capturedScreenRef.current;
@@ -4691,17 +5321,11 @@ export const KiboApp: React.FC = () => {
       : () => {};
 
     const unregExpand = api.onExpandIsland
-
       ? api.onExpandIsland(() => {
-
           setIsTucked(false);
-
           setIsExpanded(true);
-
-          setActiveTab('Controls');
-
+          setActiveTab('Chat');
         })
-
       : () => {};
 
 
@@ -4901,6 +5525,7 @@ export const KiboApp: React.FC = () => {
 
     if (timerAlarmRinging) {
       setTimerAlarmRinging(false);
+      setIsKiboDancing(false);
       setSoulMode('LISTENING');
       return;
     }
@@ -4910,7 +5535,7 @@ export const KiboApp: React.FC = () => {
     // When it gets bigger (showMediaNotch is true), scrolling down expands directly to the navs!
     if (hasMediaSession) {
       if (showMediaNotch) {
-        setActiveTab('Controls');
+        setActiveTab('Media');
         setShowMediaNotch(false);
         setIsExpanded(true);
       }
@@ -4921,7 +5546,7 @@ export const KiboApp: React.FC = () => {
     if (isTucked) return;
 
     if (!isExpanded) {
-      setActiveTab('Controls');
+      setActiveTab('Chat');
       setShowMediaNotch(false);
       setIsExpanded(true);
     }
@@ -5143,10 +5768,11 @@ export const KiboApp: React.FC = () => {
               onClick={() => {
                 if (timerAlarmRinging) {
                   setTimerAlarmRinging(false);
+                  setIsKiboDancing(false);
                   setTimerSeconds(timerTotalSeconds);
                   setSoulMode('LISTENING');
                 } else {
-                  setActiveTab('Today');
+                  setActiveTab('Focus');
                   setIsExpanded(true);
                 }
               }}
@@ -5159,13 +5785,13 @@ export const KiboApp: React.FC = () => {
                   scale={timerAlarmRinging ? 0.95 : 0.88}
                   isDull={isSoulDull}
                   interactive={true}
-                  mode={timerAlarmRinging ? 'TALKING' : 'LISTENING'}
+                  mode={timerAlarmRinging ? 'DANCING' : 'LISTENING'}
                 />
               </div>
               {timerAlarmRinging ? (
                 <div className="alarm-ringing-copy">
-                  <span className="alarm-title">Time's up!</span>
-                  <span className="alarm-sub">Click to stop alarm</span>
+                  <span className="alarm-title">Time's up! Kibo Dance!</span>
+                  <span className="alarm-sub">Click to stop celebration</span>
                 </div>
               ) : (
                 <span className="notch-timer-digits">
@@ -5409,103 +6035,1443 @@ export const KiboApp: React.FC = () => {
 
                   />
 
-                  {NAV_TABS.map(({ id: tab, label, width }) => {
-
+                  {NAV_TABS.map(({ id: tab, label, icon, width }) => {
                     const isActive = activeTab === tab;
-
                     return (
-
                       <button
-
                         key={tab}
-
                         onClick={() => setActiveTab(tab)}
-
                         className={`companion-nav-btn ${isActive ? 'active' : ''}`}
-
-                        style={{ width: `${width}px` }}
-
+                        style={{ width: `${width}px`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
                       >
-
-                        {label}
-
+                        <SvgIcon name={icon} size={11} color={isActive ? '#FFFFFF' : '#94A3B8'} />
+                        <span>{label}</span>
                       </button>
-
                     );
-
                   })}
-
                 </div>
 
-
-
                 <div className="companion-header-actions">
-
-                  {activeTab === 'Wallpaper' && (
-
+                  {activeTab === 'Chat' && chatMessages.length > 1 && (
                     <button
-
-                      onClick={handlePickLocalWallpapers}
-
+                      onClick={() => {
+                        const initial: ChatMessageItem[] = [
+                          {
+                            id: 'welcome_reset',
+                            role: 'kibo',
+                            text: "Chat history cleared. Hold Win + Alt to talk or type below.",
+                            time: 'Now',
+                          },
+                        ];
+                        setChatMessages(initial);
+                        localStorage.setItem('kibo_chat_history', JSON.stringify(initial));
+                      }}
                       className="companion-header-circle"
-
-                      title="Choose wallpaper folder"
-
+                      title="Clear chat history"
                     >
-
-                      <SvgIcon name="folder" size={12} />
-
+                      <SvgIcon name="trash" size={11} />
                     </button>
-
                   )}
-
-                  
 
                   <button
                     onClick={() => {
                       if (activeTab === 'Settings') {
-                        setActiveTab('Controls');
+                        setActiveTab('Chat');
                       } else {
                         setSettingsCategory('Account');
                         setActiveTab('Settings');
                       }
                     }}
                     className={`companion-header-circle ${activeTab === 'Settings' ? 'active' : ''}`}
-                    title={activeTab === 'Settings' ? 'Return to Controls' : 'Settings & API Keys'}
+                    title={activeTab === 'Settings' ? 'Return to Chat' : 'Settings & Preferences'}
                     style={activeTab === 'Settings' ? { background: 'rgba(56, 189, 248, 0.22)', color: '#38BDF8' } : undefined}
                   >
                     <SvgIcon name="gear" size={12} />
                   </button>
 
                   <button
-
                     onClick={() => {
-
                       const next = !sfxEnabled;
-
                       setSfxEnabled(next);
-
                       soundFX.setEnabled(next);
-
                     }}
-
                     title={sfxEnabled ? 'Sound Effects: On' : 'Sound Effects: Muted'}
-
                     className="companion-header-circle"
-
                   >
-
                     <SvgIcon name={sfxEnabled ? 'speaker' : 'mute'} size={12} />
-
                   </button>
-
                 </div>
-
               </div>
 
-
-
               <div ref={tabContentRef} className="companion-tab-body">
+                {/* =========================================================
+                    TAB 1: CHAT (Dotted-Grid Speech Bubble History + Hold to Talk + Ask Kibo)
+                    ========================================================= */}
+                {activeTab === 'Chat' && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      flex: 1,
+                      minHeight: 0,
+                      width: '100%',
+                      borderRadius: '16px',
+                      backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.13) 1px, transparent 1px)',
+                      backgroundSize: '18px 18px',
+                      backgroundPosition: 'center center',
+                      padding: '8px 6px 4px',
+                      position: 'relative',
+                      justifyContent: 'space-between',
+                      gap: '10px',
+                    }}
+                  >
+                    <div
+                      ref={chatScrollRef}
+                      style={{
+                        flex: 1,
+                        minHeight: 0,
+                        overflowY: 'auto',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '10px',
+                        padding: '6px 8px 8px',
+                      }}
+                    >
+                      {chatMessages.map((msg) => {
+                        const isUser = msg.role === 'user';
+                        return (
+                          <div
+                            key={msg.id}
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: isUser ? 'flex-end' : 'flex-start',
+                              width: '100%',
+                            }}
+                          >
+                            <div
+                              style={
+                                isUser
+                                  ? {
+                                      maxWidth: '78%',
+                                      padding: '9px 16px',
+                                      borderRadius: '18px 18px 4px 18px',
+                                      background: 'linear-gradient(180deg, #DCEBFF 0%, #98C5FF 100%)',
+                                      color: '#09111E',
+                                      fontSize: '13px',
+                                      fontWeight: 600,
+                                      lineHeight: 1.42,
+                                      boxShadow: '0 4px 14px rgba(120, 180, 255, 0.22), inset 0 1px 0 rgba(255,255,255,0.75)',
+                                      wordBreak: 'break-word',
+                                    }
+                                  : {
+                                      maxWidth: '82%',
+                                      padding: '11px 16px',
+                                      borderRadius: '16px 16px 16px 4px',
+                                      background: '#26272B',
+                                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                                      color: '#F4F4F5',
+                                      fontSize: '13px',
+                                      fontWeight: 500,
+                                      lineHeight: 1.46,
+                                      boxShadow: '0 4px 14px rgba(0, 0, 0, 0.28)',
+                                      wordBreak: 'break-word',
+                                    }
+                              }
+                            >
+                              <div>{msg.text}</div>
+                              {msg.actionFilePath && (
+                                <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
+                                  <button
+                                    onClick={() => window.kiboAPI?.showItemInFolder?.(msg.actionFilePath!)}
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '5px',
+                                      padding: '4px 10px',
+                                      borderRadius: '8px',
+                                      background: 'rgba(56, 189, 248, 0.16)',
+                                      border: '1px solid rgba(56, 189, 248, 0.35)',
+                                      color: '#BAE6FD',
+                                      fontSize: '11px',
+                                      fontWeight: 700,
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    <SvgIcon name="folder" size={11} color="#38BDF8" />
+                                    <span>{msg.actionLabel || 'Show in Folder'}</span>
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {askNotchPhase === 'thinking' && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '6px' }}>
+                          <div
+                            style={{
+                              padding: '9px 14px',
+                              borderRadius: '16px 16px 16px 4px',
+                              background: '#26272B',
+                              border: '1px solid rgba(56, 189, 248, 0.28)',
+                              color: '#BAE6FD',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                            }}
+                          >
+                            <SoulCanvas soul={currentSoul} width={24} height={20} scale={0.62} mode="THINKING" />
+                            <span>Kibo is thinking...</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Bottom Action Bar matching screenshot: Hold to talk button + Ask Kibo input */}
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1.35fr 1fr',
+                        gap: '10px',
+                        alignItems: 'center',
+                        paddingTop: '4px',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onPointerDown={() => startHoldRecording('ASK')}
+                        onPointerUp={() => stopHoldRecording()}
+                        onClick={() => {
+                          if (askNotchPhase === 'idle' && !activeHoldModeRef.current) {
+                            startLiveVoiceAsk();
+                          }
+                        }}
+                        style={{
+                          height: '42px',
+                          borderRadius: '999px',
+                          border: '1px solid rgba(255, 255, 255, 0.65)',
+                          background:
+                            askNotchPhase === 'speaking'
+                              ? 'linear-gradient(180deg, #7DD3FC 0%, #38BDF8 100%)'
+                              : 'linear-gradient(180deg, #E2EEFF 0%, #99C6FF 100%)',
+                          color: '#09111E',
+                          fontWeight: 700,
+                          fontSize: '13px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          cursor: 'pointer',
+                          boxShadow: '0 4px 18px rgba(120, 180, 255, 0.28), inset 0 1px 1px rgba(255, 255, 255, 0.85)',
+                          transition: 'transform 0.14s ease, box-shadow 0.14s ease',
+                        }}
+                      >
+                        <SvgIcon name="mic" size={14} color="#09111E" />
+                        <span>
+                          {askNotchPhase === 'speaking'
+                            ? 'Listening... Release to send'
+                            : `Hold ${customShortcuts.ask} to talk`}
+                        </span>
+                      </button>
+
+                      <div
+                        style={{
+                          height: '42px',
+                          borderRadius: '999px',
+                          background: '#1E1F23',
+                          border: '1px solid rgba(255, 255, 255, 0.12)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '0 14px',
+                          gap: '8px',
+                        }}
+                      >
+                        <input
+                          type="text"
+                          value={chatInputText}
+                          onChange={(e) => setChatInputText(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && chatInputText.trim()) {
+                              const q = chatInputText.trim();
+                              setChatInputText('');
+                              setUserBubbleText(q);
+                              executeVoiceCommand(q);
+                            }
+                          }}
+                          placeholder="Ask Kibo..."
+                          style={{
+                            flex: 1,
+                            background: 'transparent',
+                            border: 'none',
+                            outline: 'none',
+                            color: '#F4F4F5',
+                            fontSize: '13px',
+                            fontWeight: 500,
+                            fontFamily: 'inherit',
+                          }}
+                        />
+                        {chatInputText.trim() && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const q = chatInputText.trim();
+                              if (!q) return;
+                              setChatInputText('');
+                              setUserBubbleText(q);
+                              executeVoiceCommand(q);
+                            }}
+                            style={{
+                              background: '#38BDF8',
+                              color: '#09111E',
+                              border: 'none',
+                              borderRadius: '999px',
+                              width: '24px',
+                              height: '24px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              fontWeight: 800,
+                              fontSize: '12px',
+                            }}
+                          >
+                            →
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* =========================================================
+                    TAB 2: CONVERT (Non-Destructive Universal File Converter)
+                    ========================================================= */}
+                {activeTab === 'Convert' && (
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1.15fr 0.85fr',
+                      gap: '14px',
+                      flex: 1,
+                      minHeight: 0,
+                      width: '100%',
+                    }}
+                  >
+                    {/* Left Column: Dropzone + Target Format Matrix */}
+                    <div
+                      className="companion-glass-card"
+                      style={{
+                        padding: '16px 18px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        gap: '12px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <SvgIcon name="convert" size={15} color="#38BDF8" />
+                          <span style={{ fontSize: '13.5px', fontWeight: 800, color: '#FFFFFF' }}>
+                            Universal File Converter
+                          </span>
+                        </div>
+                        <span
+                          style={{
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: '999px',
+                            background: 'rgba(16, 185, 129, 0.14)',
+                            color: '#34D399',
+                            border: '1px solid rgba(16, 185, 129, 0.28)',
+                          }}
+                        >
+                          Original File Safe
+                        </span>
+                      </div>
+
+                      {/* Drag & Drop or Browse Box */}
+                      <div
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setIsConvertDragOver(true);
+                        }}
+                        onDragLeave={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setIsConvertDragOver(false);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setIsConvertDragOver(false);
+                          const f = e.dataTransfer?.files?.[0] as any;
+                          if (f) {
+                            const fp = f.path || f.name;
+                            const ext = (f.name.split('.').pop() || '').toLowerCase();
+                            setConvertSourceFile({
+                              filePath: fp,
+                              fileName: f.name,
+                              ext,
+                              sizeBytes: f.size,
+                            });
+                            if (ext === 'pdf') setConvertTargetFormat('docx');
+                            else if (ext === 'docx' || ext === 'doc') setConvertTargetFormat('pdf');
+                            else if (ext === 'csv') setConvertTargetFormat('json');
+                            else if (ext === 'json') setConvertTargetFormat('csv');
+                            else if (['png', 'jpg', 'jpeg', 'webp'].includes(ext)) setConvertTargetFormat('pdf');
+                            setConvertStatusMsg(null);
+                          }
+                        }}
+                        onClick={async () => {
+                          if (!window.kiboAPI?.pickFileForConvert) return;
+                          const picked = await window.kiboAPI.pickFileForConvert();
+                          if (picked?.success && picked.filePath) {
+                            const ext = (picked.ext || '').toLowerCase();
+                            setConvertSourceFile({
+                              filePath: picked.filePath,
+                              fileName: picked.fileName || picked.filePath.split(/[\\/]/).pop() || 'File',
+                              ext,
+                              sizeBytes: picked.sizeBytes,
+                            });
+                            if (ext === 'pdf') setConvertTargetFormat('docx');
+                            else if (ext === 'docx' || ext === 'doc') setConvertTargetFormat('pdf');
+                            else if (ext === 'csv') setConvertTargetFormat('json');
+                            else if (ext === 'json') setConvertTargetFormat('csv');
+                            else if (['png', 'jpg', 'jpeg', 'webp'].includes(ext)) setConvertTargetFormat('pdf');
+                            setConvertStatusMsg(null);
+                          }
+                        }}
+                        style={{
+                          border: isConvertDragOver
+                            ? '1.5px dashed #38BDF8'
+                            : convertSourceFile
+                            ? '1.5px solid rgba(56, 189, 248, 0.45)'
+                            : '1.5px dashed rgba(255, 255, 255, 0.16)',
+                          borderRadius: '14px',
+                          background: isConvertDragOver
+                            ? 'rgba(56, 189, 248, 0.1)'
+                            : 'rgba(255, 255, 255, 0.025)',
+                          padding: '16px 14px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          cursor: 'pointer',
+                          textAlign: 'center',
+                          transition: 'all 0.18s ease',
+                          minHeight: '96px',
+                        }}
+                      >
+                        <SvgIcon
+                          name={convertSourceFile ? 'file' : 'upload'}
+                          size={22}
+                          color={convertSourceFile ? '#38BDF8' : '#94A3B8'}
+                        />
+                        {convertSourceFile ? (
+                          <>
+                            <div style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {convertSourceFile.fileName}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#94A3B8' }}>
+                              Source: .{(convertSourceFile.ext || 'file').toUpperCase()} · Click or drop another file to change
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div style={{ fontSize: '12.5px', fontWeight: 700, color: '#E2E8F0' }}>
+                              Drop any file here or click to browse
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#71717A' }}>
+                              PDF ↔ Word (.docx) · Markdown · HTML · CSV ↔ JSON · PNG / JPG / WEBP
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Target Format Selector */}
+                      <div>
+                        <div style={{ fontSize: '10.5px', fontWeight: 700, color: '#94A3B8', marginBottom: '6px', letterSpacing: '0.04em' }}>
+                          CONVERT TO FORMAT
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                          {(
+                            [
+                              { id: 'docx', label: 'Word (.docx)' },
+                              { id: 'pdf', label: 'PDF (.pdf)' },
+                              { id: 'txt', label: 'Text (.txt)' },
+                              { id: 'md', label: 'Markdown (.md)' },
+                              { id: 'html', label: 'HTML (.html)' },
+                              { id: 'json', label: 'JSON (.json)' },
+                              { id: 'csv', label: 'CSV (.csv)' },
+                              { id: 'png', label: 'PNG' },
+                              { id: 'jpg', label: 'JPG' },
+                              { id: 'webp', label: 'WEBP' },
+                            ] as const
+                          ).map((fmt) => {
+                            const isSelected = convertTargetFormat === fmt.id;
+                            return (
+                              <button
+                                key={fmt.id}
+                                type="button"
+                                onClick={() => setConvertTargetFormat(fmt.id)}
+                                style={{
+                                  padding: '5px 10px',
+                                  borderRadius: '8px',
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  border: isSelected
+                                    ? '1px solid #38BDF8'
+                                    : '1px solid rgba(255, 255, 255, 0.08)',
+                                  background: isSelected
+                                    ? 'rgba(56, 189, 248, 0.2)'
+                                    : 'rgba(255, 255, 255, 0.04)',
+                                  color: isSelected ? '#FFFFFF' : '#A1A1AA',
+                                  transition: 'all 0.14s ease',
+                                }}
+                              >
+                                {fmt.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Convert Action Button + Status */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <button
+                          type="button"
+                          disabled={!convertSourceFile || isConvertingFile}
+                          onClick={() => {
+                            if (!convertSourceFile) return;
+                            handleRunFileConversion({
+                              filePath: convertSourceFile.filePath,
+                              targetFormat: convertTargetFormat,
+                            });
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '10px 14px',
+                            borderRadius: '10px',
+                            border: 'none',
+                            background: convertSourceFile
+                              ? 'linear-gradient(135deg, #38BDF8 0%, #2563EB 100%)'
+                              : 'rgba(255, 255, 255, 0.07)',
+                            color: convertSourceFile ? '#FFFFFF' : '#71717A',
+                            fontWeight: 800,
+                            fontSize: '12.5px',
+                            cursor: convertSourceFile ? 'pointer' : 'not-allowed',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                          }}
+                        >
+                          <SvgIcon name="convert" size={14} color={convertSourceFile ? '#FFFFFF' : '#71717A'} />
+                          <span>
+                            {isConvertingFile
+                              ? 'Converting...'
+                              : convertSourceFile
+                              ? `Convert to .${convertTargetFormat.toUpperCase()} (Keep Original)`
+                              : 'Select or Drop a File Above'}
+                          </span>
+                        </button>
+
+                        {convertStatusMsg && (
+                          <div
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              color:
+                                convertStatusMsg.type === 'ok'
+                                  ? '#34D399'
+                                  : convertStatusMsg.type === 'err'
+                                  ? '#F87171'
+                                  : '#BAE6FD',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '8px',
+                            }}
+                          >
+                            <span className="companion-truncate">{convertStatusMsg.text}</span>
+                            {convertStatusMsg.outputPath && (
+                              <button
+                                type="button"
+                                onClick={() => window.kiboAPI?.showItemInFolder?.(convertStatusMsg.outputPath!)}
+                                style={{
+                                  background: 'rgba(56, 189, 248, 0.16)',
+                                  border: '1px solid rgba(56, 189, 248, 0.35)',
+                                  color: '#BAE6FD',
+                                  borderRadius: '6px',
+                                  padding: '2px 8px',
+                                  fontSize: '10.5px',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                Reveal File
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Right Column: Voice Conversion Tip + Recent Conversions */}
+                    <div
+                      className="companion-glass-card"
+                      style={{
+                        padding: '16px 18px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '10px',
+                        minHeight: 0,
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '0.02em' }}>
+                          Recent Conversions
+                        </span>
+                        <span className="companion-mono-tiny" style={{ color: '#71717A' }}>
+                          {recentConversions.length} files
+                        </span>
+                      </div>
+
+                      <div
+                        style={{
+                          padding: '9px 11px',
+                          borderRadius: '10px',
+                          background: 'rgba(56, 189, 248, 0.08)',
+                          border: '1px solid rgba(56, 189, 248, 0.2)',
+                          fontSize: '11px',
+                          color: '#BAE6FD',
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        <strong>Voice Command:</strong> Say{' '}
+                        <em>"Convert my report.pdf to Word"</em> or{' '}
+                        <em>"Convert notes.docx to PDF"</em> — Kibo locates the file and creates the converted copy alongside it.
+                      </div>
+
+                      <div
+                        style={{
+                          flex: 1,
+                          minHeight: 0,
+                          overflowY: 'auto',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px',
+                        }}
+                      >
+                        {recentConversions.length === 0 ? (
+                          <div
+                            style={{
+                              flex: 1,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#71717A',
+                              fontSize: '11.5px',
+                              textAlign: 'center',
+                            }}
+                          >
+                            No converted files yet.
+                          </div>
+                        ) : (
+                          recentConversions.map((item) => (
+                            <div
+                              key={item.id}
+                              style={{
+                                padding: '8px 10px',
+                                borderRadius: '10px',
+                                background: 'rgba(255, 255, 255, 0.04)',
+                                border: '1px solid rgba(255, 255, 255, 0.06)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: '8px',
+                              }}
+                            >
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <div className="companion-truncate" style={{ fontSize: '12px', fontWeight: 700, color: '#FFFFFF' }}>
+                                  {item.outputFileName}
+                                </div>
+                                <div className="companion-truncate" style={{ fontSize: '10.5px', color: '#94A3B8' }}>
+                                  From {item.sourceName} · {item.timestamp}
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => window.kiboAPI?.showItemInFolder?.(item.outputPath)}
+                                style={{
+                                  padding: '4px 8px',
+                                  borderRadius: '7px',
+                                  background: 'rgba(255, 255, 255, 0.07)',
+                                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                                  color: '#E2E8F0',
+                                  fontSize: '10.5px',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                Folder
+                              </button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* =========================================================
+                    TAB 3: FOCUS (Focus Timer + Stopwatch + Kibo Dance Celebration)
+                    ========================================================= */}
+                {activeTab === 'Focus' && (
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1.15fr 0.85fr',
+                      gap: '14px',
+                      flex: 1,
+                      minHeight: 0,
+                      width: '100%',
+                    }}
+                  >
+                    {/* Left Card: Focus Timer OR Precision Stopwatch */}
+                    <div
+                      className="companion-glass-card"
+                      style={{
+                        padding: '16px 20px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        gap: '12px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            type="button"
+                            onClick={() => setFocusSubMode('timer')}
+                            className={`companion-filter-pill ${focusSubMode === 'timer' ? 'active' : ''}`}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                          >
+                            <SvgIcon name="timer" size={12} />
+                            <span>Focus Timer</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFocusSubMode('stopwatch')}
+                            className={`companion-filter-pill ${focusSubMode === 'stopwatch' ? 'active' : ''}`}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                          >
+                            <SvgIcon name="stopwatch" size={12} />
+                            <span>Stopwatch</span>
+                          </button>
+                        </div>
+
+                        <span className="companion-mono-tiny" style={{ color: isTimerRunning || stopwatchRunning ? '#38BDF8' : '#71717A' }}>
+                          {focusSubMode === 'timer'
+                            ? isTimerRunning
+                              ? 'Focus active'
+                              : timerAlarmRinging
+                              ? 'Completed!'
+                              : 'Ready'
+                            : stopwatchRunning
+                            ? 'Counting'
+                            : 'Ready'}
+                        </span>
+                      </div>
+
+                      {focusSubMode === 'timer' ? (
+                        <>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '24px', margin: '4px 0' }}>
+                            <div style={{ position: 'relative', width: '112px', height: '112px', flexShrink: 0 }}>
+                              <svg width={112} height={112} style={{ transform: 'rotate(-90deg)' }}>
+                                <circle
+                                  cx={56}
+                                  cy={56}
+                                  r={48}
+                                  stroke="rgba(255, 255, 255, 0.08)"
+                                  strokeWidth={6}
+                                  fill="transparent"
+                                />
+                                <circle
+                                  cx={56}
+                                  cy={56}
+                                  r={48}
+                                  stroke="var(--adaptive-accent, #38BDF8)"
+                                  strokeWidth={6}
+                                  strokeDasharray={2 * Math.PI * 48}
+                                  strokeDashoffset={2 * Math.PI * 48 * (1 - (timerTotalSeconds > 0 ? timerSeconds / timerTotalSeconds : 0))}
+                                  strokeLinecap="round"
+                                  fill="transparent"
+                                  style={{ transition: 'stroke-dashoffset 0.5s linear' }}
+                                />
+                              </svg>
+                              <div className="companion-timer-readout" style={{ fontSize: '22px', fontWeight: 800 }}>
+                                {String(Math.floor(timerSeconds / 60)).padStart(2, '0')}:
+                                {String(timerSeconds % 60).padStart(2, '0')}
+                              </div>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '5px' }}>
+                                {(['1m', '5m', '15m', '25m', '45m'] as const).map((p) => {
+                                  const isActive = timerPreset === p;
+                                  return (
+                                    <button
+                                      key={p}
+                                      onClick={() => {
+                                        setTimerPreset(p);
+                                        const secs = parseInt(p, 10) * 60;
+                                        setTimerSeconds(secs);
+                                        setTimerTotalSeconds(secs);
+                                        setIsTimerRunning(false);
+                                        setTimerAlarmRinging(false);
+                                      }}
+                                      className={`companion-preset-chip ${isActive ? 'active' : ''}`}
+                                      style={{ padding: '5px 0', fontSize: '11px', textAlign: 'center' }}
+                                    >
+                                      {p}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                <button
+                                  onClick={() => {
+                                    if (isTimerRunning) {
+                                      setIsTimerRunning(false);
+                                      triggerKiboCelebrationDance(4500);
+                                    } else {
+                                      setTimerAlarmRinging(false);
+                                      setIsKiboDancing(false);
+                                      setIsTimerRunning(true);
+                                    }
+                                  }}
+                                  className="timer-start-btn"
+                                  style={{ padding: '9px 0', fontSize: '12.5px' }}
+                                >
+                                  {isTimerRunning ? 'Stop & Dance' : 'Start Focus'}
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setIsTimerRunning(false);
+                                    setTimerAlarmRinging(false);
+                                    setIsKiboDancing(false);
+                                    setSoulMode('LISTENING');
+                                    setTimerSeconds(timerTotalSeconds);
+                                  }}
+                                  className="timer-reset-btn"
+                                  style={{ padding: '9px 0', fontSize: '12.5px' }}
+                                >
+                                  Reset
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div style={{ fontSize: '11px', color: '#94A3B8', textAlign: 'center' }}>
+                            When the timer stops or completes, Kibo celebrates with a victory dance and +5 Sparks.
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          {/* Stopwatch View */}
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', margin: '4px 0' }}>
+                            <div
+                              style={{
+                                fontSize: '36px',
+                                fontWeight: 800,
+                                color: '#FFFFFF',
+                                fontVariantNumeric: 'tabular-nums',
+                                letterSpacing: '-0.02em',
+                              }}
+                            >
+                              {String(Math.floor(stopwatchMs / 60000)).padStart(2, '0')}:
+                              {String(Math.floor((stopwatchMs % 60000) / 1000)).padStart(2, '0')}.
+                              <span style={{ fontSize: '22px', color: '#38BDF8' }}>
+                                {String(Math.floor((stopwatchMs % 1000) / 10)).padStart(2, '0')}
+                              </span>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (stopwatchRunning) {
+                                    setStopwatchRunning(false);
+                                    if (stopwatchMs > 1000) triggerKiboCelebrationDance(4500);
+                                  } else {
+                                    setStopwatchRunning(true);
+                                  }
+                                }}
+                                className="timer-start-btn"
+                                style={{ flex: 1, padding: '9px 0', fontSize: '12.5px' }}
+                              >
+                                {stopwatchRunning ? 'Stop & Dance' : stopwatchMs > 0 ? 'Resume' : 'Start'}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={!stopwatchRunning && stopwatchMs === 0}
+                                onClick={() => {
+                                  if (stopwatchRunning) {
+                                    setStopwatchLaps((prev) => [stopwatchMs, ...prev]);
+                                  } else {
+                                    setStopwatchMs(0);
+                                    setStopwatchLaps([]);
+                                  }
+                                }}
+                                className="timer-reset-btn"
+                                style={{ flex: 1, padding: '9px 0', fontSize: '12.5px' }}
+                              >
+                                {stopwatchRunning ? 'Lap' : 'Reset'}
+                              </button>
+                            </div>
+
+                            {stopwatchLaps.length > 0 && (
+                              <div
+                                style={{
+                                  width: '100%',
+                                  maxHeight: '76px',
+                                  overflowY: 'auto',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '4px',
+                                  padding: '4px 6px',
+                                  background: 'rgba(255,255,255,0.03)',
+                                  borderRadius: '8px',
+                                }}
+                              >
+                                {stopwatchLaps.map((lapMs, idx) => (
+                                  <div
+                                    key={idx}
+                                    style={{
+                                      display: 'flex',
+                                      justifyContent: 'space-between',
+                                      fontSize: '11px',
+                                      color: '#D4D4D8',
+                                    }}
+                                  >
+                                    <span>Lap {stopwatchLaps.length - idx}</span>
+                                    <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>
+                                      {String(Math.floor(lapMs / 60000)).padStart(2, '0')}:
+                                      {String(Math.floor((lapMs % 60000) / 1000)).padStart(2, '0')}.
+                                      {String(Math.floor((lapMs % 1000) / 10)).padStart(2, '0')}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Right Card: Live Kibo Companion Dance Stage & Priorities */}
+                    <div
+                      className="companion-glass-card"
+                      style={{
+                        padding: '16px 18px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        textAlign: 'center',
+                        position: 'relative',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 800, color: '#FFFFFF' }}>
+                          Kibo Focus Stage
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: '999px',
+                            background: isKiboDancing || timerAlarmRinging ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255,255,255,0.06)',
+                            color: isKiboDancing || timerAlarmRinging ? '#38BDF8' : '#94A3B8',
+                          }}
+                        >
+                          {isKiboDancing || timerAlarmRinging ? 'Dancing!' : isTimerRunning || stopwatchRunning ? 'Focusing' : 'Standing By'}
+                        </span>
+                      </div>
+
+                      <div
+                        style={{
+                          position: 'relative',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          height: '120px',
+                          width: '100%',
+                        }}
+                      >
+                        <SoulCanvas
+                          soul={currentSoul}
+                          width={126}
+                          height={104}
+                          scale={1.32}
+                          mode={isKiboDancing || timerAlarmRinging ? 'DANCING' : soulMode}
+                          interactive={true}
+                          onClick={() => triggerKiboCelebrationDance(5200)}
+                        />
+                      </div>
+
+                      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ fontSize: '11.5px', color: '#A1A1AA', lineHeight: 1.4 }}>
+                          {isKiboDancing || timerAlarmRinging
+                            ? 'Focus session complete! Kibo is doing his victory dance.'
+                            : 'Click Kibo or finish a timer session to trigger his celebration dance.'}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => triggerKiboCelebrationDance(5200)}
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            borderRadius: '10px',
+                            border: '1px solid rgba(56, 189, 248, 0.35)',
+                            background: 'rgba(56, 189, 248, 0.14)',
+                            color: '#BAE6FD',
+                            fontWeight: 700,
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {isKiboDancing ? 'Dancing Now!' : 'Preview Victory Dance'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* =========================================================
+                    TAB 4: SKILLS (SKILL.md Modular Capability Manager)
+                    ========================================================= */}
+                {activeTab === 'Skills' && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '10px',
+                      flex: 1,
+                      minHeight: 0,
+                      width: '100%',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '7px' }}>
+                          <SvgIcon name="skill" size={14} color="#38BDF8" />
+                          <span>Equipped Skills (SKILL.md)</span>
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>
+                          Active skills are automatically injected into Kibo when building websites, converting files, or executing tasks.
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!window.kiboAPI?.pickSkillMdFile) return;
+                            const picked = await window.kiboAPI.pickSkillMdFile();
+                            if (picked?.success && picked.content) {
+                              const newSkill: KiboSkillItem = {
+                                id: `skill_${Date.now()}`,
+                                name: `${picked.name || 'custom-skill'} (SKILL.md)`,
+                                description: picked.description || 'Imported custom SKILL.md instruction pack.',
+                                content: picked.content,
+                                enabled: true,
+                              };
+                              updateSkillsList((prev) => [newSkill, ...prev]);
+                              soundFX.playTaskSuccess();
+                            }
+                          }}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '9px',
+                            background: 'rgba(56, 189, 248, 0.15)',
+                            border: '1px solid rgba(56, 189, 248, 0.35)',
+                            color: '#BAE6FD',
+                            fontSize: '11.5px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                          }}
+                        >
+                          <SvgIcon name="upload" size={12} color="#38BDF8" />
+                          <span>Import SKILL.md</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setIsAddingSkill((v) => !v)}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '9px',
+                            background: 'rgba(255, 255, 255, 0.07)',
+                            border: '1px solid rgba(255, 255, 255, 0.12)',
+                            color: '#FFFFFF',
+                            fontSize: '11.5px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {isAddingSkill ? 'Cancel' : '+ New Skill'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {isAddingSkill && (
+                      <div
+                        className="companion-glass-card"
+                        style={{
+                          padding: '12px 14px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '8px',
+                        }}
+                      >
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: '8px' }}>
+                          <input
+                            type="text"
+                            placeholder="Skill name (e.g. gsap-motion-taste)"
+                            value={newSkillName}
+                            onChange={(e) => setNewSkillName(e.target.value)}
+                            style={{
+                              background: '#141519',
+                              border: '1px solid rgba(255,255,255,0.12)',
+                              borderRadius: '8px',
+                              padding: '7px 10px',
+                              color: '#FFFFFF',
+                              fontSize: '12px',
+                            }}
+                          />
+                          <input
+                            type="text"
+                            placeholder="Short description of when Kibo should use this skill..."
+                            value={newSkillDesc}
+                            onChange={(e) => setNewSkillDesc(e.target.value)}
+                            style={{
+                              background: '#141519',
+                              border: '1px solid rgba(255,255,255,0.12)',
+                              borderRadius: '8px',
+                              padding: '7px 10px',
+                              color: '#FFFFFF',
+                              fontSize: '12px',
+                            }}
+                          />
+                        </div>
+                        <textarea
+                          rows={3}
+                          placeholder="Paste SKILL.md rules, design tokens, or coding instructions..."
+                          value={newSkillContent}
+                          onChange={(e) => setNewSkillContent(e.target.value)}
+                          style={{
+                            background: '#141519',
+                            border: '1px solid rgba(255,255,255,0.12)',
+                            borderRadius: '8px',
+                            padding: '8px 10px',
+                            color: '#FFFFFF',
+                            fontSize: '11.5px',
+                            fontFamily: 'var(--kibo-font-mono)',
+                            resize: 'none',
+                          }}
+                        />
+                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!newSkillName.trim() || !newSkillContent.trim()) return;
+                              const created: KiboSkillItem = {
+                                id: `skill_${Date.now()}`,
+                                name: newSkillName.trim().endsWith('(SKILL.md)')
+                                  ? newSkillName.trim()
+                                  : `${newSkillName.trim()} (SKILL.md)`,
+                                description: newSkillDesc.trim() || 'Custom user skill module.',
+                                content: newSkillContent.trim(),
+                                enabled: true,
+                              };
+                              updateSkillsList((prev) => [created, ...prev]);
+                              setNewSkillName('');
+                              setNewSkillDesc('');
+                              setNewSkillContent('');
+                              setIsAddingSkill(false);
+                              soundFX.playTaskSuccess();
+                            }}
+                            style={{
+                              padding: '6px 14px',
+                              borderRadius: '8px',
+                              background: '#38BDF8',
+                              color: '#09111E',
+                              border: 'none',
+                              fontWeight: 800,
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Save & Equip Skill
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div
+                      style={{
+                        flex: 1,
+                        minHeight: 0,
+                        overflowY: 'auto',
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr',
+                        gap: '10px',
+                        paddingRight: '4px',
+                      }}
+                    >
+                      {skillsList.map((sk) => (
+                        <div
+                          key={sk.id}
+                          style={{
+                            padding: '12px 14px',
+                            borderRadius: '13px',
+                            background: sk.enabled ? 'rgba(56, 189, 248, 0.08)' : 'rgba(255, 255, 255, 0.03)',
+                            border: sk.enabled
+                              ? '1px solid rgba(56, 189, 248, 0.32)'
+                              : '1px solid rgba(255, 255, 255, 0.07)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between',
+                            gap: '8px',
+                          }}
+                        >
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                              <span className="companion-truncate" style={{ fontSize: '12.5px', fontWeight: 800, color: '#FFFFFF' }}>
+                                {sk.name}
+                              </span>
+                              <button
+                                type="button"
+                                className={`kibo-switch ${sk.enabled ? 'is-on' : ''}`}
+                                onClick={() => {
+                                  updateSkillsList((prev) =>
+                                    prev.map((item) => (item.id === sk.id ? { ...item, enabled: !item.enabled } : item))
+                                  );
+                                }}
+                              >
+                                <span className="kibo-switch-knob" />
+                              </button>
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px', lineHeight: 1.4 }}>
+                              {sk.description}
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: '10px', fontWeight: 700, color: sk.enabled ? '#38BDF8' : '#71717A' }}>
+                              {sk.enabled ? 'ACTIVE IN PROMPT' : 'DISABLED'}
+                            </span>
+                            {!sk.builtIn && (
+                              <button
+                                type="button"
+                                onClick={() => updateSkillsList((prev) => prev.filter((i) => i.id !== sk.id))}
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  color: '#F87171',
+                                  fontSize: '10.5px',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* =========================================================
+                    TAB 5: MEDIA (Enhanced Music Player + Synthwave Focus Stream)
+                    ========================================================= */}
+                {activeTab === 'Media' && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: '12px',
+                      flex: 1,
+                      minHeight: 0,
+                      width: '100%',
+                    }}
+                  >
+                    <div
+                      className="companion-media-card-v2"
+                      style={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        padding: '18px 20px',
+                        background: `linear-gradient(135deg, rgba(${mediaArtPalette.rgb}, 0.34) 0%, rgba(${mediaArtPalette.rgb}, 0.10) 55%, #141519 100%)`,
+                        border: `1px solid rgba(${mediaArtPalette.rgb}, 0.28)`,
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 800, color: '#BAE6FD', letterSpacing: '0.04em' }}>
+                          {hasMediaSession ? (osMedia.source || 'SYSTEM MEDIA SESSION').toUpperCase() : isPlayingLofi ? 'KIBO SYNTH STREAM' : 'MEDIA PLAYER'}
+                        </span>
+                        <div className="mini-media-eq-bars">
+                          {[0.35, 0.7, 1.0, 0.65, 0.85, 0.5].map((h, i) => (
+                            <span
+                              key={i}
+                              className={`mini-eq-bar ${!(isPlayingMedia || isPlayingLofi) ? 'is-paused' : ''}`}
+                              style={{
+                                height: isPlayingMedia || isPlayingLofi ? `${Math.round(h * 14)}px` : '4px',
+                                background: mediaArtPalette.accent,
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="media-middle-row" style={{ gap: '16px', margin: '8px 0' }}>
+                        <div
+                          className="companion-album-art"
+                          style={{
+                            width: '72px',
+                            height: '72px',
+                            borderRadius: '14px',
+                            ...(activeMediaArtwork
+                              ? {
+                                  backgroundImage: `url("${activeMediaArtwork}")`,
+                                  backgroundSize: 'cover',
+                                  backgroundPosition: 'center',
+                                }
+                              : {
+                                  background: mediaArtPalette.gradient,
+                                }),
+                          }}
+                        />
+
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, textAlign: 'left' }}>
+                          <div className="companion-truncate" style={{ fontSize: '17px', fontWeight: 800, color: '#ffffff' }}>
+                            {hasMediaSession ? activeMediaTitle : isPlayingLofi ? 'Nightride Chillsynth Radio' : 'No Track Playing'}
+                          </div>
+                          <div className="companion-truncate" style={{ fontSize: '12.5px', color: '#D4D4D8' }}>
+                            {hasMediaSession ? activeMediaArtist : isPlayingLofi ? 'Ambient Focus Stream' : 'Play music in Spotify, YouTube, or start Focus Stream'}
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <button onClick={handleMediaPrev} className="media-circle-btn">
+                            <SvgIcon name="prev" size={15} color="#D4D4D8" />
+                          </button>
+                          <button onClick={toggleMediaPlayback} className="media-ivory-play-btn" style={{ width: '44px', height: '44px' }}>
+                            <SvgIcon name={isPlayingMedia || isPlayingLofi ? 'pause' : 'play'} size={18} color="#1C1917" />
+                          </button>
+                          <button onClick={handleMediaNext} className="media-circle-btn">
+                            <SvgIcon name="next" size={15} color="#D4D4D8" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="media-bottom-scrub">
+                        <span className="companion-mono-tiny">{formatTime(mediaProgress)}</span>
+                        <div
+                          ref={controlsScrubRef}
+                          className="companion-scrub-track"
+                          onPointerDown={(e) => {
+                            e.stopPropagation();
+                            if (leaveCollapseTimerRef.current) {
+                              clearTimeout(leaveCollapseTimerRef.current);
+                            }
+                            activeScrubRef.current = controlsScrubRef.current;
+                            isDraggingMediaScrubRef.current = true;
+                            setIsDraggingMediaScrub(true);
+                            updateMediaScrubFromClientX(e.clientX, true);
+                          }}
+                        >
+                          <div
+                            className="companion-scrub-fill adaptive"
+                            style={{
+                              width: `${Math.min(100, (mediaProgress / Math.max(1, totalMediaDuration)) * 100)}%`,
+                              background: mediaArtPalette.accent,
+                            }}
+                          >
+                            <div
+                              className="companion-scrub-thumb adaptive"
+                              style={{ background: mediaArtPalette.accent }}
+                            />
+                          </div>
+                        </div>
+                        <span className="companion-mono-tiny">{formatTime(totalMediaDuration)}</span>
+                      </div>
+                    </div>
+
+                    {/* Volume Bar */}
+                    <div
+                      ref={volumeTrackRef}
+                      className="companion-volume-pill-track"
+                      onPointerDown={(e) => {
+                        if (leaveCollapseTimerRef.current) {
+                          clearTimeout(leaveCollapseTimerRef.current);
+                        }
+                        isDraggingVolumeRef.current = true;
+                        setIsDraggingVolume(true);
+                        updateVolumeFromClientX(e.clientX);
+                      }}
+                      onWheel={(e) => {
+                        const delta = e.deltaY < 0 ? 4 : -4;
+                        applyUserVolumeChange(volumeLevel + delta);
+                      }}
+                    >
+                      <div
+                        className="companion-volume-pill-fill"
+                        style={{
+                          width: `${isMuted ? 8 : Math.max(8, volumeLevel)}%`,
+                          transition: isDraggingVolume ? 'none' : 'width 0.12s ease-out',
+                        }}
+                      >
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const nextMute = !isMuted;
+                            setIsMuted(nextMute);
+                            window.kiboAPI?.setMute?.(nextMute);
+                          }}
+                          className="volume-inner-speaker-btn"
+                        >
+                          <SvgIcon name={isMuted ? 'mute' : 'speaker'} size={14} />
+                        </button>
+                      </div>
+                      <span className="volume-right-pct">{isMuted ? '0%' : `${volumeLevel}%`}</span>
+                    </div>
+                  </div>
+                )}
+
                 {activeTab === 'Controls' && (
                   <div
                     style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, justifyContent: 'space-between', position: 'relative' }}
@@ -6814,10 +8780,12 @@ export const KiboApp: React.FC = () => {
                         </div>
 
                         {[
-                          { id: 'Account', label: 'Account' },
+                          { id: 'Account', label: 'Account & Keys' },
+                          { id: 'Voice', label: 'Voice & Audio' },
+                          { id: 'Integrations', label: 'Integrations' },
+                          { id: 'Agents', label: 'Agents & Access' },
+                          { id: 'Core', label: 'Core & Skins' },
                           { id: 'General', label: 'General' },
-                          { id: 'Core', label: 'Core & Skin' },
-                          { id: 'Voice', label: 'Voice & AI' },
                           { id: 'Shortcuts', label: 'Shortcuts' },
                           { id: 'System', label: 'System' },
                         ].map((item) => {
@@ -7114,44 +9082,65 @@ export const KiboApp: React.FC = () => {
                       {settingsCategory === 'Voice' && (
                         <>
                           <div>
-                            <h2 className="kibo-settings-header-title">Voice & Dictation</h2>
-                            <p className="kibo-settings-header-sub">Configure spoken model voice and dictation parameters.</p>
+                            <h2 className="kibo-settings-header-title">Voice, Captions & Audio Devices</h2>
+                            <p className="kibo-settings-header-sub">Configure Google Gemini neural voice synthesis, live captions, speaker output, and microphone input.</p>
                           </div>
 
                           <div className="kibo-settings-card">
                             <div className="kibo-settings-row">
                               <div>
-                                <div className="kibo-settings-row-label">Voice Model Voice</div>
-                                <div className="kibo-settings-row-desc">Synthesized voice module for Kibo responses</div>
+                                <div className="kibo-settings-row-label">Google Gemini Neural Voice</div>
+                                <div className="kibo-settings-row-desc">Unlimited-quota Gemini Live & TTS neural voice used when Kibo speaks</div>
                               </div>
-                              <select
-                                value={equippedCards.Voice || 'voice_charon'}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  setEquippedCards((prev) => ({ ...prev, Voice: val as any }));
-                                  localStorage.setItem('kibo_loadout_voice', val);
-                                }}
-                                style={{
-                                  background: '#141519',
-                                  color: '#F8FAFC',
-                                  border: '1px solid rgba(255,255,255,0.12)',
-                                  borderRadius: 8,
-                                  padding: '6px 12px',
-                                  fontSize: 13,
-                                  outline: 'none',
-                                }}
-                              >
-                                <option value="voice_puck">Puck (Warm & Friendly)</option>
-                                <option value="voice_charon">Charon (Deep & Calming)</option>
-                                <option value="voice_aoede">Aoede (Melodic)</option>
-                                <option value="voice_fenrir">Fenrir (Authoritative)</option>
-                              </select>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <select
+                                  value={equippedCards.Voice || 'voice_charon'}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setEquippedCards((prev) => ({ ...prev, Voice: val as any }));
+                                    localStorage.setItem('kibo_loadout_voice', val);
+                                  }}
+                                  style={{
+                                    background: '#141519',
+                                    color: '#F8FAFC',
+                                    border: '1px solid rgba(255,255,255,0.12)',
+                                    borderRadius: 8,
+                                    padding: '6px 12px',
+                                    fontSize: 12.5,
+                                    outline: 'none',
+                                  }}
+                                >
+                                  <option value="voice_charon">Charon (Deep & Calming)</option>
+                                  <option value="voice_aoede">Aoede (Warm & Expressive)</option>
+                                  <option value="voice_fenrir">Fenrir (Crisp & Direct)</option>
+                                  <option value="voice_puck">Puck (Kinetic & Friendly)</option>
+                                </select>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    speakAsKibo('Hello! I am Kibo, speaking with my Google Gemini neural voice.');
+                                  }}
+                                  className="config-pill-btn"
+                                  style={{
+                                    background: 'rgba(56, 189, 248, 0.14)',
+                                    color: '#38BDF8',
+                                    border: '1px solid rgba(56, 189, 248, 0.3)',
+                                    padding: '6px 12px',
+                                    borderRadius: 8,
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  Test Voice
+                                </button>
+                              </div>
                             </div>
 
                             <div className="kibo-settings-row">
                               <div>
                                 <div className="kibo-settings-row-label">Spoken Voice Responses</div>
-                                <div className="kibo-settings-row-desc">Play synthesized voice when Kibo replies to queries</div>
+                                <div className="kibo-settings-row-desc">Play synthesized Google neural audio when Kibo replies to queries</div>
                               </div>
                               <button
                                 type="button"
@@ -7168,11 +9157,510 @@ export const KiboApp: React.FC = () => {
 
                             <div className="kibo-settings-row">
                               <div>
-                                <div className="kibo-settings-row-label">Real-Time Speech Cleanup</div>
-                                <div className="kibo-settings-row-desc">Automatically eliminates stutters, filler words, and mid-sentence corrections</div>
+                                <div className="kibo-settings-row-label">On-Screen Live Captions</div>
+                                <div className="kibo-settings-row-desc">Display floating speech & reply caption bubbles below the notch (full history always stays in Chat)</div>
                               </div>
-                              <span style={{ fontSize: 12, color: '#10B981', fontWeight: 600 }}>Active</span>
+                              <button
+                                type="button"
+                                className={`kibo-switch ${captionsEnabled ? 'is-on' : ''}`}
+                                onClick={() => {
+                                  const next = !captionsEnabled;
+                                  setCaptionsEnabled(next);
+                                  localStorage.setItem('kibo_captions_enabled', next ? 'true' : 'false');
+                                }}
+                              >
+                                <span className="kibo-switch-knob" />
+                              </button>
                             </div>
+
+                            <div className="kibo-settings-row">
+                              <div>
+                                <div className="kibo-settings-row-label">Output Device (Speaker / Headphones)</div>
+                                <div className="kibo-settings-row-desc">Route Kibo's spoken voice and chimes to a specific audio output</div>
+                              </div>
+                              <select
+                                value={selectedSpeakerDeviceId}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setSelectedSpeakerDeviceId(val);
+                                  localStorage.setItem('kibo_output_device_id', val);
+                                  voiceEngine.setOutputDevice(val);
+                                }}
+                                style={{
+                                  maxWidth: 230,
+                                  background: '#141519',
+                                  color: '#F8FAFC',
+                                  border: '1px solid rgba(255,255,255,0.12)',
+                                  borderRadius: 8,
+                                  padding: '6px 10px',
+                                  fontSize: 12,
+                                  outline: 'none',
+                                }}
+                              >
+                                {audioOutputDevices.map((d) => (
+                                  <option key={d.deviceId} value={d.deviceId}>
+                                    {d.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="kibo-settings-card">
+                            <div className="kibo-settings-row">
+                              <div>
+                                <div className="kibo-settings-row-label">Microphone Input Device</div>
+                                <div className="kibo-settings-row-desc">Select which microphone Kibo listens to for voice commands and dictation</div>
+                              </div>
+                              <select
+                                value={selectedMicDeviceId}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setSelectedMicDeviceId(val);
+                                  localStorage.setItem('kibo_mic_device_id', val);
+                                }}
+                                style={{
+                                  maxWidth: 230,
+                                  background: '#141519',
+                                  color: '#F8FAFC',
+                                  border: '1px solid rgba(255,255,255,0.12)',
+                                  borderRadius: 8,
+                                  padding: '6px 10px',
+                                  fontSize: 12,
+                                  outline: 'none',
+                                }}
+                              >
+                                {audioInputDevices.map((d) => (
+                                  <option key={d.deviceId} value={d.deviceId}>
+                                    {d.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div className="kibo-settings-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 10 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div>
+                                  <div className="kibo-settings-row-label">Microphone Signal Test</div>
+                                  <div className="kibo-settings-row-desc">Speak normally to verify input sensitivity and hardware routing</div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={toggleMicTest}
+                                  className="config-pill-btn"
+                                  style={{
+                                    background: isTestingMic ? 'rgba(239, 68, 68, 0.16)' : '#1E293B',
+                                    color: isTestingMic ? '#F87171' : '#F8FAFC',
+                                    border: isTestingMic ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(255,255,255,0.1)',
+                                    padding: '6px 14px',
+                                    borderRadius: 8,
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 6,
+                                  }}
+                                >
+                                  <SvgIcon name="mic" size={12} color={isTestingMic ? '#F87171' : '#38BDF8'} />
+                                  <span>{isTestingMic ? 'Stop Mic Test' : 'Test Microphone'}</span>
+                                </button>
+                              </div>
+
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <div
+                                  style={{
+                                    flex: 1,
+                                    height: 8,
+                                    borderRadius: 999,
+                                    background: '#141519',
+                                    border: '1px solid rgba(255,255,255,0.07)',
+                                    overflow: 'hidden',
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      width: `${isTestingMic ? Math.max(4, micTestLevel) : 0}%`,
+                                      height: '100%',
+                                      borderRadius: 999,
+                                      background: 'linear-gradient(90deg, #38BDF8 0%, #34D399 70%, #FBBF24 100%)',
+                                      transition: 'width 0.08s ease-out',
+                                    }}
+                                  />
+                                </div>
+                                <span style={{ fontSize: 11, fontFamily: 'var(--kibo-font-mono)', color: '#94A3B8', minWidth: 38, textAlign: 'right' }}>
+                                  {isTestingMic ? `${micTestLevel}%` : 'Idle'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {settingsCategory === 'Integrations' && (
+                        <>
+                          <div>
+                            <h2 className="kibo-settings-header-title">Integrations & Chrome Bridge</h2>
+                            <p className="kibo-settings-header-sub">Connect Kibo to Chrome, workspace apps, and custom APIs like Meta Ads or Linear.</p>
+                          </div>
+
+                          {/* Chrome Extension Drag-and-Drop Walkthrough Card */}
+                          <div className="kibo-settings-card" style={{ border: '1px solid rgba(56, 189, 248, 0.25)', background: 'linear-gradient(180deg, rgba(56, 189, 248, 0.06) 0%, rgba(20, 21, 25, 0.85) 100%)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <div style={{ width: 32, height: 32, borderRadius: 9, background: 'rgba(56, 189, 248, 0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <SvgIcon name="chrome" size={17} color="#38BDF8" />
+                                </div>
+                                <div>
+                                  <div className="kibo-settings-row-label">Kibo Chrome Companion Extension (Manifest V3)</div>
+                                  <div className="kibo-settings-row-desc">Lets Kibo read active tab context, DOM elements, and automate browser workflows</div>
+                                </div>
+                              </div>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: '#38BDF8', background: 'rgba(56, 189, 248, 0.12)', padding: '3px 9px', borderRadius: 999 }}>
+                                3-Step Setup
+                              </span>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 6 }}>
+                              <div style={{ background: '#141519', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '10px' }}>
+                                <div style={{ fontSize: 10.5, fontWeight: 800, color: '#38BDF8', marginBottom: 4 }}>STEP 1 · EXPORT FILES</div>
+                                <div style={{ fontSize: 11, color: '#94A3B8', lineHeight: 1.4, marginBottom: 8 }}>
+                                  Generate the unpacked <code style={{ color: '#E2E8F0' }}>Kibo-Chrome-Extension</code> folder on your Desktop.
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    const res = await window.kiboAPI?.exportChromeExtension?.();
+                                    if (res?.success && res.extDir) {
+                                      setChromeExtStatus(`Exported to ${res.extDir}`);
+                                      soundFX.playSuccessChime();
+                                    }
+                                  }}
+                                  style={{
+                                    width: '100%',
+                                    background: '#38BDF8',
+                                    color: '#0A0E17',
+                                    border: 'none',
+                                    borderRadius: 7,
+                                    padding: '6px 10px',
+                                    fontSize: 11.5,
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  Export Extension Folder
+                                </button>
+                              </div>
+
+                              <div style={{ background: '#141519', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '10px' }}>
+                                <div style={{ fontSize: 10.5, fontWeight: 800, color: '#38BDF8', marginBottom: 4 }}>STEP 2 · DEV MODE</div>
+                                <div style={{ fontSize: 11, color: '#94A3B8', lineHeight: 1.4, marginBottom: 8 }}>
+                                  Open <code style={{ color: '#E2E8F0' }}>chrome://extensions</code> and toggle on <strong>Developer mode</strong> in the top-right.
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    window.kiboAPI?.openChromeExtensionsPage?.();
+                                  }}
+                                  style={{
+                                    width: '100%',
+                                    background: '#1E293B',
+                                    color: '#F8FAFC',
+                                    border: '1px solid rgba(255,255,255,0.12)',
+                                    borderRadius: 7,
+                                    padding: '6px 10px',
+                                    fontSize: 11.5,
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  Open Chrome Extensions
+                                </button>
+                              </div>
+
+                              <div style={{ background: '#141519', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '10px' }}>
+                                <div style={{ fontSize: 10.5, fontWeight: 800, color: '#34D399', marginBottom: 4 }}>STEP 3 · DRAG & DROP</div>
+                                <div style={{ fontSize: 11, color: '#94A3B8', lineHeight: 1.4 }}>
+                                  Drag the exported <code style={{ color: '#E2E8F0' }}>Kibo-Chrome-Extension</code> folder from Explorer and drop it directly into Chrome.
+                                </div>
+                              </div>
+                            </div>
+
+                            {chromeExtStatus && (
+                              <div style={{ marginTop: 8, fontSize: 11, color: '#34D399', fontWeight: 600 }}>
+                                {chromeExtStatus} — Folder opened in Windows Explorer ready to drag & drop!
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Native App Connections */}
+                          <div className="kibo-settings-card">
+                            <div className="kibo-settings-row-label" style={{ marginBottom: 6 }}>Workspace App Connections</div>
+                            {Object.values(APP_INTEGRATIONS).map((app) => {
+                              const isConn = multitaskAgent.isAppConnected(app.id);
+                              return (
+                                <div key={app.id} className="kibo-settings-row">
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <div style={{ width: 28, height: 28, borderRadius: 7, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                      <SvgIcon name="plug" size={14} color={isConn ? '#34D399' : '#94A3B8'} />
+                                    </div>
+                                    <div>
+                                      <div className="kibo-settings-row-label">{app.name}</div>
+                                      <div className="kibo-settings-row-desc">{app.suggestions[0]}</div>
+                                    </div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (isConn) {
+                                        multitaskAgent.unlinkApp(app.id);
+                                      } else {
+                                        multitaskAgent.connectApp(app.id);
+                                      }
+                                      soundFX.playToggle(!isConn);
+                                      setDetectedAppId((prev) => (prev === app.id ? null : prev));
+                                    }}
+                                    style={{
+                                      background: isConn ? 'rgba(16, 185, 129, 0.15)' : '#1E293B',
+                                      color: isConn ? '#34D399' : '#E2E8F0',
+                                      border: isConn ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid rgba(255,255,255,0.1)',
+                                      borderRadius: 8,
+                                      padding: '5px 12px',
+                                      fontSize: 11.5,
+                                      fontWeight: 700,
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    {isConn ? 'Connected' : 'Connect'}
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* Custom Connections (Meta Ads, Linear, Webhooks, MCP) */}
+                          <div className="kibo-settings-card">
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                              <div>
+                                <div className="kibo-settings-row-label">Custom Connections (Meta Ads, Webhooks, APIs)</div>
+                                <div className="kibo-settings-row-desc">Add custom external platforms or ad accounts for Kibo agents to query</div>
+                              </div>
+                            </div>
+
+                            {customIntegrations.map((conn) => (
+                              <div key={conn.id} className="kibo-settings-row">
+                                <div>
+                                  <div className="kibo-settings-row-label">{conn.name}</div>
+                                  <div className="kibo-settings-row-desc">
+                                    {conn.category} · <span style={{ fontFamily: 'var(--kibo-font-mono)', fontSize: 10.5 }}>{conn.endpointOrId}</span>
+                                  </div>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setCustomIntegrations((prev) => {
+                                        const next = prev.map((c) => (c.id === conn.id ? { ...c, connected: !c.connected } : c));
+                                        localStorage.setItem('kibo_custom_integrations', JSON.stringify(next));
+                                        return next;
+                                      });
+                                    }}
+                                    style={{
+                                      background: conn.connected ? 'rgba(56, 189, 248, 0.15)' : '#1E293B',
+                                      color: conn.connected ? '#38BDF8' : '#94A3B8',
+                                      border: conn.connected ? '1px solid rgba(56, 189, 248, 0.35)' : '1px solid rgba(255,255,255,0.08)',
+                                      borderRadius: 7,
+                                      padding: '4px 10px',
+                                      fontSize: 11,
+                                      fontWeight: 700,
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    {conn.connected ? 'Active' : 'Enable'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setCustomIntegrations((prev) => {
+                                        const next = prev.filter((c) => c.id !== conn.id);
+                                        localStorage.setItem('kibo_custom_integrations', JSON.stringify(next));
+                                        return next;
+                                      });
+                                    }}
+                                    style={{
+                                      background: 'transparent',
+                                      color: '#64748B',
+                                      border: '1px solid rgba(255,255,255,0.08)',
+                                      borderRadius: 7,
+                                      padding: '4px 8px',
+                                      fontSize: 11,
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr auto', gap: 6, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                              <input
+                                type="text"
+                                value={newConnName}
+                                onChange={(e) => setNewConnName(e.target.value)}
+                                placeholder="Name (e.g. Meta Ads)"
+                                style={{ background: '#141519', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '6px 9px', color: '#F8FAFC', fontSize: 11.5 }}
+                              />
+                              <input
+                                type="text"
+                                value={newConnCategory}
+                                onChange={(e) => setNewConnCategory(e.target.value)}
+                                placeholder="Role (e.g. Ad Analytics)"
+                                style={{ background: '#141519', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '6px 9px', color: '#F8FAFC', fontSize: 11.5 }}
+                              />
+                              <input
+                                type="text"
+                                value={newConnEndpoint}
+                                onChange={(e) => setNewConnEndpoint(e.target.value)}
+                                placeholder="Account ID / API Endpoint"
+                                style={{ background: '#141519', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '6px 9px', color: '#F8FAFC', fontSize: 11.5 }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!newConnName.trim()) return;
+                                  const item: CustomIntegrationItem = {
+                                    id: `conn_${Date.now()}`,
+                                    name: newConnName.trim(),
+                                    category: newConnCategory.trim() || 'Custom Integration',
+                                    endpointOrId: newConnEndpoint.trim() || 'local-bridge',
+                                    connected: true,
+                                  };
+                                  setCustomIntegrations((prev) => {
+                                    const next = [...prev, item];
+                                    localStorage.setItem('kibo_custom_integrations', JSON.stringify(next));
+                                    return next;
+                                  });
+                                  setNewConnName('');
+                                  setNewConnCategory('');
+                                  setNewConnEndpoint('');
+                                  soundFX.playSuccessChime();
+                                }}
+                                style={{
+                                  background: '#38BDF8',
+                                  color: '#0A0E17',
+                                  border: 'none',
+                                  borderRadius: 7,
+                                  padding: '6px 12px',
+                                  fontSize: 11.5,
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                Add
+                              </button>
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {settingsCategory === 'Agents' && (
+                        <>
+                          <div>
+                            <h2 className="kibo-settings-header-title">Agent Reach & OS Permissions</h2>
+                            <p className="kibo-settings-header-sub">Control which local folders, hardware sensors, and personal records Kibo agents are allowed to access.</p>
+                          </div>
+
+                          <div className="kibo-settings-card">
+                            {(
+                              [
+                                {
+                                  key: 'filesAndFolders',
+                                  label: 'Files & Folders',
+                                  desc: 'Allow Kibo to locate, read, and non-destructively convert files in Desktop & Downloads',
+                                  icon: 'folder',
+                                },
+                                {
+                                  key: 'documents',
+                                  label: 'Documents',
+                                  desc: 'Access PDFs, Word documents (.docx), Markdown notes, and spreadsheets',
+                                  icon: 'doc',
+                                },
+                                {
+                                  key: 'pictures',
+                                  label: 'Pictures & Screenshots',
+                                  desc: 'Read local images, Circle-to-Ask screen captures, and export converted graphics',
+                                  icon: 'image',
+                                },
+                                {
+                                  key: 'contacts',
+                                  label: 'Contacts & People',
+                                  desc: 'Resolve recipient names when drafting emails or scheduling workspace invites',
+                                  icon: 'contacts',
+                                },
+                                {
+                                  key: 'calendar',
+                                  label: 'Calendar & Reminders',
+                                  desc: 'Read upcoming schedule blocks and trigger timed voice routines',
+                                  icon: 'calendar',
+                                },
+                                {
+                                  key: 'microphone',
+                                  label: 'Microphone',
+                                  desc: 'Required for Push-to-Talk voice commands (Win + Alt) and Clean Dictation',
+                                  icon: 'mic',
+                                },
+                                {
+                                  key: 'camera',
+                                  label: 'Camera',
+                                  desc: 'Allow visual presence or hardware camera queries when explicitly requested',
+                                  icon: 'camera',
+                                },
+                                {
+                                  key: 'location',
+                                  label: 'Location & Timezone',
+                                  desc: 'Use regional context for local weather, commute, and search queries',
+                                  icon: 'location',
+                                },
+                              ] as ReadonlyArray<{
+                                key: keyof AgentPermissionState;
+                                label: string;
+                                desc: string;
+                                icon: string;
+                              }>
+                            ).map((perm) => {
+                              const isAllowed = Boolean(agentPermissions[perm.key]);
+                              return (
+                                <div key={perm.key} className="kibo-settings-row">
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <div
+                                      style={{
+                                        width: 30,
+                                        height: 30,
+                                        borderRadius: 8,
+                                        background: isAllowed ? 'rgba(56, 189, 248, 0.14)' : 'rgba(255,255,255,0.04)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                      }}
+                                    >
+                                      <SvgIcon name={perm.icon} size={14} color={isAllowed ? '#38BDF8' : '#64748B'} />
+                                    </div>
+                                    <div>
+                                      <div className="kibo-settings-row-label">{perm.label}</div>
+                                      <div className="kibo-settings-row-desc">{perm.desc}</div>
+                                    </div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    className={`kibo-switch ${isAllowed ? 'is-on' : ''}`}
+                                    onClick={() => toggleAgentPermission(perm.key)}
+                                  >
+                                    <span className="kibo-switch-knob" />
+                                  </button>
+                                </div>
+                              );
+                            })}
                           </div>
                         </>
                       )}
@@ -7297,7 +9785,7 @@ export const KiboApp: React.FC = () => {
           onPreviewExpandIsland={(expand) => {
             setIsTucked(!expand);
             setIsExpanded(expand);
-            if (expand) setActiveTab('Controls');
+            if (expand) setActiveTab('Chat');
           }}
           onComplete={completeOnboarding}
         />
@@ -8148,7 +10636,7 @@ export const KiboApp: React.FC = () => {
                     setShowCompanionWindow(false);
                     setIsTucked(false);
                     setIsExpanded(true);
-                    setActiveTab('Controls');
+                    setActiveTab('Chat');
                   }}
                   className="dock-icon-btn"
                 >
@@ -8163,7 +10651,7 @@ export const KiboApp: React.FC = () => {
                     setShowCompanionWindow(false);
                     setIsTucked(false);
                     setIsExpanded(true);
-                    setActiveTab('Clipboard');
+                    setActiveTab('Convert');
                   }}
                   className="dock-icon-btn"
                 >
@@ -8290,7 +10778,7 @@ export const KiboApp: React.FC = () => {
         </div>
       )}
 
-      {!isExpanded && askNotchPhase === 'idle' && dictationState === 'idle' && !lassoActive && (userBubbleText || kiboReply) && (
+      {captionsEnabled && !isExpanded && askNotchPhase === 'idle' && dictationState === 'idle' && !lassoActive && (userBubbleText || kiboReply) && (
         <div className="kibo-floating-hud-stack">
           {userBubbleText && (
             <div className="kibo-voice-pill user-white">

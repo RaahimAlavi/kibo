@@ -482,6 +482,46 @@ class KiboSoundEngine {
   public playClick() {
     this.playTabSwitch();
   }
+
+  // 16. Joyful Kibo Dance Melody (Celebratory pentatonic synth groove when Focus Timer finishes)
+  public playDanceMelody() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const notes = [
+      { f: 523.25, t: 0.0, d: 0.14 },  // C5
+      { f: 659.25, t: 0.14, d: 0.14 }, // E5
+      { f: 783.99, t: 0.28, d: 0.14 }, // G5
+      { f: 1046.5, t: 0.42, d: 0.24 }, // C6
+      { f: 783.99, t: 0.68, d: 0.14 }, // G5
+      { f: 1046.5, t: 0.84, d: 0.36 }, // C6
+    ];
+
+    notes.forEach(({ f, t, d }) => {
+      const osc = ctx.createOscillator();
+      const sub = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(f, now + t);
+
+      sub.type = 'triangle';
+      sub.frequency.setValueAtTime(f * 0.5, now + t);
+
+      gain.gain.setValueAtTime(0.001, now + t);
+      gain.gain.linearRampToValueAtTime(0.055, now + t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + t + d);
+
+      osc.connect(gain);
+      sub.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now + t);
+      sub.start(now + t);
+      osc.stop(now + t + d + 0.02);
+      sub.stop(now + t + d + 0.02);
+    });
+  }
 }
 
 export const soundFX = new KiboSoundEngine();

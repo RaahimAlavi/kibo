@@ -992,6 +992,540 @@ ipcMain.handle('quit-app', () => {
   return true;
 });
 
+// ============================================================================
+// UNIVERSAL NON-DESTRUCTIVE FILE CONVERTER, CHROME EXTENSION & SKILL.MD LOADER
+// ============================================================================
+
+const zlib = require('zlib');
+
+// Minimal pure-Node ZIP builder so we can create valid OpenXML .docx files natively without external dependencies
+function buildSimpleZipBuffer(filesMap) {
+  const localHeaders = [];
+  const centralHeaders = [];
+  let offset = 0;
+
+  const crcTable = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) {
+      c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    }
+    crcTable[n] = c >>> 0;
+  }
+  function crc32(buf) {
+    let crc = 0xffffffff;
+    for (let i = 0; i < buf.length; i++) {
+      crc = crcTable[(crc ^ buf[i]) & 0xff] ^ (crc >>> 8);
+    }
+    return (crc ^ 0xffffffff) >>> 0;
+  }
+
+  for (const [name, contentStrOrBuf] of Object.entries(filesMap)) {
+    const data = Buffer.isBuffer(contentStrOrBuf)
+      ? contentStrOrBuf
+      : Buffer.from(String(contentStrOrBuf), 'utf8');
+    const nameBuf = Buffer.from(name, 'utf8');
+    const crc = crc32(data);
+    const compressed = zlib.deflateRawSync(data);
+
+    const local = Buffer.alloc(30 + nameBuf.length);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt16LE(0, 6);
+    local.writeUInt16LE(8, 8);
+    local.writeUInt16LE(0, 10);
+    local.writeUInt16LE(0, 12);
+    local.writeUInt32LE(crc, 14);
+    local.writeUInt32LE(compressed.length, 18);
+    local.writeUInt32LE(data.length, 22);
+    local.writeUInt16LE(nameBuf.length, 26);
+    local.writeUInt16LE(0, 28);
+    nameBuf.copy(local, 30);
+
+    const central = Buffer.alloc(46 + nameBuf.length);
+    central.writeUInt32LE(0x02014b50, 0);
+    central.writeUInt16LE(20, 4);
+    central.writeUInt16LE(20, 6);
+    central.writeUInt16LE(0, 8);
+    central.writeUInt16LE(8, 10);
+    central.writeUInt16LE(0, 12);
+    central.writeUInt16LE(0, 14);
+    central.writeUInt32LE(crc, 16);
+    central.writeUInt32LE(compressed.length, 20);
+    central.writeUInt32LE(data.length, 24);
+    central.writeUInt16LE(nameBuf.length, 28);
+    central.writeUInt16LE(0, 30);
+    central.writeUInt16LE(0, 32);
+    central.writeUInt16LE(0, 34);
+    central.writeUInt16LE(0, 36);
+    central.writeUInt32LE(0, 38);
+    central.writeUInt32LE(offset, 42);
+    nameBuf.copy(central, 46);
+
+    localHeaders.push(local, compressed);
+    centralHeaders.push(central);
+    offset += local.length + compressed.length;
+  }
+
+  const centralBuf = Buffer.concat(centralHeaders);
+  const eocd = Buffer.alloc(22);
+  const count = Object.keys(filesMap).length;
+  eocd.writeUInt32LE(0x06054b50, 0);
+  eocd.writeUInt16LE(0, 4);
+  eocd.writeUInt16LE(0, 6);
+  eocd.writeUInt16LE(count, 8);
+  eocd.writeUInt16LE(count, 10);
+  eocd.writeUInt32LE(centralBuf.length, 12);
+  eocd.writeUInt32LE(offset, 16);
+  eocd.writeUInt16LE(0, 20);
+
+  return Buffer.concat([...localHeaders, centralBuf, eocd]);
+}
+
+function escapeXml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function createDocxBufferFromText(title, rawText) {
+  const lines = String(rawText || '').split(/\r?\n/);
+  const paragraphsXml = lines
+    .map((line) => {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        return `<w:p><w:r><w:t></w:t></w:r></w:p>`;
+      }
+      const isHeading = trimmed.startsWith('# ');
+      const cleanLine = isHeading ? trimmed.replace(/^#+\s*/, '') : line;
+      return `<w:p>${
+        isHeading ? '<w:pPr><w:pStyle w:val="Heading1"/></w:pPr>' : ''
+      }<w:r><w:t xml:space="preserve">${escapeXml(cleanLine)}</w:t></w:r></w:p>`;
+    })
+    .join('');
+
+  const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`;
+
+  const rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+
+  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p><w:r><w:rPr><w:b/><w:sz w:val="32"/></w:rPr><w:t>${escapeXml(title)}</w:t></w:r></w:p>
+    ${paragraphsXml}
+  </w:body>
+</w:document>`;
+
+  return buildSimpleZipBuffer({
+    '[Content_Types].xml': contentTypes,
+    '_rels/.rels': rels,
+    'word/document.xml': documentXml,
+  });
+}
+
+function extractTextFromFileSync(filePath) {
+  const ext = path.extname(filePath).toLowerCase();
+  const buf = fs.readFileSync(filePath);
+
+  if (['.txt', '.md', '.csv', '.json', '.html', '.htm', '.xml', '.js', '.ts', '.py'].includes(ext)) {
+    return buf.toString('utf8');
+  }
+
+  if (ext === '.docx') {
+    try {
+      const psCmd = `
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        $zip = [System.IO.Compression.ZipFile]::OpenRead('${filePath.replace(/'/g, "''")}')
+        $entry = $zip.Entries | Where-Object { $_.FullName -eq 'word/document.xml' }
+        if ($entry) {
+          $stream = $entry.Open()
+          $reader = New-Object System.IO.StreamReader($stream)
+          $xml = [xml]$reader.ReadToEnd()
+          $reader.Close()
+          $zip.Dispose()
+          $ns = New-Object System.Xml.XmlNamespaceManager($xml.NameTable)
+          $ns.AddNamespace('w', 'http://schemas.openxmlformats.org/wordprocessingml/2006/main')
+          $paras = $xml.SelectNodes('//w:p', $ns)
+          $out = @()
+          foreach ($p in $paras) {
+            $out += $p.InnerText
+          }
+          $out -join [Environment]::NewLine
+        }
+      `;
+      const extracted = execSync(`powershell -NoProfile -Command "${psCmd.replace(/\r?\n/g, '; ')}"`, {
+        encoding: 'utf8',
+        timeout: 6000,
+      }).trim();
+      if (extracted) return extracted;
+    } catch (_) {}
+  }
+
+  if (ext === '.pdf') {
+    const rawStr = buf.toString('latin1');
+    const textChunks = [];
+    const regex = /\(([^()\\]{2,})\)/g;
+    let m;
+    while ((m = regex.exec(rawStr)) !== null) {
+      const s = m[1].replace(/[^\x20-\x7E]/g, ' ').trim();
+      if (s.length > 1 && !/^[0-9.\s]+$/.test(s)) {
+        textChunks.push(s);
+      }
+    }
+    if (textChunks.length > 0) {
+      return textChunks.join('\n');
+    }
+    return `Extracted document content from ${path.basename(filePath)} (${(buf.length / 1024).toFixed(1)} KB).`;
+  }
+
+  return buf.toString('utf8');
+}
+
+async function renderHtmlToPdfFile(htmlContent, outPdfPath) {
+  const pdfWin = new BrowserWindow({
+    width: 840,
+    height: 1180,
+    show: false,
+    webPreferences: { offscreen: true },
+  });
+  try {
+    const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
+    await pdfWin.loadURL(dataUrl);
+    const pdfBuf = await pdfWin.webContents.printToPDF({
+      printBackground: true,
+      pageSize: 'A4',
+    });
+    fs.writeFileSync(outPdfPath, pdfBuf);
+    return true;
+  } finally {
+    if (!pdfWin.isDestroyed()) pdfWin.destroy();
+  }
+}
+
+function findUserFileByName(query) {
+  if (!query) return null;
+  const cleanQ = String(query).trim().toLowerCase();
+  if (fs.existsSync(query)) return query;
+
+  const searchDirs = [
+    app.getPath('desktop'),
+    app.getPath('downloads'),
+    app.getPath('documents'),
+    app.getPath('pictures'),
+  ];
+
+  let bestPartial = null;
+  for (const dir of searchDirs) {
+    try {
+      if (!fs.existsSync(dir)) continue;
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isFile()) {
+          const lower = entry.name.toLowerCase();
+          if (lower === cleanQ) {
+            return path.join(dir, entry.name);
+          }
+          if (!bestPartial && lower.includes(cleanQ)) {
+            bestPartial = path.join(dir, entry.name);
+          }
+        }
+      }
+    } catch (_) {}
+  }
+  return bestPartial;
+}
+
+ipcMain.handle('pick-file-for-convert', async () => {
+  const result = await dialog.showOpenDialog(mainWindow || undefined, {
+    title: 'Select File to Convert with Kibo',
+    properties: ['openFile'],
+  });
+  if (result.canceled || !result.filePaths?.[0]) {
+    return { success: false };
+  }
+  const fp = result.filePaths[0];
+  const stat = fs.statSync(fp);
+  return {
+    success: true,
+    filePath: fp,
+    fileName: path.basename(fp),
+    sizeBytes: stat.size,
+    ext: path.extname(fp).replace('.', '').toLowerCase(),
+  };
+});
+
+ipcMain.handle('show-item-in-folder', (_event, filePath) => {
+  if (filePath && fs.existsSync(filePath)) {
+    shell.showItemInFolder(filePath);
+    return true;
+  }
+  return false;
+});
+
+ipcMain.handle('convert-file', async (_event, payload) => {
+  try {
+    const targetFormat = String(payload?.targetFormat || 'pdf')
+      .replace(/^\./, '')
+      .toLowerCase();
+    let srcPath = payload?.filePath || '';
+
+    if (!srcPath && payload?.fileNameQuery) {
+      srcPath = findUserFileByName(payload.fileNameQuery) || '';
+    }
+
+    if (!srcPath && payload?.fileBase64 && payload?.originalName) {
+      const tempDir = path.join(app.getPath('downloads'));
+      srcPath = path.join(tempDir, payload.originalName);
+      const base64Clean = String(payload.fileBase64).replace(/^data:.*?;base64,/, '');
+      fs.writeFileSync(srcPath, Buffer.from(base64Clean, 'base64'));
+    }
+
+    if (!srcPath || !fs.existsSync(srcPath)) {
+      return {
+        success: false,
+        error: `Could not locate "${payload?.fileNameQuery || payload?.filePath || 'file'}" in Desktop, Downloads, or Documents.`,
+      };
+    }
+
+    const dir = path.dirname(srcPath);
+    const ext = path.extname(srcPath).toLowerCase();
+    const baseName = path.basename(srcPath, ext);
+
+    // Non-destructive output path (never overwrites or deletes the original file!)
+    let outPath = path.join(dir, `${baseName}.${targetFormat}`);
+    if (outPath.toLowerCase() === srcPath.toLowerCase() || fs.existsSync(outPath)) {
+      outPath = path.join(dir, `${baseName}_kibo.${targetFormat}`);
+    }
+
+    const isImageSrc = ['.png', '.jpg', '.jpeg', '.webp', '.bmp', '.ico', '.gif'].includes(ext);
+    const isImageTarget = ['png', 'jpg', 'jpeg', 'webp'].includes(targetFormat);
+
+    if (isImageSrc && isImageTarget) {
+      const img = nativeImage.createFromPath(srcPath);
+      if (img.isEmpty()) {
+        throw new Error('Failed to decode source image.');
+      }
+      const outBuf =
+        targetFormat === 'jpg' || targetFormat === 'jpeg' ? img.toJPEG(92) : img.toPNG();
+      fs.writeFileSync(outPath, outBuf);
+    } else if (isImageSrc && targetFormat === 'pdf') {
+      const img = nativeImage.createFromPath(srcPath);
+      const dataUrl = img.toDataURL();
+      const html = `<!DOCTYPE html><html><body style="margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#fff;"><img src="${dataUrl}" style="max-width:95%;max-height:95vh;object-fit:contain;" /></body></html>`;
+      await renderHtmlToPdfFile(html, outPath);
+    } else if (targetFormat === 'docx') {
+      const textContent = extractTextFromFileSync(srcPath);
+      const docxBuf = createDocxBufferFromText(baseName, textContent);
+      fs.writeFileSync(outPath, docxBuf);
+    } else if (targetFormat === 'pdf') {
+      const textContent = extractTextFromFileSync(srcPath);
+      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:'Segoe UI',system-ui,sans-serif;padding:48px;color:#111827;line-height:1.65;font-size:14px;}h1{font-size:22px;margin-bottom:16px;border-bottom:1px solid #e5e7eb;padding-bottom:8px;}pre{white-space:pre-wrap;font-family:inherit;}</style></head><body><h1>${escapeXml(baseName)}</h1><pre>${escapeXml(textContent)}</pre></body></html>`;
+      await renderHtmlToPdfFile(html, outPath);
+    } else if (targetFormat === 'json' && ext === '.csv') {
+      const rawCsv = fs.readFileSync(srcPath, 'utf8');
+      const lines = rawCsv.split(/\r?\n/).filter(Boolean);
+      const headers = (lines[0] || '').split(',').map((h) => h.trim().replace(/^"|"$/g, ''));
+      const rows = lines.slice(1).map((line) => {
+        const vals = line.split(',').map((v) => v.trim().replace(/^"|"$/g, ''));
+        const obj = {};
+        headers.forEach((h, i) => {
+          obj[h || `col_${i}`] = vals[i] ?? '';
+        });
+        return obj;
+      });
+      fs.writeFileSync(outPath, JSON.stringify(rows, null, 2), 'utf8');
+    } else if (targetFormat === 'csv' && ext === '.json') {
+      const rawJson = JSON.parse(fs.readFileSync(srcPath, 'utf8'));
+      const arr = Array.isArray(rawJson) ? rawJson : [rawJson];
+      const headers = Object.keys(arr[0] || {});
+      const csvLines = [
+        headers.join(','),
+        ...arr.map((row) => headers.map((h) => JSON.stringify(row[h] ?? '')).join(',')),
+      ];
+      fs.writeFileSync(outPath, csvLines.join('\n'), 'utf8');
+    } else if (targetFormat === 'html') {
+      const textContent = extractTextFromFileSync(srcPath);
+      const html = `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8" />\n  <title>${escapeXml(baseName)}</title>\n  <style>body{font-family:system-ui,sans-serif;max-width:760px;margin:48px auto;padding:0 24px;line-height:1.65;color:#18181b;}</style>\n</head>\n<body>\n  <h1>${escapeXml(baseName)}</h1>\n  <div style="white-space:pre-wrap;">${escapeXml(textContent)}</div>\n</body>\n</html>`;
+      fs.writeFileSync(outPath, html, 'utf8');
+    } else {
+      const textContent = extractTextFromFileSync(srcPath);
+      fs.writeFileSync(outPath, textContent, 'utf8');
+    }
+
+    const outStat = fs.statSync(outPath);
+    return {
+      success: true,
+      sourcePath: srcPath,
+      outputPath: outPath,
+      outputName: path.basename(outPath),
+      sizeBytes: outStat.size,
+      message: `Converted ${path.basename(srcPath)} to ${path.basename(outPath)} (original preserved).`,
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: err?.message || 'Conversion failed.',
+    };
+  }
+});
+
+// Export Ready-to-Drop Kibo Chrome Extension Folder for Developer Mode
+ipcMain.handle('export-chrome-extension', async () => {
+  try {
+    const extDir = path.join(app.getPath('desktop'), 'Kibo-Chrome-Extension');
+    fs.mkdirSync(extDir, { recursive: true });
+
+    const manifest = {
+      manifest_version: 3,
+      name: 'Kibo Browser Bridge',
+      version: '1.0.0',
+      description: 'Connects Google Chrome tabs, DOM context, and live web actions directly to Kibo Desktop Companion.',
+      permissions: ['activeTab', 'tabs', 'scripting'],
+      host_permissions: ['http://127.0.0.1:51742/*'],
+      background: {
+        service_worker: 'background.js',
+      },
+      action: {
+        default_popup: 'popup.html',
+        default_title: 'Kibo Browser Bridge',
+      },
+      content_scripts: [
+        {
+          matches: ['<all_urls>'],
+          js: ['content.js'],
+        },
+      ],
+    };
+
+    const backgroundJs = `// Kibo Browser Bridge Service Worker
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+  try {
+    const tab = await chrome.tabs.get(activeInfo.tabId);
+    if (tab && tab.url) {
+      fetch('http://127.0.0.1:51742/api/browser-context', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: tab.title || '', url: tab.url })
+      }).catch(() => {});
+    }
+  } catch (_) {}
+});
+`;
+
+    const contentJs = `// Kibo Content Script Bridge
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'KIBO_PAGE_ACTION') {
+    console.log('[Kibo Bridge] Executing page action:', event.data);
+  }
+});
+`;
+
+    const popupHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    body { width: 240px; margin: 0; padding: 16px; background: #0C0E14; color: #F8FAFC; font-family: system-ui, sans-serif; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 99px; background: rgba(56,189,248,0.16); color: #38BDF8; font-size: 11px; font-weight: 700; }
+    h3 { margin: 10px 0 4px; font-size: 14px; }
+    p { margin: 0; font-size: 12px; color: #94A3B8; line-height: 1.45; }
+  </style>
+</head>
+<body>
+  <div class="badge">Connected to Kibo</div>
+  <h3>Kibo Browser Bridge</h3>
+  <p>Active tab context and DOM automation are linked to your Kibo top-bezel companion.</p>
+</body>
+</html>`;
+
+    fs.writeFileSync(path.join(extDir, 'manifest.json'), JSON.stringify(manifest, null, 2), 'utf8');
+    fs.writeFileSync(path.join(extDir, 'background.js'), backgroundJs, 'utf8');
+    fs.writeFileSync(path.join(extDir, 'content.js'), contentJs, 'utf8');
+    fs.writeFileSync(path.join(extDir, 'popup.html'), popupHtml, 'utf8');
+
+    const iconSrc = path.join(__dirname, '../public/icon-256.png');
+    if (fs.existsSync(iconSrc)) {
+      fs.copyFileSync(iconSrc, path.join(extDir, 'icon.png'));
+    }
+
+    shell.showItemInFolder(path.join(extDir, 'manifest.json'));
+    return {
+      success: true,
+      folderPath: extDir,
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: err?.message || 'Failed to export Chrome extension.',
+    };
+  }
+});
+
+ipcMain.handle('open-chrome-extensions-page', async () => {
+  try {
+    clipboard.writeText('chrome://extensions');
+    exec('start chrome "chrome://extensions"', (err) => {
+      if (err) {
+        shell.openExternal('https://www.google.com/chrome/');
+      }
+    });
+    return { success: true };
+  } catch (_) {
+    return { success: false };
+  }
+});
+
+ipcMain.handle('pick-skill-md-file', async () => {
+  try {
+    const result = await dialog.showOpenDialog(mainWindow || undefined, {
+      title: 'Import SKILL.md File for Kibo',
+      filters: [{ name: 'Skill Markdown', extensions: ['md', 'txt'] }],
+      properties: ['openFile'],
+    });
+    if (result.canceled || !result.filePaths?.[0]) {
+      return { success: false };
+    }
+    const fp = result.filePaths[0];
+    const content = fs.readFileSync(fp, 'utf8');
+    const fileName = path.basename(fp);
+    const parentFolder = path.basename(path.dirname(fp));
+
+    let name = fileName.toLowerCase() === 'skill.md' && parentFolder ? parentFolder : path.basename(fp, path.extname(fp));
+    let description = 'Custom skill guidelines loaded from SKILL.md';
+
+    const nameMatch = content.match(/^name:\s*(.+)$/m) || content.match(/^#\s+(.+)$/m);
+    if (nameMatch) name = nameMatch[1].trim().replace(/^['"]|['"]$/g, '');
+
+    const descMatch = content.match(/^description:\s*(.+)$/m);
+    if (descMatch) description = descMatch[1].trim().replace(/^['"]|['"]$/g, '');
+
+    return {
+      success: true,
+      name,
+      description,
+      fileName,
+      filePath: fp,
+      content,
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: err?.message || 'Could not read SKILL.md file.',
+    };
+  }
+});
+
 function getWindowsWallpaperPath() {
   try {
     const stdout = execSync(

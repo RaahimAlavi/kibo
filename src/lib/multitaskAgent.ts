@@ -1,5 +1,5 @@
 // src/lib/multitaskAgent.ts
-import { queryGemini } from './gemini';
+import { queryGemini, getActiveSkillsPromptBlock } from './gemini';
 import { soundFX } from './soundFX';
 import { searchTavily } from './tavily';
 
@@ -138,15 +138,16 @@ export const APP_INTEGRATIONS: Record<DetectedAppConfig['id'], DetectedAppConfig
 };
 
 const HTML_BUILDER_MODELS = [
-  'gemini-2.5-flash',
-  'gemini-3.5-flash-lite',
-  'gemini-3-flash',
   'gemini-3.1-flash-lite',
+  'gemini-3.5-flash-lite',
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
+  'gemini-3.8-flash',
 ];
 
 /**
  * Dedicated High-Token Vision + HTML Generator (8192 output tokens, no tool-call restrictions)
- * Ensures every cloned or generated website matches the actual screenshot or prompt uniquely!
+ * Injects active user SKILL.md rules so generated/updated websites follow the user's custom skills!
  */
 async function generateCustomHtmlWithGemini(
   promptText: string,
@@ -155,7 +156,10 @@ async function generateCustomHtmlWithGemini(
 ): Promise<string> {
   if (!apiKey || !apiKey.trim()) return '';
 
-  const parts: any[] = [{ text: promptText }];
+  const skillsContext = getActiveSkillsPromptBlock();
+  const fullPrompt = skillsContext ? `${promptText}\n${skillsContext}` : promptText;
+
+  const parts: any[] = [{ text: fullPrompt }];
   if (screenshotDataUrl && screenshotDataUrl.includes('base64,')) {
     const [header, base64Data] = screenshotDataUrl.split('base64,');
     const mimeMatch = header.match(/data:(.*?);/);

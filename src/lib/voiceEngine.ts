@@ -1,43 +1,91 @@
 // src/lib/voiceEngine.ts
 
-export type KiboVoiceName = 'Charon' | 'Aoede' | 'Fenrir' | 'Puck';
-
+export type KiboVoiceName = 'Charon' | 'Aoede' | 'Fenrir' | 'Puck' | 'Kore';
 
 export interface SpeakOptions {
   apiKey?: string;
   voice?: KiboVoiceName;
   personality?: string;
+  outputDeviceId?: string;
   onStart?: () => void;
   onEnd?: () => void;
 }
 
+// Ordered by Unlimited Quota Live API models from user's Google AI Studio project
 const LIVE_AUDIO_MODELS = [
-  'models/gemini-2.0-flash-exp',
-  'models/gemini-2.0-flash',
+  'models/gemini-3.8-live',
+  'models/gemini-3-flash-live',
+  'models/gemini-2.5-flash-native-audio-dialog',
+  'models/gemini-2.5-flash-native-audio-preview-12-2025',
 ];
 
+// Ordered by available RPD quota in user's Google AI Studio project
 const REST_TTS_MODELS = [
-  'gemini-2.0-flash',
-  'gemini-2.0-flash-exp',
+  'gemini-3.1-flash-preview-tts',
+  'gemini-3.1-flash-tts',
+  'gemini-3.8-flash-lite-preview-tts',
+  'gemini-3.8-flash-lite-tts',
+  'gemini-3.8-flash-preview-tts',
+  'gemini-3.8-flash-tts',
+  'gemini-2.5-flash-preview-tts',
 ];
+
+const deadTtsModels = new Map<string, number>();
+
+function isModelOnCooldown(model: string): boolean {
+  const until = deadTtsModels.get(model);
+  if (!until) return false;
+  if (Date.now() > until) {
+    deadTtsModels.delete(model);
+    return false;
+  }
+  return true;
+}
+
+function markModelCooldown(model: string, durationMs = 120_000) {
+  deadTtsModels.set(model, Date.now() + durationMs);
+}
 
 class KiboVoiceEngine {
   private audioCtx: AudioContext | null = null;
+  private currentSinkId: string = 'default';
   private nextStartTime: number = 0;
   private activeSources: AudioBufferSourceNode[] = [];
   private isSpeakingState: boolean = false;
   private listeners: Set<(speaking: boolean) => void> = new Set();
   private keepAliveTimer: any = null;
+  private activeWs: WebSocket | null = null;
 
-  private getAudioContext(): AudioContext {
+  private async getAudioContext(sinkId?: string): Promise<AudioContext> {
     if (!this.audioCtx) {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       this.audioCtx = new AudioCtx({ sampleRate: 24000 });
     }
     if (this.audioCtx.state === 'suspended') {
-      this.audioCtx.resume().catch(() => {});
+      await this.audioCtx.resume().catch(() => {});
+    }
+    const targetSink =
+      sinkId ||
+      (typeof window !== 'undefined' ? localStorage.getItem('kibo_audio_output_device') || 'default' : 'default');
+    if (targetSink && targetSink !== this.currentSinkId && typeof (this.audioCtx as any).setSinkId === 'function') {
+      try {
+        await (this.audioCtx as any).setSinkId(targetSink === 'default' ? '' : targetSink);
+        this.currentSinkId = targetSink;
+      } catch (_) {}
     }
     return this.audioCtx;
+  }
+
+  public async setOutputDevice(deviceId: string) {
+    this.currentSinkId = deviceId;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('kibo_audio_output_device', deviceId);
+    }
+    if (this.audioCtx && typeof (this.audioCtx as any).setSinkId === 'function') {
+      try {
+        await (this.audioCtx as any).setSinkId(deviceId === 'default' ? '' : deviceId);
+      } catch (_) {}
+    }
   }
 
   public onSpeakingStateChange(cb: (speaking: boolean) => void): () => void {
@@ -61,6 +109,12 @@ class KiboVoiceEngine {
       clearInterval(this.keepAliveTimer);
       this.keepAliveTimer = null;
     }
+    if (this.activeWs) {
+      try {
+        this.activeWs.close();
+      } catch (_) {}
+      this.activeWs = null;
+    }
     this.activeSources.forEach((src) => {
       try {
         src.stop();
@@ -77,8 +131,8 @@ class KiboVoiceEngine {
   }
 
   // Decode base64 16-bit 24kHz little-endian PCM chunk and schedule gapless playback
-  private enqueuePcm24kChunk(base64Pcm: string, onEnd?: () => void) {
-    const ctx = this.getAudioContext();
+  private async enqueuePcm24kChunk(base64Pcm: string, sinkId?: string, onEnd?: () => void) {
+    const ctx = await this.getAudioContext(sinkId);
     const binaryStr = atob(base64Pcm);
     const len = binaryStr.length;
     const bytes = new Uint8Array(len);
@@ -102,7 +156,7 @@ class KiboVoiceEngine {
 
     const currentTime = ctx.currentTime;
     if (this.nextStartTime < currentTime) {
-      this.nextStartTime = currentTime + 0.02;
+      this.nextStartTime = currentTime + 0.015;
     }
 
     source.start(this.nextStartTime);
@@ -113,7 +167,7 @@ class KiboVoiceEngine {
 
     source.onended = () => {
       this.activeSources = this.activeSources.filter((s) => s !== source);
-      if (this.activeSources.length === 0) {
+      if (this.activeSources.length === 0 && !this.activeWs) {
         this.nextStartTime = 0;
         this.setSpeaking(false);
         onEnd?.();
@@ -121,46 +175,76 @@ class KiboVoiceEngine {
     };
   }
 
-  // Tier 1: Speak or Converse via Unlimited Gemini Live WebSocket API
+  // Tier 1: Speak or Converse via Unlimited Gemini Live WebSocket API (gemini-3.8-live, gemini-3-flash-live, gemini-2.5-flash-native-audio-dialog)
   public async speakViaLiveAPI(
     promptOrText: string,
     mode: 'SAY_EXACT' | 'CONVERSE',
     options: SpeakOptions = {}
   ): Promise<boolean> {
-    const apiKey = options.apiKey || (localStorage.getItem('kibo_gemini_key') || localStorage.getItem('kibo_gemini_key')) || '';
+    const apiKey =
+      options.apiKey ||
+      (typeof window !== 'undefined' ? localStorage.getItem('kibo_gemini_key') || '' : '');
     if (!apiKey) return false;
 
-    const voice: KiboVoiceName = options.voice || 'Charon';
+    const savedVoice =
+      typeof window !== 'undefined' ? (localStorage.getItem('kibo_voice_name') as KiboVoiceName) : null;
+    const voice: KiboVoiceName = options.voice || savedVoice || 'Aoede';
     const personality = options.personality || 'Prime Operator';
 
+    const cleanText = promptOrText
+      .replace(/[*_#`~[\]]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!cleanText) {
+      options.onEnd?.();
+      return true;
+    }
+
     for (const model of LIVE_AUDIO_MODELS) {
+      if (isModelOnCooldown(model)) continue;
+
       const success = await new Promise<boolean>((resolve) => {
         let resolved = false;
         let receivedAudio = false;
 
-        const wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${apiKey}`;
+        const wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${encodeURIComponent(apiKey.trim())}`;
         let ws: WebSocket;
         try {
           ws = new WebSocket(wsUrl);
+          this.activeWs = ws;
         } catch (_) {
           return resolve(false);
         }
 
-        const timeout = setTimeout(() => {
+        const firstChunkTimeout = setTimeout(() => {
+          if (!receivedAudio && !resolved) {
+            resolved = true;
+            this.activeWs = null;
+            markModelCooldown(model, 60_000);
+            try {
+              ws.close();
+            } catch (_) {}
+            resolve(false);
+          }
+        }, 3200);
+
+        const totalTimeout = setTimeout(() => {
           if (!resolved) {
             resolved = true;
-            try { ws.close(); } catch (_) {}
+            this.activeWs = null;
+            try {
+              ws.close();
+            } catch (_) {}
             resolve(receivedAudio);
           }
-        }, 12000);
+        }, 15000);
 
         ws.onopen = () => {
           const systemText =
             mode === 'SAY_EXACT'
-              ? 'Read the user message aloud verbatim with natural human expression. Do not add extra words.'
-              : `You are Kibo, a tactile desktop cyber-droid with a "${personality}" personality. Keep spoken replies under 2 short sentences, crisp, and direct.`;
+              ? 'You are a high-precision voice synthesizer. Speak the exact text provided by the user aloud with warm, natural expression. Never add introductory words, never answer questions, only read the exact text verbatim.'
+              : `You are Kibo, a fast desktop companion with a "${personality}" personality. Keep spoken replies under 2 short sentences, natural and direct.`;
 
-          // 1. Send Live session setup with prebuilt voice (Charon, Aoede, Fenrir, Puck)
           try {
             ws.send(
               JSON.stringify({
@@ -183,9 +267,11 @@ class KiboVoiceEngine {
               })
             );
           } catch (_) {
-            clearTimeout(timeout);
+            clearTimeout(firstChunkTimeout);
+            clearTimeout(totalTimeout);
             if (!resolved) {
               resolved = true;
+              this.activeWs = null;
               resolve(false);
             }
           }
@@ -193,11 +279,24 @@ class KiboVoiceEngine {
 
         ws.onmessage = async (event) => {
           try {
-            const rawText =
-              event.data instanceof Blob ? await event.data.text() : event.data;
+            const rawText = event.data instanceof Blob ? await event.data.text() : event.data;
             const msg = JSON.parse(rawText);
 
-            // 2. Once setup completes, send the text turn
+            if (msg.error) {
+              markModelCooldown(model, 120_000);
+              clearTimeout(firstChunkTimeout);
+              clearTimeout(totalTimeout);
+              if (!resolved) {
+                resolved = true;
+                this.activeWs = null;
+                try {
+                  ws.close();
+                } catch (_) {}
+                resolve(false);
+              }
+              return;
+            }
+
             if (msg.setupComplete) {
               ws.send(
                 JSON.stringify({
@@ -205,7 +304,14 @@ class KiboVoiceEngine {
                     turns: [
                       {
                         role: 'user',
-                        parts: [{ text: promptOrText }],
+                        parts: [
+                          {
+                            text:
+                              mode === 'SAY_EXACT'
+                                ? `Read this exact line aloud verbatim: "${cleanText}"`
+                                : cleanText,
+                          },
+                        ],
                       },
                     ],
                     turnComplete: true,
@@ -215,42 +321,60 @@ class KiboVoiceEngine {
               return;
             }
 
-            // 3. Stream incoming 24kHz PCM audio chunks immediately
             const parts = msg?.serverContent?.modelTurn?.parts;
             if (Array.isArray(parts)) {
               for (const part of parts) {
                 const inline = part?.inlineData;
-                if (inline?.data && inline?.mimeType?.startsWith('audio/pcm')) {
+                if (inline?.data && (!inline.mimeType || inline.mimeType.startsWith('audio/'))) {
                   if (!receivedAudio) {
                     receivedAudio = true;
+                    clearTimeout(firstChunkTimeout);
                     options.onStart?.();
                   }
-                  this.enqueuePcm24kChunk(inline.data);
+                  await this.enqueuePcm24kChunk(inline.data, options.outputDeviceId, options.onEnd);
                 }
               }
             }
 
             if (msg?.serverContent?.turnComplete) {
-              clearTimeout(timeout);
-              resolved = true;
-              try { ws.close(); } catch (_) {}
-              resolve(receivedAudio);
+              clearTimeout(firstChunkTimeout);
+              clearTimeout(totalTimeout);
+              this.activeWs = null;
+              if (!resolved) {
+                resolved = true;
+                try {
+                  ws.close();
+                } catch (_) {}
+                if (this.activeSources.length === 0) {
+                  this.setSpeaking(false);
+                  options.onEnd?.();
+                }
+                resolve(receivedAudio);
+              }
             }
           } catch (_) {}
         };
 
         ws.onerror = () => {
-          clearTimeout(timeout);
+          clearTimeout(firstChunkTimeout);
+          clearTimeout(totalTimeout);
+          this.activeWs = null;
           if (!resolved) {
             resolved = true;
-            resolve(false);
+            resolve(receivedAudio);
           }
         };
 
         ws.onclose = () => {
-          clearTimeout(timeout);
+          clearTimeout(firstChunkTimeout);
+          clearTimeout(totalTimeout);
+          this.activeWs = null;
           if (!resolved) {
             resolved = true;
+            if (receivedAudio && this.activeSources.length === 0) {
+              this.setSpeaking(false);
+              options.onEnd?.();
+            }
             resolve(receivedAudio);
           }
         };
@@ -262,16 +386,16 @@ class KiboVoiceEngine {
     return false;
   }
 
-  // Tier 2: Fallback to REST TTS Models
+  // Tier 2: Dedicated Google Gemini REST TTS Models (gemini-3.1-flash-preview-tts, gemini-3.8-flash-lite-preview-tts, gemini-2.5-flash-preview-tts)
   private async speakViaRestTTS(text: string, options: SpeakOptions = {}): Promise<boolean> {
     const apiKey =
       options.apiKey ||
-      (typeof window !== 'undefined'
-        ? localStorage.getItem('kibo_gemini_key') || ''
-        : '');
+      (typeof window !== 'undefined' ? localStorage.getItem('kibo_gemini_key') || '' : '');
     if (!apiKey) return false;
 
-    const voice: KiboVoiceName = options.voice || 'Charon';
+    const savedVoice =
+      typeof window !== 'undefined' ? (localStorage.getItem('kibo_voice_name') as KiboVoiceName) : null;
+    const voice: KiboVoiceName = options.voice || savedVoice || 'Aoede';
 
     const cleanText = text
       .replace(/[*_#`~[\]]/g, ' ')
@@ -283,9 +407,11 @@ class KiboVoiceEngine {
     }
 
     for (const model of REST_TTS_MODELS) {
+      if (isModelOnCooldown(model)) continue;
+
       try {
         const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey.trim())}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -305,12 +431,17 @@ class KiboVoiceEngine {
           }
         );
 
+        if (res.status === 429 || res.status === 404 || res.status === 400) {
+          markModelCooldown(model, res.status === 404 ? 600_000 : 120_000);
+          continue;
+        }
+
         if (!res.ok) continue;
         const data = await res.json();
         const inlineData = data?.candidates?.[0]?.content?.parts?.[0]?.inlineData;
         if (inlineData?.data) {
           options.onStart?.();
-          this.enqueuePcm24kChunk(inlineData.data, options.onEnd);
+          await this.enqueuePcm24kChunk(inlineData.data, options.outputDeviceId, options.onEnd);
           return true;
         }
       } catch (_) {}
@@ -319,7 +450,7 @@ class KiboVoiceEngine {
     return false;
   }
 
-  // Tier 3: Offline / No-Key Native OS Neural Voice Fallback
+  // Tier 3: Last-Resort Offline OS Neural Voice (only if API key is missing or offline)
   private speakViaNativeOS(text: string, options: SpeakOptions = {}) {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
       options.onEnd?.();
@@ -341,21 +472,26 @@ class KiboVoiceEngine {
       return;
     }
 
-    // Split text into natural sentence chunks to prevent Chromium 15s timeout
-    const sentences = cleanText.match(/[^.!?]+[.!?]+|\s*[^.!?]+$/g)?.map((s) => s.trim()).filter(Boolean) || [cleanText];
+    const sentences =
+      cleanText
+        .match(/[^.!?]+[.!?]+|\s*[^.!?]+$/g)
+        ?.map((s) => s.trim())
+        .filter(Boolean) || [cleanText];
     const voices = window.speechSynthesis.getVoices();
     const preferred = voices.find(
       (v) =>
         v.name.includes('Natural') ||
         v.name.includes('Online') ||
-        v.name.includes('David') ||
-        v.name.includes('Zira') ||
-        v.name.includes('Mark')
+        v.name.includes('Aria') ||
+        v.name.includes('Jenny') ||
+        v.name.includes('Guy')
     );
 
-    const voiceProfile = options.voice || 'Charon';
+    const savedVoice =
+      typeof window !== 'undefined' ? (localStorage.getItem('kibo_voice_name') as KiboVoiceName) : null;
+    const voiceProfile = options.voice || savedVoice || 'Aoede';
     const pitch =
-      voiceProfile === 'Charon' ? 0.95 : voiceProfile === 'Fenrir' ? 0.88 : voiceProfile === 'Aoede' ? 1.08 : 1.02;
+      voiceProfile === 'Charon' ? 0.95 : voiceProfile === 'Fenrir' ? 0.88 : voiceProfile === 'Aoede' ? 1.06 : 1.02;
 
     let currentIdx = 0;
     let finished = false;
@@ -372,7 +508,6 @@ class KiboVoiceEngine {
       (window as any)._kiboSpeechUtterance = null;
     };
 
-    // Chromium keepalive heartbeat: resume every 8s so it never freezes on long sentences
     this.keepAliveTimer = setInterval(() => {
       if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis.speaking) {
         window.speechSynthesis.pause();
@@ -409,8 +544,7 @@ class KiboVoiceEngine {
         }
       };
 
-      utterance.onerror = (e) => {
-        console.warn('[Kibo Voice] Chunk error or canceled:', e);
+      utterance.onerror = () => {
         if (currentIdx < sentences.length) {
           speakNextChunk();
         } else {
@@ -424,7 +558,7 @@ class KiboVoiceEngine {
     speakNextChunk();
   }
 
-  // Main Public Method 1: Speak exact text aloud
+  // Main Public Method 1: Speak exact text aloud using Google Gemini voices (Unlimited Live API -> REST TTS -> Offline Fallback)
   public async speak(text: string, options: SpeakOptions = {}) {
     if (!text || !text.trim()) {
       options.onEnd?.();
@@ -434,16 +568,19 @@ class KiboVoiceEngine {
 
     const apiKey =
       options.apiKey ||
-      (typeof window !== 'undefined'
-        ? localStorage.getItem('kibo_gemini_key') || ''
-        : '');
+      (typeof window !== 'undefined' ? localStorage.getItem('kibo_gemini_key') || '' : '');
 
     if (apiKey) {
-      const ok = await this.speakViaRestTTS(text, { ...options, apiKey });
-      if (ok) return;
+      // 1. Primary: Unlimited-quota Gemini Live API (models/gemini-3.8-live, gemini-3-flash-live, gemini-2.5-flash-native-audio-dialog)
+      const okLive = await this.speakViaLiveAPI(text, 'SAY_EXACT', { ...options, apiKey });
+      if (okLive) return;
+
+      // 2. Secondary: Dedicated Gemini REST TTS Models (gemini-3.1-flash-preview-tts, gemini-3.8-flash-lite-preview-tts, gemini-2.5-flash-preview-tts)
+      const okRest = await this.speakViaRestTTS(text, { ...options, apiKey });
+      if (okRest) return;
     }
 
-    // Instant Native OS TTS as offline fallback
+    // 3. Offline fallback only if no API key or network down
     this.speakViaNativeOS(text, options);
   }
 
@@ -454,7 +591,7 @@ class KiboVoiceEngine {
 
     const usedLive = await this.speakViaLiveAPI(userPrompt, 'CONVERSE', options);
     if (!usedLive) {
-      this.speakViaNativeOS("I'm right here with you. Add your Gemini key in settings for my full Live voice.", options);
+      this.speakViaNativeOS('I am ready. Check your Gemini API key in Settings to enable Google Live voices.', options);
     }
   }
 }
