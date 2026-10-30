@@ -319,206 +319,118 @@ let emberState = {
 let currentTrayTheme = 'auto'; // 'auto' (shows Ember when waiting), 'ember', or 'hito'
 
 function refreshTrayIconAndTooltip() {
+
   if (!tray) return;
+
   const shouldUseEmber =
+
     currentTrayTheme === 'ember' ||
+
     (currentTrayTheme === 'auto' && emberState.isWaiting);
 
+
+
   const icon = shouldUseEmber ? createEmberTrayIcon() : createKiboTrayIcon();
+
   tray.setImage(icon);
 
-  if (emberState.isWaiting) {
-    tray.setToolTip(`Kibo · Daily Watt Waiting! (${emberState.count.toLocaleString()} Watts)`);
-  } else {
-    tray.setToolTip(`Kibo · ${emberState.count.toLocaleString()} Watts · Tactile Desktop Cyber-Droid`);
-  }
+  tray.setToolTip(`Kibo · ${emberState.count.toLocaleString()} Sparks`);
+
 }
+
+
 
 function updateTrayMenu() {
+
   if (!tray) return;
 
-  const emberHeaderLabel = emberState.isWaiting
-    ? `Watts: ${emberState.count.toLocaleString()} · Daily Watt Waiting!`
-    : `Watts: ${emberState.count.toLocaleString()} Available`;
+
 
   const contextMenu = Menu.buildFromTemplate([
+
     {
-      label: 'Show / Expand Kibo Notch',
+
+      label: 'Open Kibo Studio',
+
       click: () => {
+
         if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.showInactive();
-          mainWindow.setAlwaysOnTop(true, 'pop-up-menu');
-          mainWindow.webContents.send('expand-island');
-        }
-      },
-    },
-    { type: 'separator' },
-    {
-      label: emberHeaderLabel,
-      submenu: [
-        {
-          label: emberState.isWaiting
-            ? 'Claim Daily Waiting Watt (+15)'
-            : 'Daily Watt Claimed (Come back tomorrow)',
-          enabled: emberState.isWaiting,
-          click: () => {
-            if (mainWindow) {
-              mainWindow.show();
-              mainWindow.focus();
-              mainWindow.webContents.send('claim-daily-ember');
-            }
-          },
-        },
-        {
-          label: 'Creator Mode: Stoke +5,000 Watts (Test)',
-          click: () => {
-            if (mainWindow) {
-              mainWindow.webContents.send('grant-creator-embers', 5000);
-            }
-          },
-        },
-        { type: 'separator' },
-        {
-          label: `Tray Design: ${
-            currentTrayTheme === 'ember'
-              ? 'Reactor Core (Active)'
-              : currentTrayTheme === 'hito'
-              ? 'Kibo Visor (Active)'
-              : 'Auto (Kibo / Reactor on Waiting)'
-          }`,
-          submenu: [
-            {
-              label: 'Auto (Switches to Reactor when waiting)',
-              type: 'radio',
-              checked: currentTrayTheme === 'auto',
-              click: () => {
-                currentTrayTheme = 'auto';
-                refreshTrayIconAndTooltip();
-                updateTrayMenu();
-              },
-            },
-            {
-              label: 'Reactor Core Design (Always Active)',
-              type: 'radio',
-              checked: currentTrayTheme === 'ember',
-              click: () => {
-                currentTrayTheme = 'ember';
-                refreshTrayIconAndTooltip();
-                updateTrayMenu();
-              },
-            },
-            {
-              label: 'Kibo Visor Design (Original Titanium/Cyan)',
-              type: 'radio',
-              checked: currentTrayTheme === 'hito',
-              click: () => {
-                currentTrayTheme = 'hito';
-                refreshTrayIconAndTooltip();
-                updateTrayMenu();
-              },
-            },
-          ],
-        },
-        {
-          label: 'View Chassis Bay & Module Unlocks...',
-          click: () => {
-            if (mainWindow) {
-              mainWindow.show();
-              mainWindow.focus();
-              mainWindow.webContents.send('open-settings', 'soul');
-            }
-          },
-        },
-      ],
-    },
-    { type: 'separator' },
-    {
-      label: 'Chassis Bay',
-      click: () => {
-        if (mainWindow) {
+
           mainWindow.show();
+
           mainWindow.focus();
+
           mainWindow.webContents.send('open-settings', 'soul');
+
         }
+
       },
+
     },
+
     {
-      label: 'Shortcuts',
-      submenu: [
-        {
-          label: `Ask Kibo: ${activeShortcuts.ask}`,
-          click: () => {
-            if (mainWindow) {
-              mainWindow.show();
-              mainWindow.focus();
-              mainWindow.webContents.send('open-settings', 'shortcuts');
-            }
-          },
-        },
-        {
-          label: `Circle to Ask: ${activeShortcuts.circle}`,
-          click: () => {
-            if (mainWindow) {
-              mainWindow.show();
-              mainWindow.focus();
-              mainWindow.webContents.send('open-settings', 'shortcuts');
-            }
-          },
-        },
-        {
-          label: `Clean Dictation: ${activeShortcuts.dictate}`,
-          click: () => {
-            if (mainWindow) {
-              mainWindow.show();
-              mainWindow.focus();
-              mainWindow.webContents.send('open-settings', 'shortcuts');
-            }
-          },
-        },
-        { type: 'separator' },
-        {
-          label: 'Change Shortcuts in Settings...',
-          click: () => {
-            if (mainWindow) {
-              mainWindow.show();
-              mainWindow.focus();
-              mainWindow.webContents.send('open-settings', 'shortcuts');
-            }
-          },
-        },
-      ],
-    },
-    {
-      label: 'Settings & API Keys',
+
+      label: 'Settings & API Keys...',
+
       click: () => {
-        if (mainWindow) {
+
+        if (mainWindow && !mainWindow.isDestroyed()) {
+
           mainWindow.show();
+
           mainWindow.focus();
+
           mainWindow.webContents.send('open-settings', 'settings');
+
         }
+
       },
+
     },
+
     {
-      label: 'Connect Gemini API Key...',
+
+      label: 'Show Kibo Notch',
+
       click: () => {
-        if (mainWindow) {
-          mainWindow.show();
-          mainWindow.focus();
-          mainWindow.webContents.send('open-settings', 'connect');
+
+        if (mainWindow && !mainWindow.isDestroyed()) {
+
+          mainWindow.showInactive();
+
+          mainWindow.setAlwaysOnTop(true, 'pop-up-menu');
+
+          mainWindow.webContents.send('expand-island');
+
         }
+
       },
+
     },
+
     { type: 'separator' },
+
     {
+
       label: 'Quit Kibo',
+
       click: () => {
+
         app.quit();
+
       },
+
     },
+
   ]);
 
+
+
   tray.setContextMenu(contextMenu);
+
 }
+
+
 
 function createSystemTray() {
   if (tray) return;
@@ -529,15 +441,25 @@ function createSystemTray() {
   updateTrayMenu();
 
   tray.on('click', () => {
+
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.showInactive();
-      mainWindow.setAlwaysOnTop(true, 'pop-up-menu');
+
+      mainWindow.show();
+
+      mainWindow.focus();
+
+      mainWindow.webContents.send('open-settings', 'soul');
+
     }
-    if (tray) {
-      tray.popUpContextMenu();
-    }
+
   });
-  
+
+  tray.on('right-click', () => {
+
+    if (tray) tray.popUpContextMenu();
+
+  });
+
 }
 
 function createWindow() {

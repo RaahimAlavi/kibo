@@ -137,6 +137,16 @@ const kiboAPI = {
     ipcRenderer.on('trigger-dictation', listener);
     return () => ipcRenderer.removeListener('trigger-dictation', listener);
   },
+  onExpandIsland: (callback) => {
+
+    const listener = () => callback();
+
+    ipcRenderer.on('expand-island', listener);
+
+    return () => ipcRenderer.removeListener('expand-island', listener);
+
+  },
+
   onTriggerAsk: (callback) => {
     const listener = () => callback();
     ipcRenderer.on('trigger-ask', listener);
