@@ -102,6 +102,8 @@ declare global {
       setWallpaper: (imagePath: string) => Promise<{ success: boolean; localPath?: string; error?: string }>;
       getWallpaperDataUrl?: (urlOrPath: string) => Promise<string>;
       pickWallpaperFiles?: () => Promise<{ success: boolean; files?: Array<{ title: string; url: string; filePath: string }> }>;
+      getStartupSetting?: () => Promise<boolean>;
+      setStartupSetting?: (enabled: boolean) => Promise<boolean>;
       updateShortcuts?: (shortcuts: { ask?: string; circle?: string; dictate?: string }) => Promise<{ success: boolean; shortcuts: any }>;
       getShortcuts?: () => Promise<{ ask: string; circle: string; dictate: string }>;
       setLassoActive?: (active: boolean) => Promise<{ success: boolean }>;
@@ -1017,6 +1019,15 @@ export const KiboApp: React.FC = () => {
   const [launchAtStartup, setLaunchAtStartup] = useState<boolean>(() => localStorage.getItem('kibo_startup') !== 'false');
   const [sfxEnabled, setSfxEnabled] = useState<boolean>(() => soundFX.isEnabled());
 
+  useEffect(() => {
+    window.kiboAPI?.getStartupSetting?.().then((enabled: boolean) => {
+      if (typeof enabled === 'boolean') {
+        setLaunchAtStartup(enabled);
+        localStorage.setItem('kibo_startup', String(enabled));
+      }
+    }).catch(() => {});
+  }, []);
+
   // Embers Economy
   const [embers, setEmbers] = useState<number>(() => {
     const saved = localStorage.getItem('kibo_watts');
@@ -1698,11 +1709,17 @@ export const KiboApp: React.FC = () => {
 
   // 5. Global Event Delegation for Hovers, Toggles, and Action Buttons
   useEffect(() => {
+    let lastHoveredElement: Element | null = null;
     const handleMouseOver = (e: MouseEvent) => {
       const target = (e.target as HTMLElement)?.closest(
         'button, .companion-control-tile, .companion-list-row, .companion-wallpaper-card, .companion-day-col, .companion-adaptive-tile, .companion-nav-btn'
       );
-      if (target) soundFX.playHover();
+      if (target && target !== lastHoveredElement) {
+        lastHoveredElement = target;
+        soundFX.playHover();
+      } else if (!target) {
+        lastHoveredElement = null;
+      }
     };
 
     const handleMouseDown = (e: MouseEvent) => {
@@ -2210,6 +2227,7 @@ export const KiboApp: React.FC = () => {
   const [appliedWallpaperIndex, setAppliedWallpaperIndex] = useState<number>(2);
   const [prevAppliedWallpaperIndex, setPrevAppliedWallpaperIndex] = useState<number>(2);
   const [isWallpaperRippling, setIsWallpaperRippling] = useState<boolean>(false);
+  const [ripplingWallpaperUrl, setRipplingWallpaperUrl] = useState<string>('');
   const [isApplyingWallpaper, setIsApplyingWallpaper] = useState<boolean>(false);
   const irisOverlayRef = useRef<HTMLDivElement>(null);
 
@@ -2243,6 +2261,18 @@ export const KiboApp: React.FC = () => {
           setWallpapersList((prev) =>
             prev.map((wp, idx) => (idx === index ? { ...wp, ...extracted } : wp))
           );
+          setAdaptiveWallpaperTheme({
+            id: target.id || 9999,
+            title: target.title || 'Current Desktop Wallpaper',
+            url: target.url,
+            thumb: target.thumb || target.url,
+            accent: extracted.accent,
+            accentSecondary: extracted.accentSecondary,
+            pillBg: extracted.pillBg,
+            rowBg: extracted.rowBg,
+            darkText: '#FFFFFF',
+            darkSubText: '#94A3B8',
+          });
         }
       } catch (_) {}
     },
@@ -2730,37 +2760,27 @@ export const KiboApp: React.FC = () => {
     ? 22
     : 18;
 
-  const hasFloatingHUD = Boolean(
-    onboardingStep !== null ||
-      askNotchPhase !== 'idle' ||
-      contextCard ||
-      userBubbleText ||
-      kiboReply ||
-      dictationState !== 'idle' ||
-      lassoActive
-  );
-
   const activeHitboxWidth =
     lassoActive || onboardingStep !== null
       ? window.innerWidth || 1920
-      : hasFloatingHUD
-      ? Math.max(notchShellWidth + archSize * 2, 740)
+      : dictationState !== 'idle'
+      ? Math.max(notchShellWidth + archSize * 2, 704)
       : notchShellWidth + archSize * 2;
 
   const activeHitboxHeight =
     lassoActive || onboardingStep !== null
       ? window.innerHeight || 1080
-      : askNotchPhase !== 'idle' || dictationState !== 'idle' || userBubbleText || kiboReply
-      ? 720
-    : contextCard
-    ? Math.max(notchShellHeight + 125, 220)
-    : showProactiveBanner
-    ? 110
-    : showMediaNotch
-    ? 128
-    : isExpanded
-    ? notchShellHeight + 4
-    : notchShellHeight;
+      : dictationState !== 'idle'
+      ? 240
+      : contextCard
+      ? Math.max(notchShellHeight + 125, 220)
+      : showProactiveBanner
+      ? 110
+      : showMediaNotch
+      ? 128
+      : isExpanded
+      ? notchShellHeight + 4
+      : notchShellHeight;
 
   useEffect(() => {
     if (!window.kiboAPI?.setWindowBounds) return;
@@ -3775,6 +3795,7 @@ export const KiboApp: React.FC = () => {
         }
       } catch (_) {}
 
+      setRipplingWallpaperUrl(targetWp.url);
       setPrevAppliedWallpaperIndex(appliedWallpaperIndex);
       setAppliedWallpaperIndex(index);
       setIsWallpaperRippling(true);
@@ -3818,6 +3839,7 @@ export const KiboApp: React.FC = () => {
                   ease: 'power1.out',
                   onComplete: () => {
                     setIsWallpaperRippling(false);
+                    setRipplingWallpaperUrl('');
                     setIsApplyingWallpaper(false);
                   },
                 });
@@ -4759,7 +4781,7 @@ export const KiboApp: React.FC = () => {
           style={{
             width: `${fullScreenDims.w}px`,
             height: `${fullScreenDims.h}px`,
-            backgroundImage: `url("${resolveWallpaperDisplayUrl(activeTheme.url)}")`,
+            backgroundImage: `url("${resolveWallpaperDisplayUrl(ripplingWallpaperUrl || activeTheme.url)}")`,
             clipPath: 'circle(22px at 50% 330px)',
             willChange: 'clip-path, opacity',
           }}
@@ -7240,6 +7262,7 @@ export const KiboApp: React.FC = () => {
                             const next = !launchAtStartup;
                             setLaunchAtStartup(next);
                             localStorage.setItem('kibo_startup', String(next));
+                            window.kiboAPI?.setStartupSetting?.(next);
                           }}
                           className="config-pill-btn"
                         >

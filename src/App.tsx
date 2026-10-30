@@ -124,6 +124,19 @@ export function App() {
   const pageRef = useRef<HTMLDivElement>(null);
   const sceneCardRef = useRef<HTMLDivElement>(null);
   const featureBodyRef = useRef<HTMLDivElement>(null);
+  const lenisRef = useRef<Lenis | null>(null);
+
+  const handleScrollToTop = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (lenisRef.current) {
+      lenisRef.current.scrollTo(0, {
+        duration: 1.35,
+        easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   useEffect(() => {
     if (isDesktopRuntime) {
@@ -143,6 +156,7 @@ export function App() {
       easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       smoothWheel: true,
     });
+    lenisRef.current = lenis;
 
     let rafId: number;
     const raf = (time: number) => {
@@ -207,6 +221,7 @@ export function App() {
     return () => {
       cancelAnimationFrame(rafId);
       lenis.destroy();
+      lenisRef.current = null;
       ctx.revert();
       observer.disconnect();
     };
@@ -562,7 +577,7 @@ export function App() {
       {/* Top Navigation */}
       <header className="kibo-web-nav">
         <div className="kibo-web-nav-inner">
-          <a href="#top" className="kibo-web-brand">
+          <a href="#top" onClick={handleScrollToTop} className="kibo-web-brand" title="Scroll to top">
             <SoulCanvas
               soul={SOUL_SKINS[0]}
               width={32}
@@ -577,11 +592,11 @@ export function App() {
           <nav className="kibo-web-links">
             <a href="#how-it-works" className="kibo-web-link">How it works</a>
             <a href="#workspace" className="kibo-web-link">Notch Workspace</a>
-            <a href="#architecture" className="kibo-web-link">Setup</a>
+            <a href="#download" className="kibo-web-link">Download</a>
           </nav>
 
-          <a href="#architecture" className="kibo-web-pill-cta">
-            Get Started
+          <a href="#download" className="kibo-web-pill-cta">
+            Download for Windows
           </a>
         </div>
       </header>
@@ -607,6 +622,15 @@ export function App() {
             need media controls, quick tools, screen vision, clean voice dictation,
             or background agents—and tucking away when you don’t.
           </p>
+
+          <div className="kibo-hero-cta-row kibo-hero-fade" style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '26px 0 42px' }}>
+            <a href="#download" className="kibo-web-pill-cta" style={{ padding: '12px 26px', fontSize: 14.5 }}>
+              Download for Windows
+            </a>
+            <span style={{ fontSize: 13, color: '#68707C', fontWeight: 500 }}>
+              Windows 10 / 11 · Free & Local-First
+            </span>
+          </div>
 
           {/* Auto-Playing Visual Story Stage */}
           <div className="kibo-stage-frame kibo-hero-fade">
@@ -854,10 +878,10 @@ export function App() {
           </div>
         </section>
 
-        {/* Section 3: Local-First Setup */}
-        <section id="architecture" className="kibo-section kibo-scroll-section">
+        {/* Section 3: Local-First Setup & Download */}
+        <section id="download" className="kibo-section kibo-scroll-section">
           <div className="kibo-section-header">
-            <span className="kibo-eyebrow">03 / Local-First Setup</span>
+            <span className="kibo-eyebrow">03 / Download & Setup</span>
             <h2 className="kibo-h2">Runs directly on your machine with your own keys.</h2>
             <p className="kibo-lead">
               Kibo connects straight from your PC to Google Gemini and Tavily using
@@ -871,11 +895,19 @@ export function App() {
               <div>
                 <span className="kibo-eyebrow">Step 01</span>
                 <h3 style={{ fontSize: 19, fontWeight: 700, margin: '6px 0 10px' }}>
-                  Launch the Desktop App
+                  Download & Launch
                 </h3>
-                <p style={{ fontSize: 14.5, lineHeight: 1.6, color: '#5A5E68', margin: 0 }}>
-                  Run <code style={{ fontFamily: "'JetBrains Mono', monospace", background: '#F1F2EE', padding: '2px 6px', borderRadius: 5 }}>npm run app</code> to start Kibo in your Windows top bezel and system tray.
+                <p style={{ fontSize: 14.5, lineHeight: 1.6, color: '#5A5E68', margin: '0 0 16px' }}>
+                  Run <code style={{ fontFamily: "'JetBrains Mono', monospace", background: '#F1F2EE', padding: '2px 6px', borderRadius: 5 }}>npm run app</code> to start, or build your standalone Windows installer with <code style={{ fontFamily: "'JetBrains Mono', monospace", background: '#F1F2EE', padding: '2px 6px', borderRadius: 5 }}>npm run dist</code>.
                 </p>
+                <a
+                  href="/download/Kibo-Setup-1.0.0.exe"
+                  className="kibo-web-pill-cta"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, textDecoration: 'none' }}
+                >
+                  <span>Download Installer (.exe)</span>
+                  <span style={{ opacity: 0.6 }}>↓</span>
+                </a>
               </div>
             </div>
 
@@ -886,7 +918,7 @@ export function App() {
                   Paste Your Gemini Key
                 </h3>
                 <p style={{ fontSize: 14.5, lineHeight: 1.6, color: '#5A5E68', margin: 0 }}>
-                  Open Settings from the Kibo tray icon and add a free Google AI Studio key for voice, vision, and dictation.
+                  Open Settings from the notch or system tray icon and add a free Google AI Studio key for voice, vision, and dictation.
                 </p>
               </div>
             </div>
@@ -895,10 +927,10 @@ export function App() {
               <div>
                 <span className="kibo-eyebrow">Step 03</span>
                 <h3 style={{ fontSize: 19, fontWeight: 700, margin: '6px 0 10px' }}>
-                  Customize Your Loadout
+                  Ready to Companion
                 </h3>
                 <p style={{ fontSize: 14.5, lineHeight: 1.6, color: '#5A5E68', margin: 0 }}>
-                  Earn Sparks passively as you complete daily tasks and focus timers to unlock new cores, voices, and abilities.
+                  Hold <code style={{ fontFamily: "'JetBrains Mono', monospace", background: '#F1F2EE', padding: '2px 6px', borderRadius: 5 }}>Win + Alt</code> to talk, <code style={{ fontFamily: "'JetBrains Mono', monospace", background: '#F1F2EE', padding: '2px 6px', borderRadius: 5 }}>Ctrl + Shift</code> to circle screen regions, or hover the top bezel anytime.
                 </p>
               </div>
             </div>
@@ -908,9 +940,10 @@ export function App() {
 
       <footer
         style={{
-          borderTop: '1px solid rgba(18, 19, 22, 0.07)',
-          padding: '36px 28px',
-          marginTop: 40,
+          borderTop: '1px solid rgba(18, 19, 22, 0.08)',
+          padding: '48px 28px 40px',
+          marginTop: 64,
+          background: 'rgba(255, 255, 255, 0.45)',
         }}
       >
         <div
@@ -920,12 +953,69 @@ export function App() {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            fontSize: 13,
-            color: '#68707C',
+            flexWrap: 'wrap',
+            gap: 20,
           }}
         >
-          <span>Kibo — Desktop Companion for Windows</span>
-          <span>Built with Electron, React & Native Win32 UIAutomation</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '4px 10px',
+                borderRadius: 999,
+                background: '#FFFFFF',
+                border: '1px solid rgba(18, 19, 22, 0.08)',
+                fontSize: 11.5,
+                fontWeight: 600,
+                color: '#121316',
+                fontFamily: 'JetBrains Mono, monospace',
+              }}
+            >
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: '#10B981',
+                  boxShadow: '0 0 6px rgba(16, 185, 129, 0.6)',
+                }}
+              />
+              v1.0.0 · Win32 x64
+            </span>
+            <span style={{ fontSize: 13, color: '#5A5E68', fontWeight: 500 }}>
+              Kibo — Ambient Top Bezel Companion for Windows
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 18, fontSize: 13 }}>
+            <span style={{ color: '#5A5E68' }}>
+              Crafted with obsession by <strong style={{ color: '#121316', fontWeight: 700 }}>Raahim Alavi</strong>
+            </span>
+            <button
+              onClick={handleScrollToTop}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#68707C',
+                fontSize: 12.5,
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '4px 8px',
+                borderRadius: 6,
+                transition: 'color 0.2s ease',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = '#121316')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = '#68707C')}
+              title="Scroll to top"
+            >
+              Back to top ↑
+            </button>
+          </div>
         </div>
       </footer>
     </div>

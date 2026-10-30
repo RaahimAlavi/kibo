@@ -403,13 +403,21 @@ function updateTrayMenu() {
           mainWindow.setAlwaysOnTop(true, 'pop-up-menu');
 
           mainWindow.webContents.send('expand-island');
-
         }
-
       },
-
     },
-
+    {
+      label: 'Run Kibo on Startup',
+      type: 'checkbox',
+      checked: app.getLoginItemSettings().openAtLogin,
+      click: (menuItem) => {
+        app.setLoginItemSettings({
+          openAtLogin: menuItem.checked,
+          path: process.execPath,
+        });
+        updateTrayMenu();
+      },
+    },
     { type: 'separator' },
 
     {
@@ -994,6 +1002,19 @@ ipcMain.handle('get-stored-settings', () => {
 
 ipcMain.handle('save-stored-settings', (_event, patch) => {
   return writeKiboSettings(patch);
+});
+
+ipcMain.handle('get-startup-setting', () => {
+  return app.getLoginItemSettings().openAtLogin;
+});
+
+ipcMain.handle('set-startup-setting', (_event, enabled) => {
+  app.setLoginItemSettings({
+    openAtLogin: Boolean(enabled),
+    path: process.execPath,
+  });
+  updateTrayMenu();
+  return app.getLoginItemSettings().openAtLogin;
 });
 
 function getWindowsWallpaperPath() {

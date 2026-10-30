@@ -2,13 +2,44 @@
   "name": "kibo",
   "private": true,
   "version": "1.0.0",
+  "description": "Kibo — Ambient Top Bezel Cyber Companion for Windows",
+  "author": "Raahim Alavi",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build --base=./",
     "preview": "vite preview",
     "app": "vite build --base=./ && electron electron/main.cjs",
-    "electron:start": "electron electron/main.cjs"
+    "electron:start": "electron electron/main.cjs",
+    "dist": "vite build --base=./ && electron-builder --win",
+    "dist:dir": "vite build --base=./ && electron-builder --dir"
+  },
+  "build": {
+    "appId": "com.raahim.kibo",
+    "productName": "Kibo",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "public/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "public/favicon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Kibo"
+    }
   },
   "dependencies": {
     "@designcodeio/threeui": "^1.2.0",
@@ -23,6 +54,7 @@
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
     "electron": "^44.7.1",
+    "electron-builder": "^26.18.0",
     "typescript": "^5.7.3",
     "vite": "^6.1.0"
   }
