@@ -195,6 +195,8 @@ const kiboAPI = {
     ipcRenderer.on('grant-creator-embers', listener);
     return () => ipcRenderer.removeListener('grant-creator-embers', listener);
   },
+  getStoredSettings: () => ipcRenderer.invoke('get-stored-settings'),
+  saveStoredSettings: (patch) => ipcRenderer.invoke('save-stored-settings', patch),
   // Kibo Watts Economy Aliases
   syncWattsState: (data) => ipcRenderer.invoke('update-embers-state', data),
   setWattsCount: (count) => {

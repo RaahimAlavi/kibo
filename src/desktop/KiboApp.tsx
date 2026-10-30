@@ -121,11 +121,13 @@ declare global {
       syncEmbersState?: (data: { count: number; isWaiting: boolean }) => Promise<{ success: boolean }>;
       onClaimDailyEmber?: (callback: () => void) => () => void;
       onGrantCreatorEmbers?: (callback: (amount: number) => void) => () => void;
+      getStoredSettings?: () => Promise<Record<string, any>>;
+      saveStoredSettings?: (patch: Record<string, any>) => Promise<any>;
     };
   }
 }
 
-type NavTab = 'Controls' | 'Today' | 'Stats' | 'Clipboard' | 'Apps' | 'Agents' | 'Wallpaper' | 'Power';
+type NavTab = 'Controls' | 'Today' | 'Agents' | 'Clipboard' | 'Apps' | 'Wallpaper' | 'Power';
 type CompanionSection = 'Kibo' | 'Shortcuts' | 'Behavior' | 'System' | 'API keys' | 'Your data' | 'Privacy';
 type LoadoutSlotType = 'Soul' | 'Voice' | 'Personality' | 'Abilities';
 type ControlDropdownType = 'wifi' | 'bluetooth' | 'audio' | 'nightlight' | null;
@@ -854,14 +856,13 @@ const NAV_TABS: ReadonlyArray<{
   label: string;
   width: number;
 }> = [
-  { id: 'Controls', label: 'Controls', width: 64 },
-  { id: 'Today', label: 'Today', width: 52 },
-  { id: 'Agents', label: 'Agents', width: 58 },
-  { id: 'Clipboard', label: 'Clipboard', width: 70 },
-  { id: 'Apps', label: 'Apps', width: 48 },
-  { id: 'Stats', label: 'Stats', width: 50 },
-  { id: 'Wallpaper', label: 'Wallpaper', width: 72 },
-  { id: 'Power', label: 'Power', width: 52 },
+  { id: 'Controls', label: 'Controls', width: 66 },
+  { id: 'Today', label: 'Today', width: 54 },
+  { id: 'Agents', label: 'Agents', width: 60 },
+  { id: 'Clipboard', label: 'Clipboard', width: 72 },
+  { id: 'Apps', label: 'Apps', width: 50 },
+  { id: 'Wallpaper', label: 'Wallpaper', width: 74 },
+  { id: 'Power', label: 'Power', width: 56 },
 ];
 
 const APP_WIN_W = 880;
@@ -943,18 +944,44 @@ export const KiboApp: React.FC = () => {
   const [showConnectModal, setShowConnectModal] = useState<boolean>(false);
   const [notchApiAlert, setNotchApiAlert] = useState<{ type: 'missing_key' | 'rate_limit'; text: string } | null>(null);
 
+  // Synchronize keys and settings with persistent disk storage in userData
+  useEffect(() => {
+    const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
+    if (!api?.getStoredSettings) return;
+    api.getStoredSettings().then((stored: Record<string, any>) => {
+      if (!stored || typeof stored !== 'object') return;
+      if (stored.kibo_gemini_key && typeof stored.kibo_gemini_key === 'string') {
+        const val = stored.kibo_gemini_key.trim();
+        setApiKey(val);
+        setGeminiDraftKey(val);
+        localStorage.setItem('kibo_gemini_key', val);
+      }
+      if (stored.kibo_tavily_key && typeof stored.kibo_tavily_key === 'string') {
+        const val = stored.kibo_tavily_key.trim();
+        setTavilyKey(val);
+        setTavilyDraftKey(val);
+        localStorage.setItem('kibo_tavily_key', val);
+      }
+    }).catch(() => {});
+  }, []);
+
   const [onboardingStep, setOnboardingStep] = useState<number | null>(null);
   const [lastHotkeyAction, setLastHotkeyAction] = useState<string | null>(null);
 
   const completeOnboarding = useCallback(() => {
+    const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
     if (geminiDraftKey.trim()) {
-      setApiKey(geminiDraftKey.trim());
-      localStorage.setItem('kibo_gemini_key', geminiDraftKey.trim());
+      const val = geminiDraftKey.trim();
+      setApiKey(val);
+      localStorage.setItem('kibo_gemini_key', val);
+      api?.saveStoredSettings?.({ kibo_gemini_key: val });
       setNotchApiAlert(null);
     }
     if (tavilyDraftKey.trim()) {
-      setTavilyKey(tavilyDraftKey.trim());
-      localStorage.setItem('kibo_tavily_key', tavilyDraftKey.trim());
+      const val = tavilyDraftKey.trim();
+      setTavilyKey(val);
+      localStorage.setItem('kibo_tavily_key', val);
+      api?.saveStoredSettings?.({ kibo_tavily_key: val });
     }
     localStorage.setItem('kibo_onboarded_v1', 'true');
     setOnboardingStep(null);
@@ -2516,7 +2543,6 @@ export const KiboApp: React.FC = () => {
     const dims: Record<NavTab, { w: number; h: number }> = {
       Controls:  { w: 708, h: 396 },
       Today:     { w: 860, h: 440 },
-      Stats:     { w: 860, h: 368 },
       Clipboard: { w: 860, h: 444 },
       Apps:      { w: 708, h: 560 },
       Agents:    { w: 860, h: 440 },
@@ -3856,10 +3882,15 @@ export const KiboApp: React.FC = () => {
   const handleSaveGeminiKey = () => {
     const trimmed = geminiDraftKey.trim();
     setApiKey(trimmed);
+    const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
     if (trimmed) {
       localStorage.setItem('kibo_gemini_key', trimmed);
+      api?.saveStoredSettings?.({ kibo_gemini_key: trimmed });
       setNotchApiAlert(null);
       setSoulMode('LISTENING');
+    } else {
+      localStorage.removeItem('kibo_gemini_key');
+      api?.saveStoredSettings?.({ kibo_gemini_key: '' });
     }
     setShowConnectModal(false);
   };
@@ -3868,6 +3899,8 @@ export const KiboApp: React.FC = () => {
     setApiKey('');
     setGeminiDraftKey('');
     localStorage.removeItem('kibo_gemini_key');
+    const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
+    api?.saveStoredSettings?.({ kibo_gemini_key: '' });
   };
 
   const formatTime = (secs: number) => {
@@ -5765,141 +5798,6 @@ export const KiboApp: React.FC = () => {
                   </div>
                 )}
 
-                {activeTab === 'Stats' && (
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '1.85fr 1fr',
-                      gap: '10px',
-                      width: '100%',
-                      flex: 1,
-                      paddingBottom: '6px',
-                    }}
-                  >
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', flex: 1 }}>
-                        {renderCircleGauge(
-                          systemStats.cpu.percent,
-                          activeTheme.accent,
-                          'CPU',
-                          systemStats.cpu.model,
-                          [systemStats.cpu.speed, `${systemStats.cpu.processes} proc`]
-                        )}
-                        {renderCircleGauge(
-                          systemStats.gpu.percent,
-                          '#C084FC',
-                          'GPU',
-                          systemStats.gpu.name || systemStats.gpu.model,
-                          [`${systemStats.gpu.vramUsed} / ${systemStats.gpu.vramTotal} GB`]
-                        )}
-                        {renderCircleGauge(
-                          systemStats.ram.percent,
-                          '#8ED92F',
-                          'RAM',
-                          `${systemStats.ram.usedGb} / ${systemStats.ram.totalGb} GB`,
-                          [`${systemStats.ram.freeGb} GB free`]
-                        )}
-                      </div>
-
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
-                        <div className="companion-mini-stat-box">
-                          <div className="companion-mini-stat-label">DISK C:</div>
-                          <div className="companion-mini-stat-val">
-                            {systemStats.disk.usedGb} / {systemStats.disk.totalGb} GB
-                          </div>
-                        </div>
-                        <div className="companion-mini-stat-box">
-                          <div className="companion-mini-stat-label">NETWORK</div>
-                          <div className="companion-mini-stat-val">
-                            ↓ {systemStats.network.down}  ↑ {systemStats.network.up}
-                          </div>
-                        </div>
-                        <div className="companion-mini-stat-box">
-                          <div className="companion-mini-stat-label">UP FOR</div>
-                          <div className="companion-mini-stat-val">{systemStats.uptime}</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      <div className="companion-glass-card" style={{ padding: '12px 14px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                          <span style={{ fontSize: '11px', fontWeight: 600, color: '#8A8A93' }}>
-                            Top apps · {appsSortBy}
-                          </span>
-                          <button
-                            onClick={() => setAppsSortBy((prev) => (prev === 'RAM' ? 'CPU' : 'RAM'))}
-                            className="companion-sort-link"
-                          >
-                            {appsSortBy === 'RAM' ? 'CPU ⇄' : 'RAM ⇄'}
-                          </button>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          {(systemStats.topApps && systemStats.topApps.length > 0
-                            ? systemStats.topApps
-                            : [
-                                { name: 'Scanning processes...', icon: '•', usage: '— MB', cpuUsage: '—', width: '30%' },
-                              ]
-                          ).map((app: any, i: number) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-                              <span className="companion-app-badge">{app.icon}</span>
-                              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px' }}>
-                                  <span className="companion-truncate" style={{ color: '#ffffff', fontWeight: 700 }}>
-                                    {app.name}
-                                  </span>
-                                  <span className="companion-mono-tiny" style={{ color: '#8A8A93', flexShrink: 0 }}>
-                                    {appsSortBy === 'RAM' ? app.usage : app.cpuUsage}
-                                  </span>
-                                </div>
-                                <div style={{ width: '100%', height: '3px', background: 'rgba(255, 255, 255, 0.06)', borderRadius: '2px', overflow: 'hidden' }}>
-                                  <div
-                                    style={{
-                                      width: app.width,
-                                      height: '100%',
-                                      background: '#8ED92F',
-                                      borderRadius: '2px',
-                                    }}
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="companion-glass-card" style={{ padding: '12px 14px', justifyContent: 'space-between', flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '11px', fontWeight: 600, color: '#8A8A93' }}>Internet speed</span>
-                          <span className="companion-mono-tiny">{speedLastTested}</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '18px', margin: '4px 0' }}>
-                          <div>
-                            <span style={{ fontSize: '22px', fontWeight: 800, color: '#ffffff' }}>
-                              {speedDownload !== null ? speedDownload : '—'}
-                            </span>{' '}
-                            <span style={{ fontSize: '10px', color: '#8A8A93' }}>Mbps ↓</span>
-                          </div>
-                          <div>
-                            <span style={{ fontSize: '22px', fontWeight: 800, color: '#ffffff' }}>
-                              {speedUpload !== null ? speedUpload : '—'}
-                            </span>{' '}
-                            <span style={{ fontSize: '10px', color: '#8A8A93' }}>Mbps ↑</span>
-                          </div>
-                        </div>
-                        <button
-                          onClick={handleRunSpeedTest}
-                          disabled={isSpeedTesting}
-                          className="companion-adaptive-cta-btn"
-                        >
-                          <span>▶</span>
-                          <span>{isSpeedTesting ? 'Testing connection...' : 'Run speed test'}</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {activeTab === 'Clipboard' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1, minHeight: 0 }}>
                     <div className="clipboard-unified-bar">
@@ -6938,12 +6836,16 @@ export const KiboApp: React.FC = () => {
                           />
                           <button
                             onClick={() => {
+                              const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
                               if (tavilyDraftKey.trim()) {
-                                setTavilyKey(tavilyDraftKey.trim());
-                                localStorage.setItem('kibo_tavily_key', tavilyDraftKey.trim());
+                                const val = tavilyDraftKey.trim();
+                                setTavilyKey(val);
+                                localStorage.setItem('kibo_tavily_key', val);
+                                api?.saveStoredSettings?.({ kibo_tavily_key: val });
                               } else {
                                 setTavilyKey('');
                                 localStorage.removeItem('kibo_tavily_key');
+                                api?.saveStoredSettings?.({ kibo_tavily_key: '' });
                               }
                             }}
                             className="config-pill-btn"

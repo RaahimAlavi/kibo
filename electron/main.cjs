@@ -598,6 +598,8 @@ function createWindow() {
     }
   });
 
+  const KIBO_LOCAL_PORT = 51742;
+
   localServer.on('error', (err) => {
     console.error('[Kibo] Local HTTP server error, falling back to direct file load:', err);
     const prodPath = path.join(__dirname, '../dist/index.html');
@@ -606,11 +608,9 @@ function createWindow() {
     }
   });
 
-  localServer.listen(0, '127.0.0.1', () => {
-    const addr = localServer.address();
-    const port = typeof addr === 'object' && addr ? addr.port : 5173;
+  localServer.listen(KIBO_LOCAL_PORT, '127.0.0.1', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.loadURL(`http://127.0.0.1:${port}/?mode=desktop`);
+      mainWindow.loadURL(`http://127.0.0.1:${KIBO_LOCAL_PORT}/?mode=desktop`);
     }
   });
 
@@ -929,6 +929,40 @@ ipcMain.on('set-embers-count', (_event, count) => {
     refreshTrayIconAndTooltip();
     updateTrayMenu();
   }
+});
+
+const kiboSettingsFile = path.join(app.getPath('userData'), 'kibo_settings.json');
+
+function readKiboSettings() {
+  try {
+    if (fs.existsSync(kiboSettingsFile)) {
+      return JSON.parse(fs.readFileSync(kiboSettingsFile, 'utf8'));
+    }
+  } catch (err) {
+    console.error('[Kibo] Failed to read stored settings:', err);
+  }
+  return {};
+}
+
+function writeKiboSettings(patch) {
+  try {
+    const current = readKiboSettings();
+    const updated = { ...current, ...(patch || {}) };
+    fs.mkdirSync(path.dirname(kiboSettingsFile), { recursive: true });
+    fs.writeFileSync(kiboSettingsFile, JSON.stringify(updated, null, 2), 'utf8');
+    return updated;
+  } catch (err) {
+    console.error('[Kibo] Failed to write stored settings:', err);
+    return null;
+  }
+}
+
+ipcMain.handle('get-stored-settings', () => {
+  return readKiboSettings();
+});
+
+ipcMain.handle('save-stored-settings', (_event, patch) => {
+  return writeKiboSettings(patch);
 });
 
 ipcMain.handle('update-embers-state', (_event, payload) => {

@@ -4115,3 +4115,28 @@ button:focus-visible,
   pointer-events: none;
   user-select: none;
 }
+
+/* Ensure all interactive controls, buttons, inputs and labels strictly inherit Figtree */
+button,
+input,
+select,
+textarea,
+kbd,
+.companion-power-card,
+.companion-power-label,
+.companion-nav-btn,
+.companion-adaptive-tile,
+.companion-tile-title,
+.companion-tile-sub,
+.config-pill-btn,
+.companion-header-circle {
+  font-family: 'Figtree', -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif !important;
+}
+
+.companion-power-label {
+  font-family: 'Figtree', -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+}
+
