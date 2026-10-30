@@ -63,6 +63,8 @@ app.commandLine.appendSwitch('use-fake-ui-for-media-stream');
 app.commandLine.appendSwitch('log-level', '3');
 app.commandLine.appendSwitch('disable-crash-reporter');
 
+const KIBO_LOCAL_PORT = 51742;
+
 let mainWindow = null;
 let tray = null;
 let hitTestInterval = null;
@@ -496,7 +498,20 @@ function createWindow() {
     },
   });
 
-  mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+  mainWindow.webContents.on('console-message', (event, ...args) => {
+    let level = 0, message = '', line = 0, sourceId = '';
+    if (event && typeof event === 'object' && ('message' in event || 'level' in event)) {
+      level = event.level || 0;
+      message = event.message || '';
+      line = event.lineNumber || event.line || 0;
+      sourceId = event.sourceId || '';
+    } else {
+      level = args[0] || 0;
+      message = args[1] || '';
+      line = args[2] || 0;
+      sourceId = args[3] || '';
+    }
+    if (String(message).includes('Content-Security-Policy')) return;
     if (level >= 2 || String(message).includes('Error') || String(message).includes('Uncaught')) {
       console.log('[Renderer Log]', message, sourceId ? '(' + sourceId + ':' + line + ')' : '');
     }
@@ -576,7 +591,25 @@ function createWindow() {
 
   const localServer = http.createServer((req, res) => {
     try {
-      const parsedUrl = new URL(req.url || '/', 'http://127.0.0.1');
+      const parsedUrl = new URL(req.url || '/', `http://127.0.0.1:${KIBO_LOCAL_PORT}`);
+
+      // Safely stream local Windows wallpaper and user image files over HTTP
+      if (parsedUrl.pathname === '/api/wallpaper') {
+        const rawTarget = parsedUrl.searchParams.get('path');
+        if (rawTarget && fs.existsSync(rawTarget)) {
+          const ext = path.extname(rawTarget).toLowerCase();
+          res.writeHead(200, {
+            'Content-Type': mimeTypes[ext] || 'image/jpeg',
+            'Access-Control-Allow-Origin': '*',
+            'Cache-Control': 'public, max-age=3600',
+          });
+          return fs.createReadStream(rawTarget).pipe(res);
+        } else {
+          res.writeHead(404);
+          return res.end('Not found');
+        }
+      }
+
       let safePath = decodeURIComponent(parsedUrl.pathname);
       if (safePath === '/' || safePath === '/index.html') safePath = '/index.html';
       const filePath = path.join(distRoot, safePath);
@@ -597,8 +630,6 @@ function createWindow() {
       res.end('Internal error');
     }
   });
-
-  const KIBO_LOCAL_PORT = 51742;
 
   localServer.on('error', (err) => {
     console.error('[Kibo] Local HTTP server error, falling back to direct file load:', err);
@@ -993,7 +1024,7 @@ function extractPaletteFromWallpaper() {
     if (img.isEmpty()) return null;
 
     const small = img.resize({ width: 32, height: 32, quality: 'good' });
-    const buffer = small.getBitmap(); // Windows BGRA buffer
+    const buffer = small.toBitmap(); // Windows BGRA buffer
 
     let bestScore = -1;
     let bestR = 56, bestG = 189, bestB = 248; // fallback sky blue
@@ -1025,6 +1056,7 @@ function extractPaletteFromWallpaper() {
 
     return {
       wallpaperPath: wpPath,
+      wallpaperUrl: `http://127.0.0.1:${KIBO_LOCAL_PORT}/api/wallpaper?path=${encodeURIComponent(wpPath)}`,
       accent,
       accentSecondary,
       pillBg,

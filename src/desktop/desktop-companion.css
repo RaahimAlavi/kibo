@@ -441,8 +441,8 @@
    ========================================================================== */
 
 .companion-adaptive-tile {
-  background: var(--card-dark);
-  border: none;
+  background: #141519;
+  border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 16px;
   height: 58px;
   padding: 0 14px;
@@ -452,12 +452,21 @@
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  transition: background 0.25s ease, transform 0.15s ease;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   outline: none;
 }
 
+.companion-adaptive-tile:hover {
+  background: #191A20;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
 .companion-adaptive-tile:active { transform: scale(0.985); }
-.companion-adaptive-tile.is-on { background: var(--adaptive-accent); }
+.companion-adaptive-tile.is-on {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(var(--adaptive-accent-rgb, 56, 189, 248), 0.42);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4), inset 0 0 18px rgba(var(--adaptive-accent-rgb, 56, 189, 248), 0.08);
+}
 
 .companion-adaptive-tile .tile-left {
   display: flex;
@@ -471,18 +480,19 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.07);
   color: #8E8E96;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: background 0.25s ease, color 0.25s ease;
+  transition: all 0.22s ease;
 }
 
 .companion-adaptive-tile.is-on .tile-icon-circle {
-  background: rgba(20, 12, 8, 0.14);
-  color: var(--adaptive-dark-text);
+  background: var(--adaptive-accent, #38BDF8);
+  color: #0C0D12;
+  box-shadow: 0 0 14px rgba(var(--adaptive-accent-rgb, 56, 189, 248), 0.5);
 }
 
 .companion-adaptive-tile .tile-copy { text-align: left; min-width: 0; }
@@ -495,7 +505,7 @@
   text-align: left;
 }
 
-.companion-adaptive-tile.is-on .tile-title { color: var(--adaptive-dark-text); }
+.companion-adaptive-tile.is-on .tile-title { color: #ffffff; }
 
 .companion-adaptive-tile .tile-sub {
   font-size: 10.5px;
@@ -505,7 +515,7 @@
   text-align: left;
 }
 
-.companion-adaptive-tile.is-on .tile-sub { color: var(--adaptive-dark-sub); }
+.companion-adaptive-tile.is-on .tile-sub { color: #94A3B8; }
 
 .companion-adaptive-tile .tile-chevron-zone {
   height: 28px;
@@ -517,9 +527,9 @@
   justify-content: center;
 }
 
-.companion-adaptive-tile.is-on .tile-chevron-zone { border-left-color: rgba(20, 12, 8, 0.14); }
+.companion-adaptive-tile.is-on .tile-chevron-zone { border-left-color: rgba(255, 255, 255, 0.1); }
 .companion-adaptive-tile .tile-chevron { font-size: 12px; color: #71717A; transform: translateY(-2px); }
-.companion-adaptive-tile.is-on .tile-chevron { color: var(--adaptive-dark-text); }
+.companion-adaptive-tile.is-on .tile-chevron { color: #94A3B8; }
 
 .audio-output-dropdown {
   position: absolute;
@@ -557,30 +567,36 @@
 
 .companion-volume-pill-track {
   width: 100%;
-  height: 40px;
-  background: var(--card-dark);
+  height: 42px;
+  background: #141519;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 999px;
   position: relative;
   overflow: hidden;
   cursor: ew-resize;
   display: flex;
   align-items: center;
+  transition: border-color 0.2s ease;
+}
+
+.companion-volume-pill-track:hover {
+  border-color: rgba(255, 255, 255, 0.16);
 }
 
 .companion-volume-pill-fill {
   height: 100%;
-  background: var(--adaptive-accent);
+  background: linear-gradient(90deg, rgba(var(--adaptive-accent-rgb, 56, 189, 248), 0.72) 0%, var(--adaptive-accent, #38BDF8) 100%);
   border-radius: 999px;
   display: flex;
   align-items: center;
   padding-left: 14px;
-  transition: background 0.3s ease;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 0 16px rgba(var(--adaptive-accent-rgb, 56, 189, 248), 0.25);
 }
 
 .volume-inner-speaker-btn {
   background: transparent;
   border: none;
-  color: var(--adaptive-dark-text);
+  color: #0C0D12;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -591,10 +607,12 @@
 .volume-right-pct {
   position: absolute;
   right: 16px;
-  font-size: 12px;
-  font-weight: 800;
+  font-size: 11.5px;
+  font-weight: 700;
   color: #ffffff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
   pointer-events: none;
+  z-index: 2;
 }
 
 .companion-media-card-v2 {

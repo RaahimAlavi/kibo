@@ -972,11 +972,12 @@ export const KiboApp: React.FC = () => {
     if (api?.getCurrentWallpaperTheme) {
       api.getCurrentWallpaperTheme().then((theme: any) => {
         if (theme && theme.accent) {
+          const safeUrl = theme.wallpaperUrl || (theme.wallpaperPath ? `http://127.0.0.1:51742/api/wallpaper?path=${encodeURIComponent(theme.wallpaperPath)}` : '');
           setAdaptiveWallpaperTheme({
             id: 9999,
             title: 'Current Desktop Wallpaper',
-            url: theme.wallpaperPath ? `file://${theme.wallpaperPath.replace(/\\/g, '/')}` : '',
-            thumb: theme.wallpaperPath ? `file://${theme.wallpaperPath.replace(/\\/g, '/')}` : '',
+            url: safeUrl,
+            thumb: safeUrl,
             accent: theme.accent,
             accentSecondary: theme.accentSecondary,
             pillBg: theme.pillBg,
@@ -1187,27 +1188,34 @@ export const KiboApp: React.FC = () => {
       }
 
       speakAsKibo(text, () => {
-        // Lingering window: keep the answer visible for 3.5s after Kibo finishes speaking
+        // Lingering window: keep the answer visible for 4.0s after Kibo finishes speaking
         if (replyDismissTimerRef.current) clearTimeout(replyDismissTimerRef.current);
         replyDismissTimerRef.current = setTimeout(() => {
           setSoulMode('LISTENING');
           setKiboReply(null);
           setUserBubbleText(null);
-        }, 3500);
+        }, 4000);
       });
 
-      // Fallback timer in case speech synthesis is blocked or unavailable
-      const fallbackMs = Math.max(5000, text.length * 65);
+      // Long safety fallback (minimum 25s) so the bubble never vanishes while Kibo is talking
+      const safetyFallbackMs = Math.max(25000, text.length * 150);
       replyDismissTimerRef.current = setTimeout(() => {
-        setSoulMode('LISTENING');
-        setKiboReply(null);
-        setUserBubbleText(null);
-      }, fallbackMs);
+        if (!voiceEngine.isSpeaking()) {
+          setSoulMode('LISTENING');
+          setKiboReply(null);
+          setUserBubbleText(null);
+        }
+      }, safetyFallbackMs);
     },
     [speakAsKibo]
   );
 
   const handleKiboPoke = useCallback(() => {
+    if (leaveCollapseTimerRef.current) {
+      clearTimeout(leaveCollapseTimerRef.current);
+      leaveCollapseTimerRef.current = null;
+    }
+
     if (isTucked) {
       setIsTucked(false);
       return;
@@ -1608,6 +1616,7 @@ export const KiboApp: React.FC = () => {
     if (isExpanded || showMediaNotch) {
       leaveCollapseTimerRef.current = setTimeout(() => {
         if (isDraggingVolumeRef.current || isDraggingMediaScrubRef.current) return;
+        if (soulAnnoyanceRef.current > 0.05 || isBreathingReliefRef.current) return;
         setActiveControlDropdown(null);
         setShowMediaNotch(false);
         setIsExpanded(false);
@@ -2203,6 +2212,15 @@ export const KiboApp: React.FC = () => {
   const [isWallpaperRippling, setIsWallpaperRippling] = useState<boolean>(false);
   const [isApplyingWallpaper, setIsApplyingWallpaper] = useState<boolean>(false);
   const irisOverlayRef = useRef<HTMLDivElement>(null);
+
+  const resolveWallpaperDisplayUrl = useCallback((rawUrl: string) => {
+    if (!rawUrl) return '';
+    if (rawUrl.startsWith('data:') || rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+      return rawUrl;
+    }
+    const clean = rawUrl.replace(/^file:\/\/\/?/i, '');
+    return `http://127.0.0.1:51742/api/wallpaper?path=${encodeURIComponent(clean)}`;
+  }, []);
 
   const extractAndApplyPaletteForIndex = useCallback(
     async (index: number, listToUse: WallpaperTheme[]) => {
@@ -4593,8 +4611,21 @@ export const KiboApp: React.FC = () => {
     return lassoPoints.map((pt, idx) => `${idx === 0 ? 'M' : 'L'} ${pt.x} ${pt.y}`).join(' ');
   }, [lassoPoints]);
 
+  const accentRgb = useMemo(() => {
+    try {
+      const clean = (activeTheme.accent || '#38BDF8').replace('#', '');
+      const hex = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean;
+      const num = parseInt(hex, 16);
+      if (isNaN(num)) return '56, 189, 248';
+      return `${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}`;
+    } catch (_) {
+      return '56, 189, 248';
+    }
+  }, [activeTheme.accent]);
+
   const adaptiveVars = {
     '--adaptive-accent': activeTheme.accent,
+    '--adaptive-accent-rgb': accentRgb,
     '--adaptive-secondary': activeTheme.accentSecondary,
     '--adaptive-pill-bg': activeTheme.pillBg,
     '--adaptive-row-bg': activeTheme.rowBg,
@@ -4707,7 +4738,7 @@ export const KiboApp: React.FC = () => {
         ...adaptiveVars,
         background: isElectron
           ? 'transparent'
-          : `url("${isWallpaperRippling ? prevTheme.url : activeTheme.url}") center/cover no-repeat`,
+          : `url("${resolveWallpaperDisplayUrl(isWallpaperRippling ? prevTheme.url : activeTheme.url)}") center/cover no-repeat`,
         filter: nightLight && !isElectron ? `sepia(${Math.round(nightLightStrength * 0.45)}%) saturate(${1 + nightLightStrength * 0.0015})` : undefined,
         transition: 'filter 0.3s ease',
       }}
@@ -4728,7 +4759,7 @@ export const KiboApp: React.FC = () => {
           style={{
             width: `${fullScreenDims.w}px`,
             height: `${fullScreenDims.h}px`,
-            backgroundImage: `url("${activeTheme.url}")`,
+            backgroundImage: `url("${resolveWallpaperDisplayUrl(activeTheme.url)}")`,
             clipPath: 'circle(22px at 50% 330px)',
             willChange: 'clip-path, opacity',
           }}
@@ -4752,6 +4783,23 @@ export const KiboApp: React.FC = () => {
         onMouseLeave={handleIslandMouseLeave}
         onWheel={handleNotchWheel}
       >
+        {isTucked && (
+          <div className="tucked-hover-dock">
+            <div className={`tucked-hold-pill ${isHoverHoldActive ? 'charging' : ''}`}>
+              <div
+                className="tucked-hold-fill"
+                style={{
+                  width: `${Math.round(hoverHoldProgress * 100)}%`,
+                  background: 'var(--adaptive-accent, #38BDF8)',
+                  height: '100%',
+                  borderRadius: '999px',
+                  boxShadow: '0 0 10px var(--adaptive-accent, #38BDF8)',
+                  transition: isHoverHoldActive ? 'none' : 'width 0.15s ease-out',
+                }}
+              />
+            </div>
+          </div>
+        )}
         <svg
           className="kibo-svg-arch left"
           viewBox="0 0 24 24"
@@ -4929,16 +4977,6 @@ export const KiboApp: React.FC = () => {
                 openCompanionApp('soul', false);
               }}
             >
-              {isTucked && (
-                <div className="tucked-hover-dock">
-                  <div className={`tucked-hold-pill ${isHoverHoldActive ? 'charging' : ''}`}>
-                    <div
-                      className="tucked-hold-fill"
-                      style={{ width: `${Math.round(hoverHoldProgress * 100)}%` }}
-                    />
-                  </div>
-                </div>
-              )}
               <div
                 className="mini-media-album-thumb"
                 style={
@@ -6444,7 +6482,7 @@ export const KiboApp: React.FC = () => {
                           >
                             <div
                               className="wallpaper-slanted-image"
-                              style={{ backgroundImage: `url("${wp.thumb}")` }}
+                              style={{ backgroundImage: `url("${resolveWallpaperDisplayUrl(wp.thumb)}")` }}
                             />
                           </div>
                         ))}

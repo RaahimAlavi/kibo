@@ -12,16 +12,16 @@ export interface SpeakOptions {
 }
 
 const LIVE_AUDIO_MODELS = [
-  'models/gemini-2.5-flash-native-audio-dialog',
-  'models/gemini-3.8-live',
-  'models/gemini-3-flash-live',
+  'models/gemini-2.0-flash-exp',
+  'models/gemini-2.5-flash',
+  'models/gemini-2.0-flash',
 ];
 
 const REST_TTS_MODELS = [
+  'gemini-2.5-flash-preview-tts',
   'gemini-3.8-flash-tts',
   'gemini-3.8-flash-lite-tts',
-  'gemini-3.1-flash-tts',
-  'gemini-2.5-flash-tts',
+  'gemini-3.1-flash-tts-preview',
 ];
 
 class KiboVoiceEngine {
@@ -80,7 +80,7 @@ class KiboVoiceEngine {
   }
 
   // Decode base64 16-bit 24kHz little-endian PCM chunk and schedule gapless playback
-  private enqueuePcm24kChunk(base64Pcm: string) {
+  private enqueuePcm24kChunk(base64Pcm: string, onEnd?: () => void) {
     const ctx = this.getAudioContext();
     const binaryStr = atob(base64Pcm);
     const len = binaryStr.length;
@@ -117,7 +117,9 @@ class KiboVoiceEngine {
     source.onended = () => {
       this.activeSources = this.activeSources.filter((s) => s !== source);
       if (this.activeSources.length === 0) {
+        this.nextStartTime = 0;
         this.setSpeaking(false);
+        onEnd?.();
       }
     };
   }
@@ -265,10 +267,23 @@ class KiboVoiceEngine {
 
   // Tier 2: Fallback to REST TTS Models
   private async speakViaRestTTS(text: string, options: SpeakOptions = {}): Promise<boolean> {
-    const apiKey = options.apiKey || (localStorage.getItem('kibo_gemini_key') || localStorage.getItem('kibo_gemini_key')) || '';
+    const apiKey =
+      options.apiKey ||
+      (typeof window !== 'undefined'
+        ? localStorage.getItem('kibo_gemini_key') || ''
+        : '');
     if (!apiKey) return false;
 
     const voice: KiboVoiceName = options.voice || 'Charon';
+
+    const cleanText = text
+      .replace(/[*_#`~[\]]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!cleanText) {
+      options.onEnd?.();
+      return true;
+    }
 
     for (const model of REST_TTS_MODELS) {
       try {
@@ -278,7 +293,7 @@ class KiboVoiceEngine {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              contents: [{ parts: [{ text }] }],
+              contents: [{ parts: [{ text: cleanText }] }],
               generationConfig: {
                 responseModalities: ['AUDIO'],
                 speechConfig: {
@@ -298,7 +313,7 @@ class KiboVoiceEngine {
         const inlineData = data?.candidates?.[0]?.content?.parts?.[0]?.inlineData;
         if (inlineData?.data) {
           options.onStart?.();
-          this.enqueuePcm24kChunk(inlineData.data);
+          this.enqueuePcm24kChunk(inlineData.data, options.onEnd);
           return true;
         }
       } catch (_) {}
@@ -401,7 +416,18 @@ class KiboVoiceEngine {
     }
     this.stop();
 
-    // Instant, zero-lag Native OS TTS
+    const apiKey =
+      options.apiKey ||
+      (typeof window !== 'undefined'
+        ? localStorage.getItem('kibo_gemini_key') || ''
+        : '');
+
+    if (apiKey) {
+      const ok = await this.speakViaRestTTS(text, { ...options, apiKey });
+      if (ok) return;
+    }
+
+    // Instant Native OS TTS as offline fallback
     this.speakViaNativeOS(text, options);
   }
 
