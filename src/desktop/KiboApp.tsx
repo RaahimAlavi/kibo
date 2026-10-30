@@ -850,31 +850,18 @@ const LOADOUT_CARDS: LoadoutCardItem[] = [
 ];
 
 const NAV_TABS: ReadonlyArray<{
-
   id: NavTab;
-
   label: string;
-
   width: number;
-
 }> = [
-
-  { id: 'Controls', label: 'Controls', width: 68 },
-
-  { id: 'Today', label: 'Today', width: 56 },
-
-  { id: 'Agents', label: 'Agents', width: 62 },
-
-  { id: 'Clipboard', label: 'Clipboard', width: 74 },
-
-  { id: 'Apps', label: 'Apps', width: 52 },
-
-  { id: 'Stats', label: 'Stats', width: 54 },
-
-  { id: 'Wallpaper', label: 'Wallpaper', width: 76 },
-
-  { id: 'Power', label: 'Power', width: 56 },
-
+  { id: 'Controls', label: 'Controls', width: 64 },
+  { id: 'Today', label: 'Today', width: 52 },
+  { id: 'Agents', label: 'Agents', width: 58 },
+  { id: 'Clipboard', label: 'Clipboard', width: 70 },
+  { id: 'Apps', label: 'Apps', width: 48 },
+  { id: 'Stats', label: 'Stats', width: 50 },
+  { id: 'Wallpaper', label: 'Wallpaper', width: 72 },
+  { id: 'Power', label: 'Power', width: 52 },
 ];
 
 const APP_WIN_W = 880;
@@ -2524,17 +2511,17 @@ export const KiboApp: React.FC = () => {
 
   const currentTabDimensions = useMemo(() => {
     if (activeTab === 'Controls') {
-      return { w: 672, h: hasMediaSession ? 396 : 268 };
+      return { w: 708, h: hasMediaSession ? 396 : 268 };
     }
     const dims: Record<NavTab, { w: number; h: number }> = {
-      Controls:  { w: 672, h: 396 },
+      Controls:  { w: 708, h: 396 },
       Today:     { w: 860, h: 440 },
       Stats:     { w: 860, h: 368 },
       Clipboard: { w: 860, h: 444 },
-      Apps:      { w: 690, h: 560 },
+      Apps:      { w: 708, h: 560 },
       Agents:    { w: 860, h: 440 },
       Wallpaper: { w: 960, h: 316 },
-      Power:     { w: 672, h: 168 },
+      Power:     { w: 708, h: 168 },
     };
     return dims[activeTab];
   }, [activeTab, hasMediaSession]);
@@ -2733,47 +2720,7 @@ export const KiboApp: React.FC = () => {
             lower
           ));
 
-      // Creator Embers command for instant testing!
-      if (
-        /\b(give\s+me\s+embers|creator\s+embers|test\s+embers|add\s+embers|grant\s+embers|infinite\s+embers|lots\s+of\s+embers|more\s+embers)\b/i.test(
-          lower
-        )
-      ) {
-        handleGrantCreatorEmbers(10000);
-        setAskNotchPhase('idle');
-        setSoulMode('TALKING');
-        setTimeout(() => {
-          setSoulMode('LISTENING');
-          setKiboReply(null);
-          setUserBubbleText(null);
-        }, 3200);
-        return;
-      }
-
-      // Claim Daily Ember voice command
-      if (
-        /\b(claim\s+ember|claim\s+daily|collect\s+ember|claim\s+my\s+ember)\b/i.test(
-          lower
-        )
-      ) {
-        if (isDailyEmberWaiting) {
-          handleClaimWaitingEmber();
-        } else {
-          setKiboReply({
-            bold: '🔥 Daily Ember Already Stoked',
-            rest: `${embers.toLocaleString()} embers in your forge · Complete tasks for more`,
-          });
-          speakAsKibo('Your daily ember is already stoked. Complete tasks or check your deck for more.');
-        }
-        setAskNotchPhase('idle');
-        setSoulMode('TALKING');
-        setTimeout(() => {
-          setSoulMode('LISTENING');
-          setKiboReply(null);
-          setUserBubbleText(null);
-        }, 2800);
-        return;
-      }
+      
 
       if (isNotionDatabaseTask) {
         multitaskAgent.spawnTask(text, 'notion', { kind: 'NOTION_DATABASE' });
@@ -5113,19 +5060,7 @@ export const KiboApp: React.FC = () => {
 
                   )}
 
-                  <button
-
-                    onClick={() => openCompanionApp('soul', false)}
-
-                    className="companion-header-circle"
-
-                    title="Open Kibo Studio"
-
-                  >
-
-                    <SvgIcon name="sparkles" size={12} />
-
-                  </button>
+                  
 
                   <button
 
@@ -6612,196 +6547,78 @@ export const KiboApp: React.FC = () => {
           }}
         >
           <div
-
             className="config-app-topbar"
-
             style={{ cursor: isDraggingAppWin ? 'grabbing' : 'grab' }}
-
             onPointerDown={(e) => {
-
               if ((e.target as HTMLElement).closest('button')) return;
-
               dragOffsetRef.current = {
-
                 dx: e.clientX - appWindowPos.x,
-
                 dy: e.clientY - appWindowPos.y,
-
               };
-
               setIsDraggingAppWin(true);
-
             }}
-
           >
-
             {activeDeckSlot ? (
-
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-
                 <button
-
                   onClick={() => setActiveDeckSlot(null)}
-
                   className="companion-header-circle"
-
-                  title="Back to Kibo Studio"
-
+                  title="Back"
                 >
-
                   ‹
-
                 </button>
-
-                <span style={{ fontSize: '17px', fontWeight: 700, color: '#FFFFFF', letterSpacing: '-0.01em' }}>
-
-                  {activeDeckSlot === 'Soul' ? 'Droid Core' : activeDeckSlot}
-
+                <span style={{ fontSize: '18px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.02em' }}>
+                  {activeDeckSlot === 'Soul' ? 'Core' : activeDeckSlot}
                 </span>
-
               </div>
-
             ) : (
-
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', pointerEvents: 'none' }}>
-
                 <div className="topbar-soul-avatar">
-
-                  <SoulCanvas soul={currentSoul} width={46} height={40} scale={0.9} mode="LISTENING" />
-
+                  <SoulCanvas soul={currentSoul} width={48} height={42} scale={0.92} mode="LISTENING" />
                 </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-
-                  <span style={{ fontSize: '14.5px', fontWeight: 700, color: '#F8FAFC', letterSpacing: '-0.01em' }}>
-
-                    Kibo Studio
-
-                  </span>
-
-                  <span style={{ fontSize: '11px', color: '#8E8E93', fontWeight: 500 }}>
-
-                    {getEquippedCardName('Soul')} · {getEquippedCardName('Voice')}
-
-                  </span>
-
-                </div>
-
+                <span style={{ fontSize: '15px', fontWeight: 800, color: '#F8FAFC', letterSpacing: '-0.01em' }}>
+                  Kibo
+                </span>
               </div>
-
             )}
-
-
-
-            {/* Center macOS Segmented Switcher */}
-
-            {!activeDeckSlot && (
-
-              <div className="macos-segmented-control">
-
-                <button
-
-                  onClick={() => setCompanionDockTab('soul')}
-
-                  className={`macos-seg-btn ${companionDockTab === 'soul' ? 'active' : ''}`}
-
-                >
-
-                  Customize
-
-                </button>
-
-                <button
-
-                  onClick={() => setCompanionDockTab('settings')}
-
-                  className={`macos-seg-btn ${companionDockTab === 'settings' ? 'active' : ''}`}
-
-                >
-
-                  Settings
-
-                </button>
-
-              </div>
-
-            )}
-
-
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-
-              {isDailyEmberWaiting && (
-
-                <button
-
-                  onClick={handleClaimWaitingEmber}
-
-                  className="macos-spark-claim-pill"
-
-                  title="Claim daily +15 Sparks"
-
-                >
-
-                  +15 Daily Sparks
-
-                </button>
-
-              )}
-
               <div
-
                 className="macos-sparks-pill"
-
-                onClick={() => handleGrantCreatorEmbers(500)}
-
-                title="Click to add +500 test Sparks"
-
+                style={{ pointerEvents: 'none', userSelect: 'none' }}
               >
-
                 <LivingEmberIcon size={14} isDull={isSoulDull} />
-
                 <span>{embers.toLocaleString()} Sparks</span>
-
               </div>
-
               <button
-
                 onClick={() => {
-
-                  if (activeDeckSlot) {
-
-                    setActiveDeckSlot(null);
-
-                  } else {
-
-                    setShowCompanionWindow(false);
-
-                    setShowConnectModal(false);
-
-                  }
-
+                  const next = !sfxEnabled;
+                  setSfxEnabled(next);
+                  soundFX.setEnabled(next);
                 }}
-
-                className="config-app-close-btn"
-
+                title={sfxEnabled ? 'Sound Effects: On' : 'Sound Effects: Muted'}
+                className="companion-header-circle"
               >
-
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-
-                  <line x1="18" y1="6" x2="6" y2="18" />
-
-                  <line x1="6" y1="6" x2="18" y2="18" />
-
-                </svg>
-
+                <SvgIcon name={sfxEnabled ? 'speaker' : 'mute'} size={12} />
               </button>
-
+              <button
+                onClick={() => {
+                  if (activeDeckSlot) {
+                    setActiveDeckSlot(null);
+                  } else {
+                    setShowCompanionWindow(false);
+                    setShowConnectModal(false);
+                  }
+                }}
+                className="config-app-close-btn"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
             </div>
-
           </div>
-
-
 
           {activeDeckSlot && currentSlotCards.length > 0 ? (
             <div
@@ -7461,7 +7278,7 @@ export const KiboApp: React.FC = () => {
             </div>
           ) : (
             <div className="loadout-compass-stage">
-              <div className="loadout-heading-label">Droid Configuration</div>
+              <div className="loadout-heading-label">Loadout</div>
 
               <svg
                 className="loadout-compass-svg"
@@ -7586,9 +7403,9 @@ export const KiboApp: React.FC = () => {
                   className={`dock-icon-btn ${companionDockTab === 'soul' ? 'active-pill' : ''}`}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 2c.5 4.5 4 7.5 4 12a4 4 0 1 1-8 0c0-4.5 3.5-7.5 4-12z" />
+                    <rect x="4" y="6" width="16" height="12" rx="6" /><circle cx="9.5" cy="12" r="1.5" fill="currentColor" /><circle cx="14.5" cy="12" r="1.5" fill="currentColor" />
                   </svg>
-                  {companionDockTab === 'soul' && <span>Studio</span>}
+                  {companionDockTab === 'soul' && <span>Loadout</span>}
                 </button>
 
                 <button

@@ -4049,211 +4049,69 @@ button:focus-visible,
 
 
 
+
 /* ==========================================================================
-
-   MACOS SWIFTUI MINIMAL STUDIO & SEGMENTED CONTROLS
-
+   UNIFIED NOTCH TYPOGRAPHY & OPAQUE LOADOUT / SETTINGS WINDOW
    ========================================================================== */
 
-
-
-:root {
-
-  --companion-font-display: 'Figtree', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
-
-  --companion-font-body: 'Figtree', -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
-
+:root,
+.kibo-companion-root,
+.kibo-bezel-shell,
+.kibo-config-app-window {
+  --companion-font-sans: 'Figtree', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  --companion-font-body: 'Figtree', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  --companion-font-display: 'Figtree', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-family: 'Figtree', -apple-system, BlinkMacSystemFont, sans-serif !important;
 }
-
-
 
 .kibo-bezel-shell {
-
   background: #0C0C0E !important;
-
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.65) !important;
-
 }
-
-
 
 .kibo-bezel-shell.is-tucked {
-
   box-shadow: none !important;
-
 }
-
-
 
 .kibo-svg-arch path {
-
   fill: #0C0C0E !important;
-
 }
 
-
-
-.kibo-config-app-window {
-
-  background: rgba(18, 19, 23, 0.96) !important;
-
-  backdrop-filter: blur(40px) saturate(180%) !important;
-
-  -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
-
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-
-  border-radius: 20px !important;
-
-  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
-
-}
-
-
-
+/* 100% Solid Opaque Configuration Window (Zero desktop bleed-through) */
+.kibo-config-app-window,
 .kibo-config-app-window.loadout-theme,
-
 .kibo-config-app-window.settings-theme {
-
-  background: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.07) 0%, rgba(18, 19, 23, 0.98) 65%) !important;
-
+  background: #141519 !important;
+  background-color: #141519 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  opacity: 1 !important;
+  border: 1px solid rgba(255, 255, 255, 0.09) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.9) !important;
 }
 
-
-
-.macos-segmented-control {
-
-  display: inline-flex;
-
-  align-items: center;
-
-  background: rgba(255, 255, 255, 0.06);
-
-  border: 1px solid rgba(255, 255, 255, 0.08);
-
-  border-radius: 10px;
-
-  padding: 3px;
-
-  gap: 2px;
-
+.loadout-compass-stage {
+  background: radial-gradient(circle at 50% 44%, rgba(56, 189, 248, 0.08) 0%, #141519 62%) !important;
 }
 
-
-
-.macos-seg-btn {
-
-  background: transparent;
-
-  border: none;
-
-  color: #8E8E93;
-
-  font-family: var(--companion-font-body);
-
-  font-size: 12px;
-
-  font-weight: 600;
-
-  padding: 5px 16px;
-
-  border-radius: 7px;
-
-  cursor: pointer;
-
-  transition: all 0.18s cubic-bezier(0.22, 1, 0.36, 1);
-
+.config-app-body,
+.config-sidebar,
+.config-main-panel {
+  background: #141519 !important;
 }
-
-
-
-.macos-seg-btn:hover {
-
-  color: #E5E5EA;
-
-}
-
-
-
-.macos-seg-btn.active {
-
-  background: rgba(255, 255, 255, 0.14);
-
-  color: #FFFFFF;
-
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-
-}
-
-
 
 .macos-sparks-pill {
-
   display: inline-flex;
-
   align-items: center;
-
   gap: 6px;
-
-  background: rgba(255, 255, 255, 0.06);
-
-  border: 1px solid rgba(255, 255, 255, 0.1);
-
+  background: #1D1F26;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 999px;
-
   padding: 5px 12px;
-
   font-size: 11.5px;
-
   font-weight: 600;
-
   color: #F1F5F9;
-
-  cursor: pointer;
-
-  transition: background 0.15s ease;
-
+  pointer-events: none;
+  user-select: none;
 }
-
-
-
-.macos-sparks-pill:hover {
-
-  background: rgba(255, 255, 255, 0.11);
-
-}
-
-
-
-.macos-spark-claim-pill {
-
-  background: rgba(56, 189, 248, 0.16);
-
-  border: 1px solid rgba(56, 189, 248, 0.4);
-
-  color: #BAE6FD;
-
-  border-radius: 999px;
-
-  padding: 5px 11px;
-
-  font-size: 11px;
-
-  font-weight: 700;
-
-  cursor: pointer;
-
-  transition: all 0.15s ease;
-
-}
-
-
-
-.macos-spark-claim-pill:hover {
-
-  background: rgba(56, 189, 248, 0.26);
-
-  color: #FFFFFF;
-
-}
-
