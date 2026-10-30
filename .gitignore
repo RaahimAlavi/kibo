@@ -10,6 +10,10 @@ build/
 # Scraped / temporary files
 downloaded/
 *.py
+*.ps1
+*.sh
+*.bat
+scripts/
 extract_sections.js
 notch_path.txt
 raw_index.html

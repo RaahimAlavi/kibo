@@ -194,64 +194,15 @@ function parseHexColor(hex) {
   }
 }
 
-function createKiboTrayIcon(overrideHex) {
-  const hex = overrideHex || currentTrayColorHex;
-  const rgb = parseHexColor(hex);
-  const size = 32;
-  const buf = Buffer.alloc(size * size * 4, 0);
-
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const dx = (x - 15.5) / 11.5;
-      const dy = (y - 16.5) / 11.5;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const idx = (y * size + x) * 4;
-
-      // Top antenna tip
-      if (y >= 2 && y <= 5 && x >= 14 && x <= 17) {
-        buf[idx] = rgb.b;     // B
-        buf[idx + 1] = rgb.g; // G
-        buf[idx + 2] = rgb.r; // R
-        buf[idx + 3] = 255;
-        continue;
-      }
-
-      // Spherical Droid Shell
-      if (dist <= 1.0) {
-        const inVisor = y >= 12 && y <= 21 && x >= 7 && x <= 24;
-        const isLeftEye = y >= 14 && y <= 19 && x >= 10 && x <= 13;
-        const isRightEye = y >= 14 && y <= 19 && x >= 18 && x <= 21;
-
-        if (isLeftEye || isRightEye) {
-          // Bright glowing LED Eyes
-          buf[idx] = Math.min(255, rgb.b + 60);
-          buf[idx + 1] = Math.min(255, rgb.g + 60);
-          buf[idx + 2] = Math.min(255, rgb.r + 60);
-          buf[idx + 3] = 255;
-        } else if (inVisor) {
-          // Dark Glass Visor
-          buf[idx] = 16;
-          buf[idx + 1] = 10;
-          buf[idx + 2] = 8;
-          buf[idx + 3] = 255;
-        } else if (dist >= 0.85) {
-          // Dynamic Rim Border matching equipped core
-          buf[idx] = rgb.b;
-          buf[idx + 1] = rgb.g;
-          buf[idx + 2] = rgb.r;
-          buf[idx + 3] = 255;
-        } else {
-          // Matte Titanium Chassis
-          buf[idx] = 44;
-          buf[idx + 1] = 34;
-          buf[idx + 2] = 28;
-          buf[idx + 3] = 255;
-        }
-      }
+function createKiboTrayIcon() {
+  const iconPath = path.join(__dirname, '../public/icon-256.png');
+  if (fs.existsSync(iconPath)) {
+    const img = nativeImage.createFromPath(iconPath);
+    if (!img.isEmpty()) {
+      return img.resize({ width: 24, height: 24, quality: 'best' });
     }
   }
-
-  return nativeImage.createFromBitmap(buf, { width: size, height: size });
+  return nativeImage.createEmpty();
 }
 
 // Dedicated Fiery Ember Tray Icon with white core, radiant amber-vermilion body and ascending sparks
@@ -343,7 +294,7 @@ let isKiboPaused = false;
 
 function refreshTrayIconAndTooltip() {
   if (!tray) return;
-  const icon = createKiboTrayIcon('#38BDF8');
+  const icon = createKiboTrayIcon();
   tray.setImage(icon);
   tray.setToolTip('Kibo · Voice Control for Windows');
 }
