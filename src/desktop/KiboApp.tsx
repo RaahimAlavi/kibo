@@ -1404,28 +1404,31 @@ export const KiboApp: React.FC = () => {
     }).catch(() => {});
   }, []);
 
-  // Extract dynamic color theme from active Windows desktop wallpaper
+  // Extract dynamic color theme from active Windows desktop wallpaper (deferred past startup animation)
   useEffect(() => {
-    const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
-    if (api?.getCurrentWallpaperTheme) {
-      api.getCurrentWallpaperTheme().then((theme: any) => {
-        if (theme && theme.accent) {
-          const safeUrl = theme.wallpaperUrl || (theme.wallpaperPath ? `http://127.0.0.1:51742/api/wallpaper?path=${encodeURIComponent(theme.wallpaperPath)}` : '');
-          setAdaptiveWallpaperTheme({
-            id: 9999,
-            title: 'Current Desktop Wallpaper',
-            url: safeUrl,
-            thumb: safeUrl,
-            accent: theme.accent,
-            accentSecondary: theme.accentSecondary,
-            pillBg: theme.pillBg,
-            rowBg: theme.rowBg,
-            darkText: theme.darkText || '#F8FAFC',
-            darkSubText: theme.darkSubText || '#94A3B8',
-          });
-        }
-      }).catch(() => {});
-    }
+    const timer = setTimeout(() => {
+      const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
+      if (api?.getCurrentWallpaperTheme) {
+        api.getCurrentWallpaperTheme().then((theme: any) => {
+          if (theme && theme.accent) {
+            const safeUrl = theme.wallpaperUrl || (theme.wallpaperPath ? `http://127.0.0.1:51742/api/wallpaper?path=${encodeURIComponent(theme.wallpaperPath)}` : '');
+            setAdaptiveWallpaperTheme({
+              id: 9999,
+              title: 'Current Desktop Wallpaper',
+              url: safeUrl,
+              thumb: safeUrl,
+              accent: theme.accent,
+              accentSecondary: theme.accentSecondary,
+              pillBg: theme.pillBg,
+              rowBg: theme.rowBg,
+              darkText: theme.darkText || '#F8FAFC',
+              darkSubText: theme.darkSubText || '#94A3B8',
+            });
+          }
+        }).catch(() => {});
+      }
+    }, 2400);
+    return () => clearTimeout(timer);
   }, []);
 
   const [onboardingStep, setOnboardingStep] = useState<number | null>(null);
@@ -1648,8 +1651,13 @@ export const KiboApp: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'Chat' && chatScrollRef.current) {
-      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    if (activeTab === 'Chat' && isExpanded && chatScrollRef.current) {
+      const raf = requestAnimationFrame(() => {
+        if (chatScrollRef.current) {
+          chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+        }
+      });
+      return () => cancelAnimationFrame(raf);
     }
   }, [chatMessages, activeTab, isExpanded]);
 
@@ -2347,18 +2355,42 @@ export const KiboApp: React.FC = () => {
     isBreathingReliefRef.current = isBreathingRelief;
   }, [isBreathingRelief]);
 
+  // Today View, Focus Timer Notch Countdown & Alarm Celebration State
+  const [now, setNow] = useState(() => new Date());
+  const [timerSeconds, setTimerSeconds] = useState(1500);
+  const [timerTotalSeconds, setTimerTotalSeconds] = useState(1500);
+  const [timerPreset, setTimerPreset] = useState<'1m' | '5m' | '10m' | '15m' | '20m' | '25m' | '45m'>('25m');
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [timerAlarmRinging, setTimerAlarmRinging] = useState(false);
+  const alarmIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const handleIslandMouseEnter = useCallback(() => {
     setIsHovered(true);
     if (leaveCollapseTimerRef.current) clearTimeout(leaveCollapseTimerRef.current);
 
-    // Hold-hovering is strictly for waking Kibo when tucked/idle.
-    // When music is playing, the pill is active and clickable without any hold charging!
-    if (isTucked && !hasMediaSession && !showMediaNotch) {
-      // Require hold-hovering for 650ms to wake Kibo and drop the notch
+    // Hold-hovering is strictly for waking Kibo when the holding hover bar (isTuckedSliver) is visible!
+    // Never play hover-hold SFX when music, timer, stopwatch, ask bar, or expanded tabs are active.
+    const canShowHoverHoldBar =
+      isTucked &&
+      bootPhase === 'ready' &&
+      !isExpanded &&
+      !detectedAppId &&
+      !showMediaNotch &&
+      !isTimerRunning &&
+      !timerAlarmRinging &&
+      !stopwatchRunning &&
+      stopwatchMs === 0 &&
+      askNotchPhase === 'idle' &&
+      !hasMediaSession &&
+      !notchApiAlert &&
+      !isFileDraggingOverNotch;
+
+    if (canShowHoverHoldBar) {
+      // Snappy 420ms hold-hover to wake Kibo and drop the notch
       setIsHoverHoldActive(true);
       setHoverHoldProgress(0);
       const startTime = performance.now();
-      const holdDuration = 650;
+      const holdDuration = 420;
 
       const step = (now: number) => {
         const elapsed = now - startTime;
@@ -2379,7 +2411,21 @@ export const KiboApp: React.FC = () => {
       if (hoverHoldRafRef.current) cancelAnimationFrame(hoverHoldRafRef.current);
       hoverHoldRafRef.current = requestAnimationFrame(step);
     }
-  }, [isTucked, hasMediaSession, showMediaNotch]);
+  }, [
+    isTucked,
+    bootPhase,
+    isExpanded,
+    detectedAppId,
+    showMediaNotch,
+    isTimerRunning,
+    timerAlarmRinging,
+    stopwatchRunning,
+    stopwatchMs,
+    askNotchPhase,
+    hasMediaSession,
+    notchApiAlert,
+    isFileDraggingOverNotch,
+  ]);
 
   const handleIslandMouseLeave = useCallback(() => {
     setIsHovered(false);
@@ -2403,7 +2449,7 @@ export const KiboApp: React.FC = () => {
     }
 
     if (isExpanded || showMediaNotch) {
-      const collapseDelay = isExpanded && (activeTab === 'Convert' || activeTab === 'Skills') ? 5500 : 320;
+      const collapseDelay = 320;
       leaveCollapseTimerRef.current = setTimeout(() => {
         if (isDraggingVolumeRef.current || isDraggingMediaScrubRef.current || isNativeDialogOpenRef.current) return;
         if (soulAnnoyanceRef.current > 0.05 || isBreathingReliefRef.current) return;
@@ -2420,7 +2466,21 @@ export const KiboApp: React.FC = () => {
         setIsTucked(true);
       }, 1500);
     }
-  }, [isExpanded, showMediaNotch, autoTuckEnabled, activeTab]);
+  }, [isExpanded, showMediaNotch, autoTuckEnabled]);
+
+  // Collapse expanded notch immediately when clicking outside into another desktop window
+  useEffect(() => {
+    if (!isExpanded && !showMediaNotch) return;
+    const onWindowBlur = () => {
+      if (isNativeDialogOpenRef.current || isDraggingVolumeRef.current || isDraggingMediaScrubRef.current) return;
+      setActiveControlDropdown(null);
+      setShowMediaNotch(false);
+      setIsExpanded(false);
+      if (autoTuckEnabled) setIsTucked(true);
+    };
+    window.addEventListener('blur', onWindowBlur);
+    return () => window.removeEventListener('blur', onWindowBlur);
+  }, [isExpanded, showMediaNotch, autoTuckEnabled]);
 
   useEffect(() => {
     if (!isDraggingMediaScrub) return;
@@ -2522,24 +2582,27 @@ export const KiboApp: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (window.kiboAPI?.getControlsState) {
-      window.kiboAPI.getControlsState().then((st) => {
-        if (!st) return;
-        setWifiEnabled(Boolean(st.wifiConnected));
-        setWifiSsid(st.wifiSsid || (st.wifiConnected ? 'Connected' : 'Off'));
-        if (typeof st.bluetoothOn === 'boolean') setBluetoothEnabled(st.bluetoothOn);
-        if (typeof st.nightLightOn === 'boolean') setNightLight(st.nightLightOn);
-        setSystemDarkMode(Boolean(st.darkMode));
-        if (typeof st.volume === 'number') setVolumeLevel(st.volume);
-        if (typeof st.muted === 'boolean') setIsMuted(st.muted);
-        if (Array.isArray(st.audioDevices) && st.audioDevices.length > 0) {
-          setAudioDevicesList(st.audioDevices);
-        }
-      });
-    }
+    const timer = setTimeout(() => {
+      if (window.kiboAPI?.getControlsState) {
+        window.kiboAPI.getControlsState().then((st) => {
+          if (!st) return;
+          setWifiEnabled(Boolean(st.wifiConnected));
+          setWifiSsid(st.wifiSsid || (st.wifiConnected ? 'Connected' : 'Off'));
+          if (typeof st.bluetoothOn === 'boolean') setBluetoothEnabled(st.bluetoothOn);
+          if (typeof st.nightLightOn === 'boolean') setNightLight(st.nightLightOn);
+          setSystemDarkMode(Boolean(st.darkMode));
+          if (typeof st.volume === 'number') setVolumeLevel(st.volume);
+          if (typeof st.muted === 'boolean') setIsMuted(st.muted);
+          if (Array.isArray(st.audioDevices) && st.audioDevices.length > 0) {
+            setAudioDevicesList(st.audioDevices);
+          }
+        });
+      }
+    }, 2400);
+    return () => clearTimeout(timer);
   }, []);
 
-  // Poll Real PC Now Playing Media Session every 1.5s
+  // Poll Real PC Now Playing Media Session every 1.5s (deferred past startup animation)
   useEffect(() => {
     if (!window.kiboAPI?.getNowPlaying) return;
     const checkMedia = async () => {
@@ -2561,9 +2624,12 @@ export const KiboApp: React.FC = () => {
         }
       } catch (_) {}
     };
-    checkMedia();
+    const startTimer = setTimeout(checkMedia, 2350);
     const interval = setInterval(checkMedia, 1500);
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(startTimer);
+      clearInterval(interval);
+    };
   }, []);
 
   // Smooth 1-second progress advancement while playing
@@ -2659,15 +2725,6 @@ export const KiboApp: React.FC = () => {
     },
     [activeControlDropdown]
   );
-
-  // Today View, Focus Timer Notch Countdown & Alarm Celebration State
-  const [now, setNow] = useState(() => new Date());
-  const [timerSeconds, setTimerSeconds] = useState(1500);
-  const [timerTotalSeconds, setTimerTotalSeconds] = useState(1500);
-  const [timerPreset, setTimerPreset] = useState<'1m' | '5m' | '10m' | '15m' | '20m' | '25m' | '45m'>('25m');
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [timerAlarmRinging, setTimerAlarmRinging] = useState(false);
-  const alarmIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [routines, setRoutines] = useState<ScheduledRoutine[]>(() => {
     const saved = localStorage.getItem('kibo_routines');
@@ -2919,13 +2976,17 @@ export const KiboApp: React.FC = () => {
         })
       : () => {};
 
-    // 3. Subscribe to tray menu "open-settings" commands (Account, Shortcuts, Core Models)
+    // 3. Subscribe to tray menu & Chrome extension "open-settings" commands (Chat, Account, Shortcuts, Core)
     const unregSettings = window.kiboAPI?.onOpenSettings
       ? window.kiboAPI.onOpenSettings((section) => {
           setIsTucked(false);
           setShowMediaNotch(false);
           setShowCompanionWindow(false);
           setIsExpanded(true);
+          if (section === 'Chat') {
+            setActiveTab('Chat');
+            return;
+          }
           setActiveTab('Settings');
           if (section === 'Core' || section === 'soul') {
             setSettingsCategory('Core');
@@ -3064,7 +3125,10 @@ export const KiboApp: React.FC = () => {
   );
 
   useEffect(() => {
-    extractAndApplyPaletteForIndex(appliedWallpaperIndex, wallpapersList);
+    const timer = setTimeout(() => {
+      extractAndApplyPaletteForIndex(appliedWallpaperIndex, wallpapersList);
+    }, 2500);
+    return () => clearTimeout(timer);
   }, []);
 
   const [fullScreenDims, setFullScreenDims] = useState<{ w: number; h: number }>(() => ({
@@ -3096,13 +3160,16 @@ export const KiboApp: React.FC = () => {
   const [appsList, setAppsList] = useState<InstalledAppItem[]>([]);
 
   useEffect(() => {
-    if (window.kiboAPI?.getInstalledApps) {
-      window.kiboAPI.getInstalledApps().then((list) => {
-        if (Array.isArray(list) && list.length > 0) {
-          setAppsList(list);
-        }
-      });
-    }
+    const timer = setTimeout(() => {
+      if (window.kiboAPI?.getInstalledApps) {
+        window.kiboAPI.getInstalledApps().then((list) => {
+          if (Array.isArray(list) && list.length > 0) {
+            setAppsList(list);
+          }
+        });
+      }
+    }, 2600);
+    return () => clearTimeout(timer);
   }, []);
 
   const toggleStarApp = (appName: string, e: React.MouseEvent) => {
@@ -3476,10 +3543,10 @@ export const KiboApp: React.FC = () => {
     const dims: Record<NavTab, { w: number; h: number }> = {
       Chat:      { w: 720, h: 460 },
       Agents:    { w: 860, h: 440 },
-      Convert:   { w: 780, h: 450 },
+      Convert:   { w: 780, h: 468 },
       Focus:     { w: 780, h: 440 },
       Skills:    { w: 820, h: 460 },
-      Media:     { w: 708, h: 360 },
+      Media:     { w: 580, h: 254 },
       Controls:  { w: 708, h: 396 },
       Today:     { w: 860, h: 440 },
       Clipboard: { w: 860, h: 444 },
@@ -3743,35 +3810,60 @@ export const KiboApp: React.FC = () => {
         return;
       }
 
-      // 0A. Voice-Triggered Non-Destructive File Conversion ("Convert resume.pdf to Word")
+      // 0A. Voice-Triggered Non-Destructive File Conversion ("Convert resume.pdf to Word", "Convert the kibo.text file to pdf")
       const convertRegexMatch = text.match(
-        /\bconvert\s+(?:my\s+|the\s+|file\s+)?["']?([^"']+?)["']?\s+(?:to|into)\s+(pdf|word|docx|doc|txt|text|md|markdown|html|json|csv|png|jpg|jpeg|webp)\b/i
+        /\bconvert\s+(?:my\s+|the\s+|a\s+|file\s+)?["']?([^"']+?)["']?(?:\s+file|\s+document)?\s+(?:to|into)\s+(pdf|word|docx|doc|txt|text|md|markdown|html|json|csv|png|jpg|jpeg|webp)\b/i
       );
       if (fc?.name === 'convert_file' || convertRegexMatch) {
-        const rawSource = String(fc?.args?.sourceFileName || (convertRegexMatch ? convertRegexMatch[1] : '') || '').trim();
-        let rawTarget = String(fc?.args?.targetFormat || (convertRegexMatch ? convertRegexMatch[2] : 'pdf')).toLowerCase().trim();
+        const rawSourceInput = String(
+          fc?.args?.sourceFileName || (convertRegexMatch ? convertRegexMatch[1] : '') || ''
+        ).trim();
+        const cleanedSource = rawSourceInput
+          .replace(/^["']+|["']+$/g, '')
+          .replace(/\s+dot\s+/gi, '.')
+          .replace(/\b(the|my|a|an|this|that|file|document|doc|named|called)\b/gi, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .replace(/\.text$/i, '.txt')
+          .replace(/\.word$/i, '.docx')
+          .replace(/\.markdown$/i, '.md');
+
+        let rawTarget = String(fc?.args?.targetFormat || (convertRegexMatch ? convertRegexMatch[2] : 'pdf'))
+          .toLowerCase()
+          .trim();
         if (rawTarget === 'word' || rawTarget === 'doc') rawTarget = 'docx';
         if (rawTarget === 'text') rawTarget = 'txt';
         if (rawTarget === 'markdown') rawTarget = 'md';
 
+        const effectiveQuery = cleanedSource || convertSourceFile?.fileName || '';
+        const effectivePath = !cleanedSource && convertSourceFile?.filePath ? convertSourceFile.filePath : undefined;
+
+        if (!effectiveQuery && !effectivePath) {
+          showReplyWithSpeech(
+            'Please tell me the exact filename to convert, or drop the file into the Convert tab.',
+            'Which File to Convert?'
+          );
+          return;
+        }
+
         setAskNotchPhase('idle');
         setKiboReply({
-          bold: `Converting ${rawSource || 'file'} to .${rawTarget.toUpperCase()}...`,
+          bold: `Converting ${effectiveQuery} to .${rawTarget.toUpperCase()}...`,
           rest: 'Original file will be preserved',
         });
 
         const convRes = await handleRunFileConversion({
-          filePath: convertSourceFile?.filePath && !rawSource ? convertSourceFile.filePath : undefined,
-          fileNameQuery: rawSource || convertSourceFile?.fileName || 'document',
+          filePath: effectivePath,
+          fileNameQuery: effectiveQuery,
           targetFormat: rawTarget,
         });
 
         if (convRes?.success && convRes.outputPath) {
-          const msg = `Converted ${rawSource || 'your file'} to ${convRes.outputFileName || rawTarget.toUpperCase()} without deleting the original.`;
+          const msg = `Converted ${effectiveQuery} to ${convRes.outputFileName || rawTarget.toUpperCase()} without deleting the original.`;
           showReplyWithSpeech(msg, 'Conversion Complete', convRes.outputPath, 'Show in Folder');
         } else {
           showReplyWithSpeech(
-            convRes?.error || `I couldn't locate "${rawSource}" to convert. You can also drop it directly into the Convert tab.`
+            convRes?.error || `I couldn't locate "${effectiveQuery}" in your Desktop, Downloads, or Documents.`
           );
         }
         return;
@@ -5829,7 +5921,7 @@ export const KiboApp: React.FC = () => {
             borderBottomRightRadius: `${bottomRadius}px`,
             background:
               isExpanded && activeTab === 'Media'
-                ? `radial-gradient(125% 135% at 18% 18%, rgba(${mediaArtPalette.rgb}, 0.42) 0%, rgba(${mediaArtPalette.rgb}, 0.16) 52%, rgba(12, 12, 14, 0.96) 100%), #0C0C0E`
+                ? `radial-gradient(110% 85% at 50% 105%, rgba(${mediaArtPalette.rgb}, 0.42) 0%, rgba(${mediaArtPalette.rgb}, 0.14) 50%, rgba(12, 12, 14, 0) 82%), #0C0C0E`
                 : undefined,
             transition: 'background 0.45s ease',
           }}
@@ -5970,12 +6062,17 @@ export const KiboApp: React.FC = () => {
                   ? 'Click to stop celebration'
                   : isStopwatchNotchActive && !isTimerRunning
                   ? stopwatchRunning
-                    ? 'Click to pause stopwatch · Right button opens Focus'
-                    : 'Click to resume stopwatch · Right button opens Focus'
+                    ? 'Click anywhere to pause stopwatch · Red button resets · Double-click opens Focus'
+                    : 'Click anywhere to resume stopwatch · Red button resets · Double-click opens Focus'
                   : isTimerRunning
-                  ? 'Click to pause timer · Right button opens Focus'
-                  : 'Click to resume timer'
+                  ? 'Click anywhere to pause timer · Red button resets · Double-click opens Focus'
+                  : 'Click anywhere to resume timer'
               }
+              onDoubleClick={() => {
+                setFocusSubMode(isStopwatchNotchActive && !isTimerRunning ? 'stopwatch' : 'timer');
+                setActiveTab('Focus');
+                setIsExpanded(true);
+              }}
               onClick={() => {
                 if (timerAlarmRinging) {
                   setTimerAlarmRinging(false);
@@ -6004,6 +6101,17 @@ export const KiboApp: React.FC = () => {
                   isDull={isSoulDull}
                   interactive={true}
                   mode={timerAlarmRinging ? 'DANCING' : 'LISTENING'}
+                  expression={
+                    timerAlarmRinging
+                      ? 'DANCING'
+                      : isStopwatchNotchActive && !isTimerRunning
+                      ? stopwatchRunning
+                        ? 'STOPWATCH'
+                        : 'PEEKING'
+                      : isTimerRunning
+                      ? 'FOCUSING'
+                      : 'PEEKING'
+                  }
                 />
               </div>
               {timerAlarmRinging ? (
@@ -6012,7 +6120,7 @@ export const KiboApp: React.FC = () => {
                   <span className="alarm-sub">Click to stop celebration</span>
                 </div>
               ) : isStopwatchNotchActive && !isTimerRunning ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span
                     className="notch-timer-digits"
                     style={{
@@ -6027,62 +6135,71 @@ export const KiboApp: React.FC = () => {
                   </span>
                   <button
                     type="button"
-                    title="Open Focus Tab"
+                    title="Reset & Stop Stopwatch"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setFocusSubMode('stopwatch');
-                      setActiveTab('Focus');
-                      setIsExpanded(true);
+                      setStopwatchRunning(false);
+                      setStopwatchMs(0);
+                      setStopwatchLaps([]);
+                      soundFX.playToggle(false);
                     }}
                     style={{
-                      width: '20px',
-                      height: '20px',
+                      width: '21px',
+                      height: '21px',
                       borderRadius: '999px',
-                      border: '1px solid rgba(255,255,255,0.14)',
-                      background: 'rgba(255,255,255,0.06)',
-                      color: '#94A3B8',
+                      border: '1px solid rgba(239, 68, 68, 0.48)',
+                      background: 'rgba(239, 68, 68, 0.18)',
+                      color: '#F87171',
                       display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       cursor: 'pointer',
-                      fontSize: '10px',
                       padding: 0,
+                      transition: 'all 0.15s ease',
                     }}
                   >
-                    ⌄
+                    <SvgIcon name="reset" size={10} color="#F87171" />
                   </button>
                 </div>
               ) : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-                  <span className="notch-timer-digits">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span
+                    className="notch-timer-digits"
+                    style={{
+                      opacity: isTimerRunning ? 1 : 0.62,
+                      color: isTimerRunning ? '#38BDF8' : '#94A3B8',
+                    }}
+                  >
                     {String(Math.floor(timerSeconds / 60)).padStart(2, '0')}:
                     {String(timerSeconds % 60).padStart(2, '0')}
                   </span>
                   <button
                     type="button"
-                    title="Open Focus Tab"
+                    title="Reset & Stop Focus Timer"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setFocusSubMode('timer');
-                      setActiveTab('Focus');
-                      setIsExpanded(true);
+                      setIsTimerRunning(false);
+                      setTimerAlarmRinging(false);
+                      setIsKiboDancing(false);
+                      setTimerSeconds(timerTotalSeconds);
+                      soundFX.playToggle(false);
                     }}
                     style={{
-                      width: '20px',
-                      height: '20px',
+                      width: '21px',
+                      height: '21px',
                       borderRadius: '999px',
-                      border: '1px solid rgba(255,255,255,0.14)',
-                      background: 'rgba(255,255,255,0.06)',
-                      color: '#94A3B8',
+                      border: '1px solid rgba(239, 68, 68, 0.48)',
+                      background: 'rgba(239, 68, 68, 0.18)',
+                      color: '#F87171',
                       display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       cursor: 'pointer',
-                      fontSize: '10px',
                       padding: 0,
+                      transition: 'all 0.15s ease',
                     }}
                   >
-                    ⌄
+                    <SvgIcon name="reset" size={10} color="#F87171" />
                   </button>
                 </div>
               )}
@@ -6099,7 +6216,7 @@ export const KiboApp: React.FC = () => {
               }}
               onContextMenu={(e) => {
                 e.preventDefault();
-                openCompanionApp('soul', false);
+                e.stopPropagation();
               }}
             >
               <div
@@ -6135,7 +6252,7 @@ export const KiboApp: React.FC = () => {
             </div>
           )}
 
-          {/* STATE 1E: AWAKE OR TUCKED SOUL NOTCH (standard Kibo notch) */}
+          {/* STATE 1E: AWAKE OR TUCKED SOUL NOTCH (Right-click ONLY works directly on visible Kibo!) */}
           {!isExpanded && !isFileDraggingOverNotch && !showProactiveBanner && !showMediaNotch && !notchApiAlert && !isCompactAskBar && !isTimerNotchActive && !isMiniMediaPill && (
             <div
               className={`kibo-notch-soul ${soulIsHit ? 'is-hit' : ''}`}
@@ -6147,7 +6264,7 @@ export const KiboApp: React.FC = () => {
               onClick={handleKiboPoke}
               onContextMenu={(e) => {
                 e.preventDefault();
-                openCompanionApp('soul', false);
+                e.stopPropagation();
               }}
             >
               <div
@@ -6167,6 +6284,13 @@ export const KiboApp: React.FC = () => {
               />
               <div
                 className="kibo-idle-soul-wrap"
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (!isTucked && bootPhase === 'ready') {
+                    openCompanionApp('soul', false);
+                  }
+                }}
                 style={{
                   opacity: (isTucked || bootPhase === 'sleeping' || bootPhase === 'tucking') ? 0 : 1,
                   transform: (isTucked || bootPhase === 'sleeping' || bootPhase === 'tucking')
@@ -6400,9 +6524,10 @@ export const KiboApp: React.FC = () => {
                         flexDirection: 'column',
                         gap: '10px',
                         padding: '6px 8px 8px',
+                        contain: 'content',
                       }}
                     >
-                      {chatMessages.map((msg) => {
+                      {chatMessages.slice(-25).map((msg) => {
                         const isUser = msg.role === 'user';
                         return (
                           <div
@@ -6427,7 +6552,6 @@ export const KiboApp: React.FC = () => {
                                       fontSize: '13px',
                                       fontWeight: 600,
                                       lineHeight: 1.42,
-                                      boxShadow: '0 4px 14px rgba(0, 0, 0, 0.26)',
                                       wordBreak: 'break-word',
                                     }
                                   : {
@@ -6440,7 +6564,6 @@ export const KiboApp: React.FC = () => {
                                       fontSize: '13px',
                                       fontWeight: 500,
                                       lineHeight: 1.46,
-                                      boxShadow: '0 4px 14px rgba(0, 0, 0, 0.28)',
                                       wordBreak: 'break-word',
                                     }
                               }
@@ -6638,11 +6761,13 @@ export const KiboApp: React.FC = () => {
                     <div
                       className="companion-glass-card"
                       style={{
-                        padding: '16px 18px',
+                        padding: '15px 16px',
                         display: 'flex',
                         flexDirection: 'column',
                         justifyContent: 'space-between',
-                        gap: '12px',
+                        gap: '10px',
+                        minWidth: 0,
+                        overflow: 'hidden',
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -6897,19 +7022,21 @@ export const KiboApp: React.FC = () => {
                     <div
                       className="companion-glass-card"
                       style={{
-                        padding: '16px 18px',
+                        padding: '15px 16px',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '10px',
                         minHeight: 0,
+                        minWidth: 0,
+                        overflow: 'hidden',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingRight: '2px' }}>
                         <span style={{ fontSize: '12px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '0.02em' }}>
                           Recent Conversions
                         </span>
-                        <span className="companion-mono-tiny" style={{ color: '#71717A' }}>
-                          {recentConversions.length} files
+                        <span className="companion-mono-tiny" style={{ color: '#94A3B8', flexShrink: 0 }}>
+                          {recentConversions.length} {recentConversions.length === 1 ? 'file' : 'files'}
                         </span>
                       </div>
 
@@ -7132,7 +7259,7 @@ export const KiboApp: React.FC = () => {
                                   className="timer-start-btn"
                                   style={{ padding: '9px 0', fontSize: '12.5px' }}
                                 >
-                                  {isTimerRunning ? 'Stop & Dance' : 'Start Focus'}
+                                  {isTimerRunning ? 'Stop' : 'Start Focus'}
                                 </button>
                                 <button
                                   onClick={() => {
@@ -7189,7 +7316,7 @@ export const KiboApp: React.FC = () => {
                                 className="timer-start-btn"
                                 style={{ flex: 1, padding: '9px 0', fontSize: '12.5px' }}
                               >
-                                {stopwatchRunning ? 'Stop & Dance' : stopwatchMs > 0 ? 'Resume' : 'Start'}
+                                {stopwatchRunning ? 'Stop' : stopwatchMs > 0 ? 'Resume' : 'Start'}
                               </button>
                               <button
                                 type="button"
@@ -7296,6 +7423,15 @@ export const KiboApp: React.FC = () => {
                           height={104}
                           scale={1.32}
                           mode={isKiboDancing || timerAlarmRinging ? 'DANCING' : soulMode}
+                          expression={
+                            isKiboDancing || timerAlarmRinging
+                              ? 'DANCING'
+                              : focusSubMode === 'stopwatch' && stopwatchRunning
+                              ? 'STOPWATCH'
+                              : isTimerRunning
+                              ? 'FOCUSING'
+                              : 'NORMAL'
+                          }
                           interactive={true}
                           onClick={() => triggerKiboCelebrationDance(5200)}
                         />
@@ -7617,7 +7753,7 @@ export const KiboApp: React.FC = () => {
                 )}
 
                 {/* =========================================================
-                    TAB 5: MEDIA (Full-Notch Album Cover Glass Gradient + Single-Line Volume)
+                    TAB 5: MEDIA (Compact Full-Notch Album Cover Glass Gradient + Single-Line Volume)
                     ========================================================= */}
                 {activeTab === 'Media' && (
                   <div
@@ -7625,11 +7761,11 @@ export const KiboApp: React.FC = () => {
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'space-between',
-                      gap: '14px',
+                      gap: '10px',
                       flex: 1,
                       minHeight: 0,
                       width: '100%',
-                      padding: '8px 10px 6px',
+                      padding: '4px 8px 4px',
                       boxSizing: 'border-box',
                     }}
                   >
@@ -7637,7 +7773,7 @@ export const KiboApp: React.FC = () => {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <span
                         style={{
-                          fontSize: '11px',
+                          fontSize: '10.5px',
                           fontWeight: 800,
                           color: mediaArtPalette.accent || '#BAE6FD',
                           letterSpacing: '0.06em',
@@ -7655,7 +7791,7 @@ export const KiboApp: React.FC = () => {
                             key={i}
                             className={`mini-eq-bar ${!(isPlayingMedia || isPlayingLofi) ? 'is-paused' : ''}`}
                             style={{
-                              height: isPlayingMedia || isPlayingLofi ? `${Math.round(h * 14)}px` : '4px',
+                              height: isPlayingMedia || isPlayingLofi ? `${Math.round(h * 12)}px` : '4px',
                               background: mediaArtPalette.accent,
                             }}
                           />
@@ -7664,14 +7800,14 @@ export const KiboApp: React.FC = () => {
                     </div>
 
                     {/* Middle Row: Album Art + Track Metadata + Transport Controls */}
-                    <div className="media-middle-row" style={{ gap: '18px', margin: '4px 0' }}>
+                    <div className="media-middle-row" style={{ gap: '14px', margin: '2px 0' }}>
                       <div
                         className="companion-album-art"
                         style={{
-                          width: '84px',
-                          height: '84px',
-                          borderRadius: '16px',
-                          boxShadow: `0 12px 28px rgba(0, 0, 0, 0.45), 0 0 24px rgba(${mediaArtPalette.rgb}, 0.24)`,
+                          width: '62px',
+                          height: '62px',
+                          borderRadius: '14px',
+                          boxShadow: `0 10px 22px rgba(0, 0, 0, 0.42), 0 0 18px rgba(${mediaArtPalette.rgb}, 0.22)`,
                           ...(activeMediaArtwork
                             ? {
                                 backgroundImage: `url("${activeMediaArtwork}")`,
@@ -7684,24 +7820,24 @@ export const KiboApp: React.FC = () => {
                         }}
                       />
 
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '5px', minWidth: 0, textAlign: 'left' }}>
-                        <div className="companion-truncate" style={{ fontSize: '18.5px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.015em' }}>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0, textAlign: 'left' }}>
+                        <div className="companion-truncate" style={{ fontSize: '16px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.015em' }}>
                           {hasMediaSession ? activeMediaTitle : isPlayingLofi ? 'Nightride Chillsynth Radio' : 'No Track Playing'}
                         </div>
-                        <div className="companion-truncate" style={{ fontSize: '13px', fontWeight: 500, color: 'rgba(255, 255, 255, 0.72)' }}>
+                        <div className="companion-truncate" style={{ fontSize: '12px', fontWeight: 500, color: 'rgba(255, 255, 255, 0.72)' }}>
                           {hasMediaSession ? activeMediaArtist : isPlayingLofi ? 'Ambient Focus Stream' : 'Play music in Spotify, YouTube, or start Focus Stream'}
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <button onClick={handleMediaPrev} className="media-circle-btn">
-                          <SvgIcon name="prev" size={15} color="#E4E4E7" />
+                          <SvgIcon name="prev" size={14} color="#E4E4E7" />
                         </button>
-                        <button onClick={toggleMediaPlayback} className="media-ivory-play-btn" style={{ width: '46px', height: '46px' }}>
-                          <SvgIcon name={isPlayingMedia || isPlayingLofi ? 'pause' : 'play'} size={18} color="#1C1917" />
+                        <button onClick={toggleMediaPlayback} className="media-ivory-play-btn" style={{ width: '40px', height: '40px' }}>
+                          <SvgIcon name={isPlayingMedia || isPlayingLofi ? 'pause' : 'play'} size={16} color="#1C1917" />
                         </button>
                         <button onClick={handleMediaNext} className="media-circle-btn">
-                          <SvgIcon name="next" size={15} color="#E4E4E7" />
+                          <SvgIcon name="next" size={14} color="#E4E4E7" />
                         </button>
                       </div>
                     </div>

@@ -565,6 +565,60 @@ function createWindow() {
         }
       }
 
+      // CORS preflight & Chrome Extension Bridge API endpoints
+      if (req.method === 'OPTIONS') {
+        res.writeHead(204, {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type',
+        });
+        return res.end();
+      }
+
+      if (parsedUrl.pathname === '/api/extension-status') {
+        res.writeHead(200, {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'no-cache',
+        });
+        return res.end(
+          JSON.stringify({
+            ok: true,
+            connected: true,
+            app: 'Kibo',
+            version: '1.1.0',
+          })
+        );
+      }
+
+      if (parsedUrl.pathname === '/api/open-kibo') {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.show();
+          mainWindow.webContents.send('open-settings', 'Chat');
+        }
+        res.writeHead(200, {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'no-cache',
+        });
+        return res.end(JSON.stringify({ ok: true }));
+      }
+
+      if (parsedUrl.pathname === '/api/browser-context' && req.method === 'POST') {
+        let body = '';
+        req.on('data', (chunk) => {
+          body += chunk;
+        });
+        req.on('end', () => {
+          res.writeHead(200, {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          });
+          res.end(JSON.stringify({ ok: true }));
+        });
+        return;
+      }
+
       // Safely stream local Windows wallpaper and user image files over HTTP
       if (parsedUrl.pathname === '/api/wallpaper') {
         const rawTarget = parsedUrl.searchParams.get('path');
@@ -1217,35 +1271,103 @@ async function renderHtmlToPdfFile(htmlContent, outPdfPath) {
 
 function findUserFileByName(query) {
   if (!query) return null;
-  const cleanQ = String(query).trim().toLowerCase();
-  if (fs.existsSync(query)) return query;
+  const rawStr = String(query).trim();
+  if (fs.existsSync(rawStr) && fs.statSync(rawStr).isFile()) return rawStr;
 
-  const searchDirs = [
+  // Normalize speech-to-text quirks ("kibo.text file" -> "kibo.txt", "kibo dot text" -> "kibo.txt")
+  let cleaned = rawStr
+    .toLowerCase()
+    .replace(/^["']+|["']+$/g, '')
+    .replace(/\s+dot\s+/g, '.')
+    .replace(/\b(the|my|a|an|this|that|file|document|doc|named|called)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  cleaned = cleaned
+    .replace(/\.text$/i, '.txt')
+    .replace(/\.word$/i, '.docx')
+    .replace(/\.markdown$/i, '.md');
+
+  if (!cleaned) return null;
+
+  const queryExt = path.extname(cleaned).toLowerCase();
+  const queryBase = (queryExt ? cleaned.slice(0, -queryExt.length) : cleaned).trim();
+  if (!queryBase) return null;
+
+  const extAliases = {
+    '.txt': ['.txt', '.md', '.text', '.rtf'],
+    '.docx': ['.docx', '.doc'],
+    '.doc': ['.doc', '.docx'],
+    '.jpg': ['.jpg', '.jpeg'],
+    '.jpeg': ['.jpeg', '.jpg'],
+  };
+  const allowedExts = queryExt ? extAliases[queryExt] || [queryExt] : null;
+
+  const rootDirs = [
     app.getPath('desktop'),
     app.getPath('downloads'),
     app.getPath('documents'),
     app.getPath('pictures'),
   ];
 
-  let bestPartial = null;
-  for (const dir of searchDirs) {
+  // Collect root directories + 1 level of subdirectories
+  const searchDirs = [];
+  for (const dir of rootDirs) {
     try {
       if (!fs.existsSync(dir)) continue;
-      const entries = fs.readdirSync(dir, { withFileTypes: true });
-      for (const entry of entries) {
-        if (entry.isFile()) {
-          const lower = entry.name.toLowerCase();
-          if (lower === cleanQ) {
-            return path.join(dir, entry.name);
-          }
-          if (!bestPartial && lower.includes(cleanQ)) {
-            bestPartial = path.join(dir, entry.name);
-          }
+      searchDirs.push(dir);
+      const subEntries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of subEntries) {
+        if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'node_modules') {
+          searchDirs.push(path.join(dir, entry.name));
         }
       }
     } catch (_) {}
   }
-  return bestPartial;
+
+  let bestPath = null;
+  let bestScore = 0;
+  const compactQueryBase = queryBase.replace(/[\s_-]+/g, '');
+
+  for (const dir of searchDirs) {
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isFile()) continue;
+        const lowerName = entry.name.toLowerCase();
+        const ext = path.extname(lowerName).toLowerCase();
+        const base = path.basename(lowerName, ext).trim();
+        const compactBase = base.replace(/[\s_-]+/g, '');
+
+        let score = 0;
+        const extMatches = !allowedExts || allowedExts.includes(ext);
+
+        if (lowerName === cleaned) {
+          score = 1000;
+        } else if (base === queryBase && extMatches) {
+          score = 960;
+        } else if (compactBase === compactQueryBase && compactQueryBase.length >= 2 && extMatches) {
+          score = 920;
+        } else if (base === queryBase) {
+          score = 860;
+        } else if (compactBase === compactQueryBase && compactQueryBase.length >= 2) {
+          score = 820;
+        } else if (queryBase.length >= 3 && base.startsWith(queryBase) && extMatches) {
+          score = 760;
+        } else if (queryBase.length >= 3 && compactBase.includes(compactQueryBase) && extMatches) {
+          score = 710;
+        }
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestPath = path.join(dir, entry.name);
+          if (score === 1000) return bestPath;
+        }
+      }
+    } catch (_) {}
+  }
+
+  return bestScore >= 700 ? bestPath : null;
 }
 
 ipcMain.handle('pick-file-for-convert', async () => {
@@ -1382,35 +1504,45 @@ ipcMain.handle('convert-file', async (_event, payload) => {
   }
 });
 
-// Export Ready-to-Drop Kibo Chrome Extension Folder for Developer Mode
-ipcMain.handle('export-chrome-extension', async () => {
-  try {
-    const extDir = path.join(app.getPath('desktop'), 'Kibo-Chrome-Extension');
-    fs.mkdirSync(extDir, { recursive: true });
+// Helper to write Kibo Chrome Extension files (with icon + upgraded popup UI)
+function writeKiboChromeExtensionFiles(extDir) {
+  fs.mkdirSync(extDir, { recursive: true });
 
-    const manifest = {
-      manifest_version: 3,
-      name: 'Kibo Browser Bridge',
-      version: '1.0.0',
-      description: 'Connects Google Chrome tabs, DOM context, and live web actions directly to Kibo Desktop Companion.',
-      permissions: ['activeTab', 'tabs', 'scripting'],
-      host_permissions: ['http://127.0.0.1:51742/*'],
-      background: {
-        service_worker: 'background.js',
+  const manifest = {
+    manifest_version: 3,
+    name: 'Kibo',
+    version: '1.1.0',
+    description: 'Connects Google Chrome tabs, DOM context, and live web actions directly to Kibo Desktop Companion.',
+    permissions: ['activeTab', 'tabs', 'scripting', 'storage'],
+    host_permissions: ['http://127.0.0.1:51742/*'],
+    icons: {
+      16: 'icon.png',
+      32: 'icon.png',
+      48: 'icon.png',
+      128: 'icon.png',
+    },
+    background: {
+      service_worker: 'background.js',
+    },
+    action: {
+      default_popup: 'popup.html',
+      default_title: 'Kibo',
+      default_icon: {
+        16: 'icon.png',
+        32: 'icon.png',
+        48: 'icon.png',
+        128: 'icon.png',
       },
-      action: {
-        default_popup: 'popup.html',
-        default_title: 'Kibo Browser Bridge',
+    },
+    content_scripts: [
+      {
+        matches: ['<all_urls>'],
+        js: ['content.js'],
       },
-      content_scripts: [
-        {
-          matches: ['<all_urls>'],
-          js: ['content.js'],
-        },
-      ],
-    };
+    ],
+  };
 
-    const backgroundJs = `// Kibo Browser Bridge Service Worker
+  const backgroundJs = `// Kibo Browser Bridge Service Worker
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
   try {
     const tab = await chrome.tabs.get(activeInfo.tabId);
@@ -1425,41 +1557,350 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
 });
 `;
 
-    const contentJs = `// Kibo Content Script Bridge
-window.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'KIBO_PAGE_ACTION') {
-    console.log('[Kibo Bridge] Executing page action:', event.data);
+  const contentJs = `// Kibo Content Script Bridge + Optional Kibo Cursor Indicator
+(function () {
+  let cursorEl = null;
+  let showCursor = true;
+
+  function ensureCursorEl() {
+    if (cursorEl || !document.body) return;
+    cursorEl = document.createElement('div');
+    cursorEl.id = 'kibo-agent-cursor-ring';
+    cursorEl.style.cssText = 'position:fixed;top:0;left:0;width:18px;height:18px;border-radius:999px;border:2px solid #38BDF8;background:rgba(56,189,248,0.16);box-shadow:0 0 12px rgba(56,189,248,0.55);pointer-events:none;z-index:2147483647;transform:translate(-50%,-50%);transition:opacity 0.2s ease, transform 0.08s ease;opacity:0;';
+    document.body.appendChild(cursorEl);
   }
-});
+
+  try {
+    chrome.storage.local.get(['kiboShowCursor'], (res) => {
+      showCursor = res.kiboShowCursor !== false;
+    });
+    chrome.storage.onChanged.addListener((changes) => {
+      if (changes.kiboShowCursor) {
+        showCursor = changes.kiboShowCursor.newValue !== false;
+        if (!showCursor && cursorEl) cursorEl.style.opacity = '0';
+      }
+    });
+  } catch (_) {}
+
+  window.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'KIBO_PAGE_ACTION') {
+      ensureCursorEl();
+      if (cursorEl && showCursor && typeof event.data.x === 'number' && typeof event.data.y === 'number') {
+        cursorEl.style.left = event.data.x + 'px';
+        cursorEl.style.top = event.data.y + 'px';
+        cursorEl.style.opacity = '1';
+        setTimeout(() => {
+          if (cursorEl) cursorEl.style.opacity = '0';
+        }, 1800);
+      }
+    }
+  });
+})();
 `;
 
-    const popupHtml = `<!DOCTYPE html>
+  const popupHtml = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
   <style>
-    body { width: 240px; margin: 0; padding: 16px; background: #0C0E14; color: #F8FAFC; font-family: system-ui, sans-serif; }
-    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 99px; background: rgba(56,189,248,0.16); color: #38BDF8; font-size: 11px; font-weight: 700; }
-    h3 { margin: 10px 0 4px; font-size: 14px; }
-    p { margin: 0; font-size: 12px; color: #94A3B8; line-height: 1.45; }
+    * { box-sizing: border-box; user-select: none; }
+    body {
+      width: 288px;
+      margin: 0;
+      padding: 0;
+      background: #0C0C0E;
+      color: #F4F4F5;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, system-ui, sans-serif;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .main {
+      padding: 16px 18px 14px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+    .brand-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      object-fit: contain;
+    }
+    .brand-name {
+      font-size: 14.5px;
+      font-weight: 800;
+      color: #FFFFFF;
+      letter-spacing: -0.01em;
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #94A3B8;
+    }
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #64748B;
+      transition: all 0.2s ease;
+    }
+    .status-pill.online {
+      color: #38BDF8;
+    }
+    .status-pill.online .status-dot {
+      background: #38BDF8;
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.75);
+    }
+    .desc {
+      margin: 0 0 14px;
+      font-size: 12px;
+      color: #94A3B8;
+      line-height: 1.48;
+    }
+    .open-btn {
+      width: 100%;
+      height: 38px;
+      border-radius: 999px;
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      background: #18191E;
+      color: #F8FAFC;
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 4px 14px rgba(0, 0, 0, 0.35);
+      transition: all 0.16s ease;
+    }
+    .open-btn:hover {
+      background: rgba(56, 189, 248, 0.16);
+      border-color: #38BDF8;
+      color: #FFFFFF;
+    }
+    .open-btn:active {
+      transform: scale(0.985);
+    }
+    .sub-link {
+      display: block;
+      margin-top: 10px;
+      text-align: center;
+      font-size: 11px;
+      color: #71717A;
+      text-decoration: none;
+      transition: color 0.15s ease;
+    }
+    .sub-link:hover {
+      color: #BAE6FD;
+    }
+    .footer {
+      padding: 11px 18px;
+      background: #121318;
+      border-top: 1px solid rgba(255, 255, 255, 0.07);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      cursor: pointer;
+    }
+    .switch {
+      position: relative;
+      width: 34px;
+      height: 19px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      transition: all 0.18s ease;
+      padding: 0;
+      cursor: pointer;
+    }
+    .switch.on {
+      background: rgba(56, 189, 248, 0.28);
+      border-color: #38BDF8;
+    }
+    .knob {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 13px;
+      height: 13px;
+      border-radius: 999px;
+      background: #94A3B8;
+      transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), background 0.18s ease;
+    }
+    .switch.on .knob {
+      transform: translateX(15px);
+      background: #38BDF8;
+      box-shadow: 0 0 6px rgba(56, 189, 248, 0.6);
+    }
+    .toggle-label {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #D4D4D8;
+    }
+    .privacy-link {
+      font-size: 11px;
+      color: #71717A;
+      text-decoration: none;
+    }
+    .privacy-link:hover {
+      color: #A1A1AA;
+    }
   </style>
 </head>
 <body>
-  <div class="badge">Connected to Kibo</div>
-  <h3>Kibo Browser Bridge</h3>
-  <p>Active tab context and DOM automation are linked to your Kibo top-bezel companion.</p>
+  <div class="main">
+    <div class="header">
+      <div class="brand">
+        <img src="icon.png" alt="Kibo" class="brand-icon" />
+        <span class="brand-name">Kibo</span>
+      </div>
+      <div id="statusPill" class="status-pill">
+        <span class="status-dot"></span>
+        <span id="statusText">Offline</span>
+      </div>
+    </div>
+
+    <p id="statusDesc" class="desc">
+      Kibo isn't open on your PC. Open it and Chrome reconnects on its own.
+    </p>
+
+    <button id="openKiboBtn" class="open-btn" type="button">
+      <span>Open Kibo</span>
+    </button>
+
+    <a id="repoLink" href="https://github.com/RaahimAlavi/kibo" target="_blank" class="sub-link">
+      Kibo Desktop Companion · v1.1
+    </a>
+  </div>
+
+  <div class="footer">
+    <div id="cursorToggleRow" class="toggle-row">
+      <button id="cursorSwitch" type="button" class="switch on" aria-label="Show Kibo's cursor">
+        <span class="knob"></span>
+      </button>
+      <span class="toggle-label">Show Kibo's cursor</span>
+    </div>
+    <a href="https://github.com/RaahimAlavi/kibo" target="_blank" class="privacy-link">Privacy</a>
+  </div>
+
+  <script src="popup.js"></script>
 </body>
 </html>`;
 
-    fs.writeFileSync(path.join(extDir, 'manifest.json'), JSON.stringify(manifest, null, 2), 'utf8');
-    fs.writeFileSync(path.join(extDir, 'background.js'), backgroundJs, 'utf8');
-    fs.writeFileSync(path.join(extDir, 'content.js'), contentJs, 'utf8');
-    fs.writeFileSync(path.join(extDir, 'popup.html'), popupHtml, 'utf8');
+  const popupJs = `// Kibo Extension Popup Controller
+document.addEventListener('DOMContentLoaded', () => {
+  const statusPill = document.getElementById('statusPill');
+  const statusText = document.getElementById('statusText');
+  const statusDesc = document.getElementById('statusDesc');
+  const openKiboBtn = document.getElementById('openKiboBtn');
+  const cursorSwitch = document.getElementById('cursorSwitch');
+  const cursorToggleRow = document.getElementById('cursorToggleRow');
 
-    const iconSrc = path.join(__dirname, '../public/icon-256.png');
+  async function checkConnection() {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 900);
+      const res = await fetch('http://127.0.0.1:51742/api/extension-status', {
+        signal: controller.signal,
+        cache: 'no-store'
+      });
+      clearTimeout(timeout);
+      if (res.ok) {
+        statusPill.classList.add('online');
+        statusText.textContent = 'Connected';
+        statusDesc.textContent = 'Connected to Kibo on your PC. Active tab context and browser actions are synced.';
+        openKiboBtn.querySelector('span').textContent = 'Open Kibo Notch';
+        return;
+      }
+    } catch (_) {}
+    statusPill.classList.remove('online');
+    statusText.textContent = 'Offline';
+    statusDesc.textContent = "Kibo isn't open on your PC. Open it and Chrome reconnects on its own.";
+    openKiboBtn.querySelector('span').textContent = 'Open Kibo';
+  }
+
+  openKiboBtn.addEventListener('click', async () => {
+    try {
+      await fetch('http://127.0.0.1:51742/api/open-kibo', { method: 'POST' });
+      checkConnection();
+    } catch (_) {
+      checkConnection();
+    }
+  });
+
+  function setSwitchUI(enabled) {
+    if (enabled) cursorSwitch.classList.add('on');
+    else cursorSwitch.classList.remove('on');
+  }
+
+  try {
+    chrome.storage.local.get(['kiboShowCursor'], (res) => {
+      const enabled = res.kiboShowCursor !== false;
+      setSwitchUI(enabled);
+    });
+  } catch (_) {}
+
+  cursorToggleRow.addEventListener('click', () => {
+    const next = !cursorSwitch.classList.contains('on');
+    setSwitchUI(next);
+    try {
+      chrome.storage.local.set({ kiboShowCursor: next });
+    } catch (_) {}
+  });
+
+  checkConnection();
+});
+`;
+
+  fs.writeFileSync(path.join(extDir, 'manifest.json'), JSON.stringify(manifest, null, 2), 'utf8');
+  fs.writeFileSync(path.join(extDir, 'background.js'), backgroundJs, 'utf8');
+  fs.writeFileSync(path.join(extDir, 'content.js'), contentJs, 'utf8');
+  fs.writeFileSync(path.join(extDir, 'popup.html'), popupHtml, 'utf8');
+  fs.writeFileSync(path.join(extDir, 'popup.js'), popupJs, 'utf8');
+
+  const iconCandidates = [
+    path.join(__dirname, '../public/icon-256.png'),
+    path.join(__dirname, '../dist/icon-256.png'),
+  ];
+  for (const iconSrc of iconCandidates) {
     if (fs.existsSync(iconSrc)) {
       fs.copyFileSync(iconSrc, path.join(extDir, 'icon.png'));
+      break;
     }
+  }
+}
+
+// Auto-refresh existing Kibo-Chrome-Extension folder on Desktop if present so icon & popup stay up to date
+app.whenReady().then(() => {
+  try {
+    const existingExtDir = path.join(app.getPath('desktop'), 'Kibo-Chrome-Extension');
+    if (fs.existsSync(existingExtDir)) {
+      writeKiboChromeExtensionFiles(existingExtDir);
+    }
+  } catch (_) {}
+});
+
+// Export Ready-to-Drop Kibo Chrome Extension Folder for Developer Mode
+ipcMain.handle('export-chrome-extension', async () => {
+  try {
+    const extDir = path.join(app.getPath('desktop'), 'Kibo-Chrome-Extension');
+    writeKiboChromeExtensionFiles(extDir);
 
     shell.showItemInFolder(extDir);
     return {
@@ -1478,9 +1919,7 @@ window.addEventListener('message', (event) => {
 ipcMain.on('start-extension-drag', (event) => {
   try {
     const extDir = path.join(app.getPath('desktop'), 'Kibo-Chrome-Extension');
-    if (!fs.existsSync(extDir)) {
-      fs.mkdirSync(extDir, { recursive: true });
-    }
+    writeKiboChromeExtensionFiles(extDir);
     const iconPath = path.join(__dirname, '../public/icon-256.png');
     const icon = fs.existsSync(iconPath)
       ? nativeImage.createFromPath(iconPath).resize({ width: 32, height: 32 })

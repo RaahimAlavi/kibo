@@ -20,7 +20,9 @@ export interface SoulCanvasProps {
     | 'WINK'
     | 'YAWNING'
     | 'SAD'
-    | 'DANCING';
+    | 'DANCING'
+    | 'FOCUSING'
+    | 'STOPWATCH';
   annoyance?: number;
   isHit?: boolean;
   isBreathingRelief?: boolean;
@@ -89,6 +91,7 @@ export const SoulCanvas: React.FC<SoulCanvasProps> = ({
 
   // Critically-damped spring state for cursor tracking
   const targetLookRef = useRef({ x: 0, y: 0 });
+  const smoothTargetRef = useRef({ x: 0, y: 0 });
   const eyePosRef = useRef({ x: 0, y: 0 });
   const eyeVelRef = useRef({ x: 0, y: 0 });
   const bodyPosRef = useRef({ x: 0, y: 0 });
@@ -140,8 +143,8 @@ export const SoulCanvas: React.FC<SoulCanvasProps> = ({
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
       targetLookRef.current = {
-        x: Math.tanh((e.clientX - cx) / 210),
-        y: Math.tanh((e.clientY - cy) / 170),
+        x: Math.tanh((e.clientX - cx) / 340),
+        y: Math.tanh((e.clientY - cy) / 280),
       };
       lastMouseMoveRef.current = performance.now();
     };
@@ -190,6 +193,8 @@ export const SoulCanvas: React.FC<SoulCanvasProps> = ({
       const isTalking = mode === 'TALKING';
       const isMuted = mode === 'MUTED';
       const isDancing = mode === 'DANCING' || expr === 'DANCING';
+      const isFocusing = expr === 'FOCUSING';
+      const isStopwatchExpr = expr === 'STOPWATCH';
 
       // Smoothly interpolate annoyance and relief ("phewww") so transitions never snap
       smoothAnnoyRef.current +=
@@ -209,18 +214,24 @@ export const SoulCanvas: React.FC<SoulCanvasProps> = ({
 
       // Return gaze smoothly to center after 3s of no mouse activity
       const idleMs = now - lastMouseMoveRef.current;
-      const rawTarget = lookOverrideRef.current
+      const rawGoal = lookOverrideRef.current
         ? lookOverrideRef.current
         : idleMs > 3000
         ? {
-            x: Math.sin(time * 0.7) * 0.1,
-            y: Math.cos(time * 0.5) * 0.05,
+            x: Math.sin(time * 0.55) * 0.08,
+            y: Math.cos(time * 0.4) * 0.04,
           }
         : targetLookRef.current;
 
-      // Critically-damped spring for eyes
-      const eyeK = 0.08;
-      const eyeDamp = Math.pow(0.76, dtScale);
+      // Low-pass filter on the target itself for silky-smooth starts & stops
+      const smoothLerp = 1 - Math.pow(0.86, dtScale);
+      smoothTargetRef.current.x += (rawGoal.x - smoothTargetRef.current.x) * smoothLerp;
+      smoothTargetRef.current.y += (rawGoal.y - smoothTargetRef.current.y) * smoothLerp;
+      const rawTarget = smoothTargetRef.current;
+
+      // Over-damped, gentle spring for eyes (slower tracking + smooth cushioned deceleration)
+      const eyeK = 0.032;
+      const eyeDamp = Math.pow(0.71, dtScale);
       eyeVelRef.current.x =
         (eyeVelRef.current.x +
           (rawTarget.x - eyePosRef.current.x) * eyeK * dtScale) *
@@ -233,8 +244,8 @@ export const SoulCanvas: React.FC<SoulCanvasProps> = ({
       eyePosRef.current.y += eyeVelRef.current.y * dtScale;
 
       // Softer follow-through spring for head & body inertia
-      const bodyK = 0.038;
-      const bodyDamp = Math.pow(0.8, dtScale);
+      const bodyK = 0.017;
+      const bodyDamp = Math.pow(0.73, dtScale);
       bodyVelRef.current.x =
         (bodyVelRef.current.x +
           (rawTarget.x - bodyPosRef.current.x) * bodyK * dtScale) *
@@ -363,7 +374,7 @@ export const SoulCanvas: React.FC<SoulCanvasProps> = ({
 
       // 2. CUTE ROUNDED FLOATING PAWS (With inertial lag)
       const pawSpread =
-        r * 1.24 +
+        r * (isFocusing ? 0.96 : 1.24) +
         (isYawning ? r * 0.18 * yawnWave : 0) +
         (isDancing ? r * 0.15 : 0) +
         (relief > 0.05 ? r * 0.14 * relief : 0);
@@ -387,6 +398,14 @@ export const SoulCanvas: React.FC<SoulCanvasProps> = ({
           // Relaxed dropped hands during "phewww" sigh
           pawY = r * 0.26 * relief;
           pawRot = side * 0.35 * relief;
+        } else if (isFocusing) {
+          // Cute studying / concentrating paws tucked neatly in front
+          pawY = r * 0.14 + Math.sin(time * 3.2) * r * 0.04;
+          pawRot = -side * 0.28;
+        } else if (isStopwatchExpr) {
+          // Perky timekeeper pose: one paw raised like holding a stopwatch, one bouncing to the beat
+          pawY = side === 1 ? -r * 0.34 + Math.sin(time * 7.5) * r * 0.08 : Math.cos(time * 7.5) * r * 0.12;
+          pawRot = side === 1 ? 0.42 : -0.22;
         } else if (expr === 'POINTING' && side === 1) {
           pawY = -r * 0.44;
           pawRot = 0.55;
@@ -453,6 +472,12 @@ export const SoulCanvas: React.FC<SoulCanvasProps> = ({
           earAngle = side * (0.22 + relief * 0.38);
         } else if (isYawning || expr === 'SAD') {
           earAngle = side * 0.68;
+        } else if (isFocusing) {
+          // Ears perked inward attentively while focusing
+          earAngle = side * 0.1 + Math.sin(time * 2.0) * 0.02;
+        } else if (isStopwatchExpr) {
+          // Cute rhythmic ticking ears for stopwatch
+          earAngle = side * 0.14 + Math.sin(time * 7.5) * 0.16;
         } else if (expr === 'EXCITED' || expr === 'HAPPY') {
           earAngle = side * 0.12 + Math.sin(time * 10) * 0.12;
         } else if (isThinking) {
@@ -552,8 +577,6 @@ export const SoulCanvas: React.FC<SoulCanvasProps> = ({
         // A. "PHEWWW" RELIEF COOLDOWN EYES (Peaceful closed sighing arcs)
         if (relief > 0.25 && annoy < 0.2) {
           ctx.strokeStyle = rgbToStr(coreRgb, 1);
-          ctx.shadowColor = rgbToStr(primaryRgb, 0.9);
-          ctx.shadowBlur = 5 * scale;
           ctx.lineWidth = Math.max(1.6, 2.0 * scale);
           ctx.lineCap = 'round';
           ctx.beginPath();
@@ -577,7 +600,6 @@ export const SoulCanvas: React.FC<SoulCanvasProps> = ({
             );
           }
           ctx.stroke();
-          ctx.shadowBlur = 0;
           return;
         }
 
@@ -601,8 +623,6 @@ export const SoulCanvas: React.FC<SoulCanvasProps> = ({
         // C. HAPPY / DANCING / YAWNING / HIT Chevron Arcs (^ ^)
         if (expr === 'HAPPY' || isDancing || isYawning || isHitRef.current) {
           ctx.strokeStyle = rgbToStr(coreRgb, 1);
-          ctx.shadowColor = rgbToStr(primaryRgb, 0.9);
-          ctx.shadowBlur = 6 * scale;
           ctx.lineWidth = Math.max(1.7, 2.1 * scale);
           ctx.lineCap = 'round';
           ctx.beginPath();
@@ -614,12 +634,14 @@ export const SoulCanvas: React.FC<SoulCanvasProps> = ({
             Math.PI * 1.88
           );
           ctx.stroke();
-          ctx.shadowBlur = 0;
           return;
         }
 
-        // D. STANDARD / TALKING / THINKING / ANGRY EYES (With smooth angry brow clip!)
-        const ew = Math.max(2.7, (expr === 'EXCITED' ? 3.6 : 3.3) * scale);
+        // D. STANDARD / TALKING / THINKING / FOCUSING / STOPWATCH / ANGRY EYES
+        const ew = Math.max(
+          2.7,
+          (expr === 'EXCITED' || isStopwatchExpr ? 3.55 : isFocusing ? 3.45 : 3.3) * scale
+        );
         const eh =
           isBlinking || isMuted
             ? 0.8 * scale
@@ -627,31 +649,50 @@ export const SoulCanvas: React.FC<SoulCanvasProps> = ({
             ? 2.5 * scale
             : isTalking
             ? (3.7 + Math.abs(Math.sin(time * 13 + dir)) * 1.4) * scale
-            : expr === 'EXCITED'
-            ? 4.6 * scale
+            : isFocusing
+            ? 3.5 * scale
+            : expr === 'EXCITED' || isStopwatchExpr
+            ? 4.4 * scale
             : 4.0 * scale;
 
         ctx.save();
         ctx.fillStyle = rgbToStr(coreRgb, 1);
-        ctx.shadowColor = rgbToStr(primaryRgb, 1);
-        ctx.shadowBlur = 7 * scale;
         ctx.beginPath();
         ctx.roundRect(ex - ew / 2, eyeY - eh / 2, ew, eh, ew * 0.5);
         ctx.fill();
-        ctx.shadowBlur = 0;
 
-        // Starlight catchlight inside eye
+        // Starlight catchlight inside eye (dual sparkle when in STOPWATCH mode!)
         if (!isBlinking && !isMuted && eh > 2.2 * scale) {
           ctx.fillStyle = '#FFFFFF';
           ctx.beginPath();
           ctx.arc(
             ex + eyeLook.x * 0.45 * scale - 0.35 * scale,
             eyeY - eh * 0.22,
-            Math.max(0.75, 0.92 * scale),
+            Math.max(0.75, (isStopwatchExpr ? 1.02 : 0.92) * scale),
             0,
             Math.PI * 2
           );
           ctx.fill();
+
+          if (isStopwatchExpr || isFocusing) {
+            ctx.beginPath();
+            ctx.arc(
+              ex + 0.55 * scale,
+              eyeY + eh * 0.18,
+              Math.max(0.45, 0.52 * scale),
+              0,
+              Math.PI * 2
+            );
+            ctx.fill();
+          }
+        }
+
+        // Cute determined focus brow mask when in FOCUSING mode
+        if (isFocusing && annoy <= 0.08 && !isBlinking) {
+          ctx.fillStyle = '#090D16';
+          ctx.translate(ex, eyeY - eh * 0.46);
+          ctx.rotate(-dir * 0.16);
+          ctx.fillRect(-ew * 0.75, -eh * 0.55, ew * 1.5, eh * 0.28);
         }
 
         // Smoothly angled angry upper eyelid mask as annoyance increases (0.1 -> 1.0)
@@ -746,6 +787,23 @@ export const SoulCanvas: React.FC<SoulCanvasProps> = ({
           mouthOpen * 0.5
         );
         ctx.fill();
+      } else if (isStopwatchExpr && !isBlinking && !isMuted) {
+        // Cute cat ":3" / "w" smile for Stopwatch mode
+        ctx.strokeStyle = rgbToStr(coreRgb, 0.92);
+        ctx.lineWidth = Math.max(1.0, 1.2 * scale);
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.arc(vx - 0.95 * scale, eyeY + r * 0.22, 1.0 * scale, Math.PI * 0.1, Math.PI * 0.9);
+        ctx.arc(vx + 0.95 * scale, eyeY + r * 0.22, 1.0 * scale, Math.PI * 0.1, Math.PI * 0.9);
+        ctx.stroke();
+      } else if (isFocusing && !isBlinking && !isMuted) {
+        // Cute determined little focus smile
+        ctx.strokeStyle = rgbToStr(coreRgb, 0.9);
+        ctx.lineWidth = Math.max(1.05, 1.25 * scale);
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.arc(vx, eyeY + r * 0.22, 1.2 * scale, Math.PI * 0.22, Math.PI * 0.78);
+        ctx.stroke();
       } else if (!isBlinking && !isMuted) {
         ctx.strokeStyle = rgbToStr(coreRgb, 0.85);
         ctx.lineWidth = Math.max(1.0, 1.25 * scale);
