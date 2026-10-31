@@ -147,7 +147,7 @@ declare global {
         sizeBytes?: number;
       }>;
       showItemInFolder?: (filePath: string) => Promise<{ success: boolean }>;
-      exportChromeExtension?: () => Promise<{ success: boolean; extDir?: string; folderPath?: string; error?: string }>;
+      exportChromeExtension?: (opts?: { revealInExplorer?: boolean }) => Promise<{ success: boolean; extDir?: string; folderPath?: string; error?: string }>;
       openChromeExtensionsPage?: () => Promise<{ success: boolean }>;
       startExtensionDrag?: () => void;
       getFilePath?: (file: any) => string;
@@ -3700,7 +3700,7 @@ export const KiboApp: React.FC = () => {
       Chat:      { w: 720, h: 460 },
       Agents:    { w: 860, h: 440 },
       Convert:   { w: 780, h: 468 },
-      Focus:     expandedStickyId ? { w: 860, h: 520 } : { w: 780, h: 440 },
+      Focus:     expandedStickyId ? { w: 880, h: 520 } : { w: 820, h: 460 },
       Skills:    { w: 820, h: 460 },
       Media:     { w: 664, h: 248 },
       Controls:  { w: 708, h: 396 },
@@ -3851,7 +3851,9 @@ export const KiboApp: React.FC = () => {
       ? window.innerWidth || 1920
       : dictationState !== 'idle'
       ? Math.max(notchShellWidth + archSize * 2, 704)
-      : notchShellWidth + archSize * 2;
+      : isExpanded
+      ? notchShellWidth + archSize * 2
+      : notchShellWidth;
 
   const activeHitboxHeight =
     lassoActive || onboardingStep !== null
@@ -3877,16 +3879,9 @@ export const KiboApp: React.FC = () => {
     }
 
     const prev = prevWindowBoundsRef.current;
-    const isGrowing = activeHitboxWidth > prev.w || activeHitboxHeight > prev.h;
-
-    if (isGrowing) {
+    if (activeHitboxWidth !== prev.w || activeHitboxHeight !== prev.h) {
       window.kiboAPI.setWindowBounds(activeHitboxWidth, activeHitboxHeight);
       prevWindowBoundsRef.current = { w: activeHitboxWidth, h: activeHitboxHeight };
-    } else if (activeHitboxWidth !== prev.w || activeHitboxHeight !== prev.h) {
-      boundsTimeoutRef.current = setTimeout(() => {
-        window.kiboAPI?.setWindowBounds(activeHitboxWidth, activeHitboxHeight);
-        prevWindowBoundsRef.current = { w: activeHitboxWidth, h: activeHitboxHeight };
-      }, 180);
     }
 
     return () => {
@@ -7359,10 +7354,11 @@ export const KiboApp: React.FC = () => {
                   <div
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: '1.15fr 0.85fr',
+                      gridTemplateColumns: 'minmax(0, 1.05fr) minmax(0, 1fr)',
                       gap: '14px',
                       flex: 1,
                       minHeight: 0,
+                      minWidth: 0,
                       width: '100%',
                     }}
                   >
@@ -7666,26 +7662,49 @@ export const KiboApp: React.FC = () => {
                                     placeholder="Sticky Note Title..."
                                   />
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    soundFX.playPaperRustle(false);
-                                    setExpandedStickyId(null);
-                                  }}
-                                  style={{
-                                    padding: '4px 10px',
-                                    borderRadius: '8px',
-                                    background: 'rgba(255, 255, 255, 0.08)',
-                                    border: '1px solid rgba(255, 255, 255, 0.14)',
-                                    color: '#F8FAFC',
-                                    fontSize: '11px',
-                                    fontWeight: 700,
-                                    cursor: 'pointer',
-                                    flexShrink: 0,
-                                  }}
-                                >
-                                  ← All Notes
-                                </button>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      updateStickyNotes((prev) => prev.filter((n) => n.id !== activeSticky.id));
+                                      soundFX.playPaperRustle(false);
+                                      setExpandedStickyId(null);
+                                    }}
+                                    title="Delete Sticky Note"
+                                    style={{
+                                      padding: '4px 9px',
+                                      borderRadius: '8px',
+                                      background: 'rgba(239, 68, 68, 0.14)',
+                                      border: '1px solid rgba(239, 68, 68, 0.34)',
+                                      color: '#FCA5A5',
+                                      fontSize: '11px',
+                                      fontWeight: 700,
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    Delete
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      soundFX.playPaperRustle(false);
+                                      setExpandedStickyId(null);
+                                    }}
+                                    style={{
+                                      padding: '4px 10px',
+                                      borderRadius: '8px',
+                                      background: 'rgba(255, 255, 255, 0.08)',
+                                      border: '1px solid rgba(255, 255, 255, 0.14)',
+                                      color: '#F8FAFC',
+                                      fontSize: '11px',
+                                      fontWeight: 700,
+                                      cursor: 'pointer',
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    ← All Notes
+                                  </button>
+                                </div>
                               </div>
 
                               <textarea
@@ -7934,17 +7953,22 @@ export const KiboApp: React.FC = () => {
                             <div
                               style={{
                                 display: 'grid',
-                                gridTemplateColumns: '1fr 1fr',
+                                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                                gridAutoRows: 'max-content',
                                 gap: '9px',
                                 flex: 1,
                                 minHeight: 0,
+                                minWidth: 0,
+                                width: '100%',
                                 overflowY: 'auto',
-                                padding: '3px 2px',
+                                overflowX: 'hidden',
+                                padding: '4px 3px',
+                                boxSizing: 'border-box',
                               }}
                             >
                               {stickyNotes.map((note, idx) => {
                                 const isNoteHovered = hoveredStickyId === note.id;
-                                const tiltDeg = idx % 2 === 0 ? -2.1 : 2.1;
+                                const tiltDeg = idx % 2 === 0 ? -1.4 : 1.4;
                                 const doneCount = note.tasks.filter((t) => t.done).length;
                                 return (
                                   <div
@@ -7966,32 +7990,66 @@ export const KiboApp: React.FC = () => {
                                       gap: '6px',
                                       cursor: 'pointer',
                                       position: 'relative',
+                                      minWidth: 0,
+                                      maxWidth: '100%',
+                                      overflow: 'hidden',
+                                      boxSizing: 'border-box',
                                       transform: isNoteHovered
-                                        ? `translateY(-3px) rotate(${tiltDeg}deg) scale(1.025)`
-                                        : 'translateY(0) rotate(0deg) scale(1)',
+                                        ? `translateY(-2px) rotate(${tiltDeg}deg)`
+                                        : 'translateY(0) rotate(0deg)',
                                       boxShadow: isNoteHovered
                                         ? '0 10px 22px rgba(0, 0, 0, 0.34)'
                                         : '0 4px 10px rgba(0, 0, 0, 0.16)',
                                       transition: 'transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s ease',
                                     }}
                                   >
-                                    <div>
-                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', marginBottom: '4px' }}>
-                                        <span
-                                          className="companion-truncate"
-                                          style={{ fontSize: '11.5px', fontWeight: 800, color: '#FFFFFF' }}
-                                        >
-                                          {note.title}
-                                        </span>
-                                        <span
-                                          style={{
-                                            width: '7px',
-                                            height: '7px',
-                                            borderRadius: '999px',
-                                            background: note.accent,
-                                            flexShrink: 0,
+                                    <div style={{ minWidth: 0 }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', marginBottom: '4px', minWidth: 0 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0, flex: 1 }}>
+                                          <span
+                                            style={{
+                                              width: '6.5px',
+                                              height: '6.5px',
+                                              borderRadius: '999px',
+                                              background: note.accent,
+                                              flexShrink: 0,
+                                            }}
+                                          />
+                                          <span
+                                            className="companion-truncate"
+                                            style={{ fontSize: '11.5px', fontWeight: 800, color: '#FFFFFF', minWidth: 0 }}
+                                          >
+                                            {note.title}
+                                          </span>
+                                        </div>
+                                        <button
+                                          type="button"
+                                          title="Delete sticky note"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            updateStickyNotes((prev) => prev.filter((n) => n.id !== note.id));
+                                            if (expandedStickyId === note.id) setExpandedStickyId(null);
+                                            soundFX.playPaperRustle(false);
                                           }}
-                                        />
+                                          style={{
+                                            width: '18px',
+                                            height: '18px',
+                                            borderRadius: '6px',
+                                            background: 'rgba(255, 255, 255, 0.07)',
+                                            border: '1px solid rgba(255, 255, 255, 0.12)',
+                                            color: '#CBD5E1',
+                                            fontSize: '12px',
+                                            lineHeight: 1,
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            cursor: 'pointer',
+                                            flexShrink: 0,
+                                            padding: 0,
+                                          }}
+                                        >
+                                          ×
+                                        </button>
                                       </div>
                                       <div
                                         style={{
@@ -8002,17 +8060,18 @@ export const KiboApp: React.FC = () => {
                                           WebkitLineClamp: 3,
                                           WebkitBoxOrient: 'vertical',
                                           overflow: 'hidden',
+                                          wordBreak: 'break-word',
                                         }}
                                       >
                                         {note.body || (note.tasks[0]?.text ? `• ${note.tasks[0].text}` : 'Click to open note & tasks...')}
                                       </div>
                                     </div>
 
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '9.5px', color: '#94A3B8' }}>
-                                      <span>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '9.5px', color: '#94A3B8', minWidth: 0 }}>
+                                      <span className="companion-truncate">
                                         {note.tasks.length > 0 ? `${doneCount}/${note.tasks.length} tasks` : 'Sticky Note'}
                                       </span>
-                                      <span style={{ color: note.accent, fontWeight: 700 }}>Expand ↗</span>
+                                      <span style={{ color: note.accent, fontWeight: 700, flexShrink: 0 }}>Expand ↗</span>
                                     </div>
                                   </div>
                                 );
@@ -9128,8 +9187,8 @@ export const KiboApp: React.FC = () => {
                                 <button
                                   type="button"
                                   onClick={async () => {
-                                    const res = await window.kiboAPI?.exportChromeExtension?.();
-                                    window.kiboAPI?.openChromeExtensionsPage?.();
+                                    const res = await window.kiboAPI?.exportChromeExtension?.({ revealInExplorer: false });
+                                    await window.kiboAPI?.openChromeExtensionsPage?.();
                                     if (res?.success && res.extDir) {
                                       setChromeExtStatus(res.extDir);
                                       soundFX.playSuccessChime();
@@ -9151,7 +9210,7 @@ export const KiboApp: React.FC = () => {
                                     cursor: 'pointer',
                                   }}
                                 >
-                                  {chromeExtStatus ? 'Re-open Extensions' : 'Install Extension'}
+                                  {chromeExtStatus ? 'Open chrome://extensions/' : 'Install Extension'}
                                 </button>
                               </div>
 
@@ -9169,33 +9228,54 @@ export const KiboApp: React.FC = () => {
                                   }}
                                 >
                                   <span style={{ fontSize: 11, color: '#94A3B8' }}>
-                                    Enable <strong>Developer mode</strong> in <code style={{ color: '#E2E8F0' }}>chrome://extensions</code>, then drag this chip or the highlighted folder into Chrome:
+                                    Enable <strong>Developer mode</strong> in <code style={{ color: '#E2E8F0' }}>chrome://extensions/</code>, then drag this chip into Chrome:
                                   </span>
-                                  <div
-                                    draggable
-                                    onDragStart={(e) => {
-                                      e.preventDefault();
-                                      window.kiboAPI?.startExtensionDrag?.();
-                                    }}
-                                    style={{
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: 6,
-                                      padding: '5px 10px',
-                                      borderRadius: 7,
-                                      background: '#1E293B',
-                                      border: '1px dashed rgba(56, 189, 248, 0.5)',
-                                      color: '#BAE6FD',
-                                      fontSize: 11,
-                                      fontWeight: 700,
-                                      cursor: 'grab',
-                                      whiteSpace: 'nowrap',
-                                      flexShrink: 0,
-                                    }}
-                                    title="Drag this directly into chrome://extensions"
-                                  >
-                                    <SvgIcon name="folder" size={12} color="#38BDF8" />
-                                    <span>Drag Kibo Extension</span>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        window.kiboAPI?.exportChromeExtension?.({ revealInExplorer: true });
+                                      }}
+                                      style={{
+                                        padding: '5px 9px',
+                                        borderRadius: 7,
+                                        background: 'rgba(255,255,255,0.06)',
+                                        border: '1px solid rgba(255,255,255,0.12)',
+                                        color: '#CBD5E1',
+                                        fontSize: 11,
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                        whiteSpace: 'nowrap',
+                                      }}
+                                    >
+                                      Show Folder
+                                    </button>
+                                    <div
+                                      draggable
+                                      onDragStart={(e) => {
+                                        e.preventDefault();
+                                        window.kiboAPI?.startExtensionDrag?.();
+                                      }}
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: 6,
+                                        padding: '5px 10px',
+                                        borderRadius: 7,
+                                        background: '#1E293B',
+                                        border: '1px dashed rgba(56, 189, 248, 0.5)',
+                                        color: '#BAE6FD',
+                                        fontSize: 11,
+                                        fontWeight: 700,
+                                        cursor: 'grab',
+                                        whiteSpace: 'nowrap',
+                                        flexShrink: 0,
+                                      }}
+                                      title="Drag this directly into chrome://extensions/"
+                                    >
+                                      <SvgIcon name="folder" size={12} color="#38BDF8" />
+                                      <span>Drag Kibo Extension</span>
+                                    </div>
                                   </div>
                                 </div>
                               )}

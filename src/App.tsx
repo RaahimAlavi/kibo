@@ -328,14 +328,7 @@ export function App() {
         }
         .kibo-web-root {
           min-height: 100vh;
-          background-color: #F8F9FA;
-          background-image:
-            radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.11) 0%, rgba(56, 189, 248, 0) 48%),
-            radial-gradient(circle at 88% 28%, rgba(192, 132, 252, 0.08) 0%, rgba(192, 132, 252, 0) 42%),
-            radial-gradient(circle at 12% 68%, rgba(16, 185, 129, 0.06) 0%, rgba(16, 185, 129, 0) 45%),
-            radial-gradient(rgba(18, 19, 22, 0.075) 1px, transparent 1px);
-          background-size: 100% 100%, 100% 100%, 100% 100%, 26px 26px;
-          background-position: 0 0, 0 0, 0 0, -1px -1px;
+          background: #F7F7F4;
           color: #121316;
           font-family: var(--kibo-web-font-primary);
           -webkit-font-smoothing: antialiased;

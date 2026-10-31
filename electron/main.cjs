@@ -72,8 +72,8 @@ let hitTestInterval = null;
 let isIgnoringMouse = false;
 
 let activeNotchBounds = {
-  width: 280,
-  height: 38,
+  width: 190,
+  height: 18,
 };
 
 let activeAppWindowRect = null;
@@ -84,8 +84,8 @@ let isAgentDockActive = false;
 let isAgentDockHovered = false;
 
 function setWindowBounds(width, height) {
-  activeNotchBounds.width = Math.round(width || 280);
-  activeNotchBounds.height = Math.round(height || 38);
+  activeNotchBounds.width = Math.max(10, Math.round(width || 190));
+  activeNotchBounds.height = Math.max(10, Math.round(height || 18));
 }
 
 function positionCanvasWindow() {
@@ -109,8 +109,8 @@ function startHitTestLoop() {
     const cursor = screen.getCursorScreenPoint();
     const winBounds = mainWindow.getBounds();
 
-    const notchHalfW = Math.max(activeNotchBounds.width / 2, 130);
-    const notchHitHeight = Math.max(activeNotchBounds.height, 34);
+    const notchHalfW = Math.max(activeNotchBounds.width / 2, 44);
+    const notchHitHeight = Math.max(activeNotchBounds.height, 14);
     const centerX = winBounds.x + winBounds.width / 2;
 
     const insideNotchX =
@@ -466,6 +466,8 @@ function createWindow() {
 
   // Use 'pop-up-menu' level instead of 'screen-saver' so Windows DWM keeps hardware video overlays alive
   mainWindow.setAlwaysOnTop(true, 'pop-up-menu');
+  isIgnoringMouse = true;
+  mainWindow.setIgnoreMouseEvents(true, { forward: true });
 
   startHitTestLoop();
   // Defer heavy PowerShell watchers until after the 2.25s startup wake-and-hide animation completes
@@ -547,11 +549,10 @@ function createWindow() {
       // Native Windows Installer Direct Chrome Download Endpoint
       if (parsedUrl.pathname.startsWith('/download/')) {
         const candidates = [
+          path.join(__dirname, '../public/download/Kibo-Setup.exe'),
           path.join(__dirname, '../release/Kibo Setup 1.0.0.exe'),
           path.join(__dirname, '../release/Kibo-Setup-1.0.0.exe'),
-          path.join(__dirname, '../release/win-unpacked/Kibo.exe'),
           path.join(__dirname, '../release/Kibo.exe'),
-          path.join(__dirname, '../public/download/Kibo-Setup.exe'),
         ];
         const exePath = candidates.find((p) => fs.existsSync(p));
         if (exePath) {
@@ -765,7 +766,7 @@ ipcMain.on('set-expanded', (event, { expanded, width = 640, height = 390 } = {})
   if (expanded) {
     setWindowBounds(width, height);
   } else {
-    setWindowBounds(280, 38);
+    setWindowBounds(190, 18);
   }
 });
 
@@ -1612,42 +1613,11 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
 });
 `;
 
-  const contentJs = `// Kibo Content Script Bridge + Optional Kibo Cursor Indicator
+  const contentJs = `// Kibo Content Script Bridge
 (function () {
-  let cursorEl = null;
-  let showCursor = true;
-
-  function ensureCursorEl() {
-    if (cursorEl || !document.body) return;
-    cursorEl = document.createElement('div');
-    cursorEl.id = 'kibo-agent-cursor-ring';
-    cursorEl.style.cssText = 'position:fixed;top:0;left:0;width:18px;height:18px;border-radius:999px;border:2px solid #38BDF8;background:rgba(56,189,248,0.16);box-shadow:0 0 12px rgba(56,189,248,0.55);pointer-events:none;z-index:2147483647;transform:translate(-50%,-50%);transition:opacity 0.2s ease, transform 0.08s ease;opacity:0;';
-    document.body.appendChild(cursorEl);
-  }
-
-  try {
-    chrome.storage.local.get(['kiboShowCursor'], (res) => {
-      showCursor = res.kiboShowCursor !== false;
-    });
-    chrome.storage.onChanged.addListener((changes) => {
-      if (changes.kiboShowCursor) {
-        showCursor = changes.kiboShowCursor.newValue !== false;
-        if (!showCursor && cursorEl) cursorEl.style.opacity = '0';
-      }
-    });
-  } catch (_) {}
-
   window.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'KIBO_PAGE_ACTION') {
-      ensureCursorEl();
-      if (cursorEl && showCursor && typeof event.data.x === 'number' && typeof event.data.y === 'number') {
-        cursorEl.style.left = event.data.x + 'px';
-        cursorEl.style.top = event.data.y + 'px';
-        cursorEl.style.opacity = '1';
-        setTimeout(() => {
-          if (cursorEl) cursorEl.style.opacity = '0';
-        }, 1800);
-      }
+    if (event.data && event.data.type === 'KIBO_PAGE_PING') {
+      window.postMessage({ type: 'KIBO_PAGE_PONG', url: location.href, title: document.title }, '*');
     }
   });
 })();
@@ -1747,66 +1717,21 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
     .open-btn:active {
       transform: scale(0.985);
     }
-    .sub-link {
-      display: block;
-      margin-top: 10px;
-      text-align: center;
-      font-size: 11px;
-      color: #71717A;
-      text-decoration: none;
-      transition: color 0.15s ease;
-    }
-    .sub-link:hover {
-      color: #BAE6FD;
-    }
     .footer {
-      padding: 11px 18px;
+      padding: 10px 18px;
       background: #121318;
       border-top: 1px solid rgba(255, 255, 255, 0.07);
       display: flex;
       align-items: center;
       justify-content: space-between;
     }
-    .toggle-row {
-      display: flex;
-      align-items: center;
-      gap: 9px;
-      cursor: pointer;
+    .footer-meta {
+      font-size: 11px;
+      color: #71717A;
+      text-decoration: none;
     }
-    .switch {
-      position: relative;
-      width: 34px;
-      height: 19px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.12);
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      transition: all 0.18s ease;
-      padding: 0;
-      cursor: pointer;
-    }
-    .switch.on {
-      background: rgba(56, 189, 248, 0.28);
-      border-color: #38BDF8;
-    }
-    .knob {
-      position: absolute;
-      top: 2px;
-      left: 2px;
-      width: 13px;
-      height: 13px;
-      border-radius: 999px;
-      background: #94A3B8;
-      transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), background 0.18s ease;
-    }
-    .switch.on .knob {
-      transform: translateX(15px);
-      background: #38BDF8;
-      box-shadow: 0 0 6px rgba(56, 189, 248, 0.6);
-    }
-    .toggle-label {
-      font-size: 11.5px;
-      font-weight: 600;
-      color: #D4D4D8;
+    .footer-meta:hover {
+      color: #BAE6FD;
     }
     .privacy-link {
       font-size: 11px;
@@ -1838,19 +1763,12 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
     <button id="openKiboBtn" class="open-btn" type="button">
       <span>Open Kibo</span>
     </button>
-
-    <a id="repoLink" href="https://github.com/RaahimAlavi/kibo" target="_blank" class="sub-link">
-      Kibo Desktop Companion · v1.1
-    </a>
   </div>
 
   <div class="footer">
-    <div id="cursorToggleRow" class="toggle-row">
-      <button id="cursorSwitch" type="button" class="switch on" aria-label="Show Kibo's cursor">
-        <span class="knob"></span>
-      </button>
-      <span class="toggle-label">Show Kibo's cursor</span>
-    </div>
+    <a id="repoLink" href="https://github.com/RaahimAlavi/kibo" target="_blank" class="footer-meta">
+      Kibo Desktop Companion · v1.1
+    </a>
     <a href="https://github.com/RaahimAlavi/kibo" target="_blank" class="privacy-link">Privacy</a>
   </div>
 
@@ -1864,8 +1782,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const statusText = document.getElementById('statusText');
   const statusDesc = document.getElementById('statusDesc');
   const openKiboBtn = document.getElementById('openKiboBtn');
-  const cursorSwitch = document.getElementById('cursorSwitch');
-  const cursorToggleRow = document.getElementById('cursorToggleRow');
 
   async function checkConnection() {
     try {
@@ -1897,26 +1813,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (_) {
       checkConnection();
     }
-  });
-
-  function setSwitchUI(enabled) {
-    if (enabled) cursorSwitch.classList.add('on');
-    else cursorSwitch.classList.remove('on');
-  }
-
-  try {
-    chrome.storage.local.get(['kiboShowCursor'], (res) => {
-      const enabled = res.kiboShowCursor !== false;
-      setSwitchUI(enabled);
-    });
-  } catch (_) {}
-
-  cursorToggleRow.addEventListener('click', () => {
-    const next = !cursorSwitch.classList.contains('on');
-    setSwitchUI(next);
-    try {
-      chrome.storage.local.set({ kiboShowCursor: next });
-    } catch (_) {}
   });
 
   checkConnection();
@@ -1952,12 +1848,14 @@ app.whenReady().then(() => {
 });
 
 // Export Ready-to-Drop Kibo Chrome Extension Folder for Developer Mode
-ipcMain.handle('export-chrome-extension', async () => {
+ipcMain.handle('export-chrome-extension', async (_event, opts = {}) => {
   try {
     const extDir = path.join(app.getPath('desktop'), 'Kibo-Chrome-Extension');
     writeKiboChromeExtensionFiles(extDir);
 
-    shell.showItemInFolder(extDir);
+    if (opts && opts.revealInExplorer) {
+      shell.showItemInFolder(extDir);
+    }
     return {
       success: true,
       extDir,
@@ -1988,7 +1886,10 @@ ipcMain.on('start-extension-drag', (event) => {
 
 ipcMain.handle('open-chrome-extensions-page', async () => {
   try {
-    clipboard.writeText('chrome://extensions');
+    clipboard.writeText('chrome://extensions/');
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.blur();
+    }
     const localAppData = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
     const programFiles = process.env.PROGRAMFILES || 'C:\\Program Files';
     const programFilesX86 = process.env['PROGRAMFILES(X86)'] || 'C:\\Program Files (x86)';
@@ -2015,17 +1916,42 @@ ipcMain.handle('open-chrome-extensions-page', async () => {
     if (chromeExe) {
       const child = spawn(
         chromeExe,
-        [`--profile-directory=${lastUsedProfile}`, 'chrome://extensions/'],
+        [`--profile-directory=${lastUsedProfile}`, 'about:blank'],
         { detached: true, stdio: 'ignore', windowsHide: false }
       );
       child.unref();
     } else {
-      exec(`start chrome --profile-directory="${lastUsedProfile}" "chrome://extensions/"`, (err) => {
+      exec(`start chrome --profile-directory="${lastUsedProfile}" "about:blank"`, (err) => {
         if (err) {
           shell.openExternal('https://www.google.com/chrome/');
         }
       });
     }
+
+    // Chromium blocks internal chrome:// URLs passed via OS CLI args; navigate the active tab directly via address bar
+    const psNavigate = `
+      $wshell = New-Object -ComObject WScript.Shell
+      for ($i = 0; $i -lt 12; $i++) {
+        Start-Sleep -Milliseconds 120
+        if ($wshell.AppActivate('Google Chrome') -or $wshell.AppActivate('Chrome')) {
+          Start-Sleep -Milliseconds 140
+          Set-Clipboard -Value 'chrome://extensions/'
+          $wshell.SendKeys('^l')
+          Start-Sleep -Milliseconds 70
+          $wshell.SendKeys('^v')
+          Start-Sleep -Milliseconds 70
+          $wshell.SendKeys('{ENTER}')
+          break
+        }
+      }
+    `;
+    const encodedCmd = Buffer.from(psNavigate, 'utf16le').toString('base64');
+    spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-EncodedCommand', encodedCmd], {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true,
+    }).unref();
+
     return { success: true, profile: lastUsedProfile };
   } catch (_) {
     return { success: false };
