@@ -648,18 +648,24 @@ export async function transcribeAudioWithGeminiAPI(
   mimeType: string,
   mode: 'ASK' | 'DICTATE' | 'LASSO',
   apiKey: string,
-  screenBase64?: string
+  screenBase64?: string,
+  browserDraftHint?: string
 ): Promise<string> {
   if (!apiKey || !apiKey.trim()) {
     throw new Error('MISSING_API_KEY');
   }
 
+  const vocabContext =
+    'Context vocabulary: The assistant is named "Kibo" (often misheard by generic ASR as "keyboard", "keybo", "keebo", or "kilo"). Preserve exact filenames and extensions when spoken (e.g., "kibo.txt", "kibo.pdf", "notes.docx", "SKILL.md").';
+
   const promptText =
     mode === 'DICTATE'
-      ? 'Transcribe the user speech in this audio and clean up any false starts, filler words (um, uh), or self-corrections. Return ONLY the final polished sentence ready to be pasted, with no quotes or extra commentary.'
+      ? `Transcribe the user speech in this audio and clean up any false starts, filler words (um, uh), or self-corrections. ${vocabContext} Return ONLY the final polished sentence ready to be pasted, with no quotes or extra commentary.`
       : mode === 'LASSO'
       ? 'The user circled an area on their screen and asked a question out loud. Transcribe their question and answer it concisely in 1 short sentence based on the attached screenshot.'
-      : 'Transcribe the exact spoken command or question in this audio. Return ONLY the raw spoken words with no quotes.';
+      : `Transcribe the exact spoken command or question in this audio. ${vocabContext}${
+          browserDraftHint ? ` (Browser interim draft for reference: "${browserDraftHint}")` : ''
+        } Return ONLY the raw spoken words with no quotes.`;
 
   const parts: any[] = [
     { text: promptText },

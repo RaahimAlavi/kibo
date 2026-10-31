@@ -859,6 +859,65 @@ const SvgIcon: React.FC<{ name: string; size?: number; color?: string }> = ({
           <line x1="10" y1="14" x2="21" y2="3" />
         </svg>
       );
+    case 'note':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M15.5 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3Z" />
+          <polyline points="14 3 14 9 21 9" />
+        </svg>
+      );
+    case 'gmail':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+          <path d="M20 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.9 21.1 4 20 4Z" stroke="#EA4335" strokeWidth="1.8" />
+          <path d="M22 6L12 13L2 6" stroke="#EA4335" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case 'github':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+          <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+        </svg>
+      );
+    case 'notion':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="4" y="3" width="16" height="18" rx="2.5" />
+          <path d="M8.5 16.5V7.5L15.5 16.5V7.5" />
+        </svg>
+      );
+    case 'figma':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+          <path d="M8.5 2H12V9H8.5C6.567 9 5 7.433 5 5.5C5 3.567 6.567 2 8.5 2Z" fill="#F24E1E" />
+          <path d="M12 2H15.5C17.433 2 19 3.567 19 5.5C19 7.433 17.433 9 15.5 9H12V2Z" fill="#FF7262" />
+          <path d="M12 9H15.5C17.433 9 19 10.567 19 12.5C19 14.433 17.433 16 15.5 16H12V9Z" fill="#1ABCFE" />
+          <path d="M8.5 9H12V16H8.5C6.567 16 5 14.433 5 12.5C5 10.567 6.567 9 8.5 9Z" fill="#A259FF" />
+          <path d="M8.5 16H12V19.5C12 21.433 10.433 23 8.5 23C6.567 23 5 21.433 5 19.5C5 17.567 6.567 16 8.5 16Z" fill="#0ACF83" />
+        </svg>
+      );
+    case 'vscode':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#38BDF8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M16.5 3L7 12l9.5 9 4.5-2.2V5.2L16.5 3z" />
+          <path d="M3 8.5L7 12l-4 3.5" />
+          <path d="M16.5 3v18" />
+        </svg>
+      );
+    case 'meta':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#38BDF8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18.178 8c5.096 0 5.096 8 0 8-5.095 0-7.133-8-12.739-8-4.585 0-4.585 8 0 8 5.606 0 7.644-8 12.74-8z" />
+        </svg>
+      );
+    case 'linear':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#818CF8" strokeWidth="2" strokeLinecap="round">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M4.5 15.5l8-8" />
+          <path d="M8.5 19.5l11-11" />
+        </svg>
+      );
     default:
       return null;
   }
@@ -1075,20 +1134,20 @@ const LOADOUT_CARDS: LoadoutCardItem[] = [
   {
     id: 'soul_kitsune',
     slot: 'Soul',
-    name: 'TE-02 Field',
+    name: 'Sakura Mochi',
     rarity: 'RARE',
-    description: 'Industrial field-synth chassis with high-contrast amber dot-matrix optics.',
+    description: 'Soft pastel rose chassis with warm cherry-blossom optics and playful blush glow.',
     cost: 120,
     skinKey: SOUL_SKINS[1]?.key || SOUL_SKINS[0]?.key,
-    cardTint: 'linear-gradient(165deg, #5C4028 0%, #3E2C1E 60%, #261C15 100%)',
+    cardTint: 'linear-gradient(165deg, #5C2844 0%, #3E1C2F 60%, #26121E 100%)',
     iconKind: 'soul',
   },
   {
     id: 'soul_kodama',
     slot: 'Soul',
-    name: 'K-03 Bio-Synth',
+    name: 'Matcha Mint',
     rarity: 'RARE',
-    description: 'Low-emission phosphor-green telemetry core built for late-night deep work.',
+    description: 'Crisp botanical mint telemetry core crafted for calm, deep focus sessions.',
     cost: 220,
     skinKey: SOUL_SKINS[2]?.key || SOUL_SKINS[0]?.key,
     cardTint: 'linear-gradient(165deg, #2E4E42 0%, #213830 60%, #172621 100%)',
@@ -1097,20 +1156,20 @@ const LOADOUT_CARDS: LoadoutCardItem[] = [
   {
     id: 'soul_raijin',
     slot: 'Soul',
-    name: 'V-04 Arc',
+    name: 'Crimson Nova',
     rarity: 'EPIC',
-    description: 'Overclocked high-voltage magnetic gimbal that spins up on voice commands.',
+    description: 'High-energy ruby thruster shell with fiery coral visor optics.',
     cost: 400,
     skinKey: SOUL_SKINS[3]?.key || SOUL_SKINS[0]?.key,
-    cardTint: 'linear-gradient(165deg, #383E68 0%, #262B49 60%, #1A1D30 100%)',
+    cardTint: 'linear-gradient(165deg, #682832 0%, #491C24 60%, #301218 100%)',
     iconKind: 'soul',
   },
   {
     id: 'soul_amaterasu',
     slot: 'Soul',
-    name: 'S-05 Helios',
+    name: 'Mango Sunburst',
     rarity: 'EPIC',
-    description: 'Gold-anodized orbital frame with warm solar-flare thruster stabilizers.',
+    description: 'Bright golden-mango anodized pod radiating warm citrus sunshine.',
     cost: 650,
     skinKey: SOUL_SKINS[4]?.key || SOUL_SKINS[0]?.key,
     cardTint: 'linear-gradient(165deg, #5A4B30 0%, #403522 60%, #2B2418 100%)',
@@ -1119,9 +1178,9 @@ const LOADOUT_CARDS: LoadoutCardItem[] = [
   {
     id: 'soul_void',
     slot: 'Soul',
-    name: 'MK-0 Singularity',
+    name: 'Cyber Grape',
     rarity: 'PROTOTYPE',
-    description: 'Experimental zero-point gravity core. Includes the Gravity Well module unlocked automatically.',
+    description: 'Ultraviolet neon synth core. Unlocks the zero-point Gravity Well module automatically.',
     cost: 1000,
     skinKey: SOUL_SKINS[SOUL_SKINS.length - 1]?.key || 'flame_void',
     cardTint: 'linear-gradient(165deg, #463A59 0%, #31283F 55%, #211B2B 100%)',
@@ -1712,12 +1771,97 @@ export const KiboApp: React.FC = () => {
     return [];
   });
 
-  // Focus Timer + Stopwatch + Kibo Dance State
+  // Focus Timer + Stopwatch + Sticky Notes + Kibo Dance State
   const [focusSubMode, setFocusSubMode] = useState<'timer' | 'stopwatch'>('timer');
   const [stopwatchMs, setStopwatchMs] = useState<number>(0);
   const [stopwatchRunning, setStopwatchRunning] = useState<boolean>(false);
   const [stopwatchLaps, setStopwatchLaps] = useState<number[]>([]);
   const stopwatchStartRef = useRef<number>(0);
+
+  const [stickyNotes, setStickyNotes] = useState<
+    Array<{
+      id: string;
+      title: string;
+      accent: string;
+      bgTint: string;
+      borderTint: string;
+      body: string;
+      tasks: Array<{ id: string; text: string; done: boolean }>;
+    }>
+  >(() => {
+    try {
+      const saved = localStorage.getItem('kibo_sticky_notes');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (_) {}
+    return [
+      {
+        id: 'note_1',
+        title: 'Today’s Focus Sprint',
+        accent: '#FACC15',
+        bgTint: 'rgba(250, 204, 21, 0.08)',
+        borderTint: 'rgba(250, 204, 21, 0.28)',
+        body: 'Ship UI polish, test voice file converter, and review GitHub release.',
+        tasks: [
+          { id: 't1', text: 'Polish top notch animations', done: true },
+          { id: 't2', text: 'Test PDF to Word conversion', done: false },
+        ],
+      },
+      {
+        id: 'note_2',
+        title: 'Quick Ideas & Scratchpad',
+        accent: '#38BDF8',
+        bgTint: 'rgba(56, 189, 248, 0.08)',
+        borderTint: 'rgba(56, 189, 248, 0.28)',
+        body: 'Remember to connect Chrome Bridge and Notion workspace in Settings.',
+        tasks: [
+          { id: 't3', text: 'Import custom SKILL.md pack', done: false },
+        ],
+      },
+      {
+        id: 'note_3',
+        title: 'Reading & Links',
+        accent: '#FF6B9D',
+        bgTint: 'rgba(255, 107, 157, 0.08)',
+        borderTint: 'rgba(255, 107, 157, 0.28)',
+        body: 'Ask Kibo with Ctrl + Shift on any article or chart to summarize key metrics.',
+        tasks: [],
+      },
+      {
+        id: 'note_4',
+        title: 'Wrap-Up Checklist',
+        accent: '#10B981',
+        bgTint: 'rgba(16, 185, 129, 0.08)',
+        borderTint: 'rgba(16, 185, 129, 0.28)',
+        body: 'Clean desktop downloads and push latest commits before logging off.',
+        tasks: [
+          { id: 't4', text: 'Push changes to main repo', done: false },
+        ],
+      },
+    ];
+  });
+  const [expandedStickyId, setExpandedStickyId] = useState<string | null>(null);
+  const [hoveredStickyId, setHoveredStickyId] = useState<string | null>(null);
+  const [newStickyTaskInput, setNewStickyTaskInput] = useState<string>('');
+
+  const updateStickyNotes = useCallback(
+    (
+      updater: (
+        prev: typeof stickyNotes
+      ) => typeof stickyNotes
+    ) => {
+      setStickyNotes((prev) => {
+        const next = updater(prev);
+        try {
+          localStorage.setItem('kibo_sticky_notes', JSON.stringify(next));
+        } catch (_) {}
+        return next;
+      });
+    },
+    []
+  );
 
   useEffect(() => {
     if (!stopwatchRunning) return;
@@ -2361,6 +2505,7 @@ export const KiboApp: React.FC = () => {
   const [timerTotalSeconds, setTimerTotalSeconds] = useState(1500);
   const [timerPreset, setTimerPreset] = useState<'1m' | '5m' | '10m' | '15m' | '20m' | '25m' | '45m'>('25m');
   const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [isTimerSessionActive, setIsTimerSessionActive] = useState(false);
   const [timerAlarmRinging, setTimerAlarmRinging] = useState(false);
   const alarmIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -2377,6 +2522,8 @@ export const KiboApp: React.FC = () => {
       !detectedAppId &&
       !showMediaNotch &&
       !isTimerRunning &&
+      !isTimerSessionActive &&
+      timerSeconds === timerTotalSeconds &&
       !timerAlarmRinging &&
       !stopwatchRunning &&
       stopwatchMs === 0 &&
@@ -3492,7 +3639,11 @@ export const KiboApp: React.FC = () => {
       isExpanded ||
       showMediaNotch ||
       isTimerRunning ||
+      isTimerSessionActive ||
+      timerSeconds < timerTotalSeconds ||
       timerAlarmRinging ||
+      stopwatchRunning ||
+      stopwatchMs > 0 ||
       askNotchPhase !== 'idle' ||
       Boolean(contextCard) ||
       Boolean(userBubbleText) ||
@@ -3521,7 +3672,12 @@ export const KiboApp: React.FC = () => {
     isExpanded,
     showMediaNotch,
     isTimerRunning,
+    isTimerSessionActive,
+    timerSeconds,
+    timerTotalSeconds,
     timerAlarmRinging,
+    stopwatchRunning,
+    stopwatchMs,
     askNotchPhase,
     contextCard,
     userBubbleText,
@@ -3544,9 +3700,9 @@ export const KiboApp: React.FC = () => {
       Chat:      { w: 720, h: 460 },
       Agents:    { w: 860, h: 440 },
       Convert:   { w: 780, h: 468 },
-      Focus:     { w: 780, h: 440 },
+      Focus:     expandedStickyId ? { w: 860, h: 520 } : { w: 780, h: 440 },
       Skills:    { w: 820, h: 460 },
-      Media:     { w: 580, h: 254 },
+      Media:     { w: 664, h: 248 },
       Controls:  { w: 708, h: 396 },
       Today:     { w: 860, h: 440 },
       Clipboard: { w: 860, h: 444 },
@@ -3556,7 +3712,7 @@ export const KiboApp: React.FC = () => {
       Settings:  { w: 880, h: 540 },
     };
     return dims[activeTab] || { w: 740, h: 450 };
-  }, [activeTab, hasMediaSession]);
+  }, [activeTab, hasMediaSession, expandedStickyId]);
 
   const handleRunFileConversion = useCallback(
     async (opts: { filePath?: string; fileNameQuery?: string; targetFormat: string }) => {
@@ -3624,7 +3780,7 @@ export const KiboApp: React.FC = () => {
   const showProactiveBanner = !isExpanded && !showCompanionWindow && Boolean(detectedAppId);
   const isCompactAskBar = !showProactiveBanner && (askNotchPhase === 'speaking' || askNotchPhase === 'thinking');
   const isStopwatchNotchActive = !isExpanded && !showProactiveBanner && !showMediaNotch && !isCompactAskBar && (stopwatchRunning || stopwatchMs > 0);
-  const isTimerNotchActive = !isExpanded && !showProactiveBanner && !showMediaNotch && !isCompactAskBar && (isTimerRunning || timerAlarmRinging || isStopwatchNotchActive);
+  const isTimerNotchActive = !isExpanded && !showProactiveBanner && !showMediaNotch && !isCompactAskBar && (isTimerRunning || isTimerSessionActive || timerSeconds < timerTotalSeconds || timerAlarmRinging || isStopwatchNotchActive);
   const isMiniMediaPill = (bootPhase === 'ready' || bootPhase === 'tucking') && !isExpanded && !showProactiveBanner && !showMediaNotch && !isCompactAskBar && !isTimerNotchActive && !notchApiAlert && !isFileDraggingOverNotch && hasMediaSession;
   const isTuckedSliver = (isTucked || bootPhase === 'sleeping' || (bootPhase === 'tucking' && !hasMediaSession)) && !isExpanded && !showProactiveBanner && !showMediaNotch && !isTimerNotchActive && !isCompactAskBar && !isMiniMediaPill && !notchApiAlert && !isFileDraggingOverNotch;
 
@@ -3894,6 +4050,7 @@ export const KiboApp: React.FC = () => {
         setTimerTotalSeconds(totalSecs);
         setTimerSeconds(totalSecs);
         setTimerAlarmRinging(false);
+        setIsTimerSessionActive(true);
         setIsTimerRunning(true);
         showReplyWithSpeech(
           `Focus timer started for ${mins >= 1 ? `${Math.round(mins)} minutes` : `${totalSecs} seconds`}. I'll dance when time is up!`,
@@ -5312,14 +5469,28 @@ export const KiboApp: React.FC = () => {
               if (mode === 'ASK') {
                 setAskNotchPhase('thinking');
                 setSoulMode('THINKING');
-                let transcript = liveSpeechRef.current.trim();
-                if (!transcript && base64Audio) {
-                  transcript = await transcribeAudioWithGeminiAPI(
-                    base64Audio,
-                    blob.type,
-                    'ASK',
-                    apiKey
-                  );
+                const browserDraft = liveSpeechRef.current.trim();
+                let transcript = browserDraft;
+                if (base64Audio && base64Audio.length > 400) {
+                  try {
+                    const geminiTranscript = await transcribeAudioWithGeminiAPI(
+                      base64Audio,
+                      blob.type,
+                      'ASK',
+                      apiKey,
+                      undefined,
+                      browserDraft
+                    );
+                    if (geminiTranscript && !geminiTranscript.includes('<noise>') && !geminiTranscript.includes('(silence)')) {
+                      transcript = geminiTranscript.trim();
+                    }
+                  } catch (_) {}
+                }
+                if (transcript) {
+                  // Domain vocabulary normalization so "keyboard.txt" / "keyboard file" resolves to "kibo.txt"
+                  transcript = transcript
+                    .replace(/\b(?:keyboard|keybo|keebo|kilo)\.(txt|text|pdf|docx|doc|md|markdown|json|csv|html)\b/gi, 'kibo.$1')
+                    .replace(/\b(?:keyboard|keybo|keebo)\s+dot\s+(txt|text|pdf|docx|doc|md|markdown)\b/gi, 'kibo.$1');
                 }
                 if (transcript && !transcript.includes('<noise>') && !transcript.includes('(silence)')) {
                   setUserBubbleText(transcript);
@@ -5526,6 +5697,7 @@ export const KiboApp: React.FC = () => {
       unregHotkey();
       unregLasso();
       unregDictate();
+      unregExpand();
       unregAsk();
     };
   }, [startHoldRecording, stopHoldRecording, triggerLassoFlow, triggerCleanDictationFlow, startLiveVoiceAsk]);
@@ -6095,16 +6267,16 @@ export const KiboApp: React.FC = () => {
               <div className={timerAlarmRinging ? 'alarm-dancing-soul' : 'ask-mini-soul-left'}>
                 <SoulCanvas
                   soul={currentSoul}
-                  width={timerAlarmRinging ? 58 : 50}
-                  height={timerAlarmRinging ? 48 : 38}
-                  scale={timerAlarmRinging ? 0.95 : 0.86}
+                  width={timerAlarmRinging ? 60 : 54}
+                  height={timerAlarmRinging ? 48 : 42}
+                  scale={timerAlarmRinging ? 1.0 : 0.94}
                   isDull={isSoulDull}
                   interactive={true}
                   mode={timerAlarmRinging ? 'DANCING' : 'LISTENING'}
                   expression={
                     timerAlarmRinging
                       ? 'DANCING'
-                      : isStopwatchNotchActive && !isTimerRunning
+                      : isStopwatchNotchActive && !isTimerRunning && !isTimerSessionActive
                       ? stopwatchRunning
                         ? 'STOPWATCH'
                         : 'PEEKING'
@@ -6119,7 +6291,7 @@ export const KiboApp: React.FC = () => {
                   <span className="alarm-title">Time's up! Kibo Dance!</span>
                   <span className="alarm-sub">Click to stop celebration</span>
                 </div>
-              ) : isStopwatchNotchActive && !isTimerRunning ? (
+              ) : isStopwatchNotchActive && !isTimerRunning && !isTimerSessionActive ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span
                     className="notch-timer-digits"
@@ -6147,8 +6319,8 @@ export const KiboApp: React.FC = () => {
                       width: '21px',
                       height: '21px',
                       borderRadius: '999px',
-                      border: '1px solid rgba(239, 68, 68, 0.48)',
-                      background: 'rgba(239, 68, 68, 0.18)',
+                      border: '1px solid rgba(239, 68, 68, 0.55)',
+                      background: 'rgba(239, 68, 68, 0.2)',
                       color: '#F87171',
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -6158,7 +6330,15 @@ export const KiboApp: React.FC = () => {
                       transition: 'all 0.15s ease',
                     }}
                   >
-                    <SvgIcon name="reset" size={10} color="#F87171" />
+                    <span
+                      style={{
+                        width: '7px',
+                        height: '7px',
+                        borderRadius: '1.5px',
+                        background: '#F87171',
+                        display: 'block',
+                      }}
+                    />
                   </button>
                 </div>
               ) : (
@@ -6166,7 +6346,7 @@ export const KiboApp: React.FC = () => {
                   <span
                     className="notch-timer-digits"
                     style={{
-                      opacity: isTimerRunning ? 1 : 0.62,
+                      opacity: isTimerRunning ? 1 : 0.68,
                       color: isTimerRunning ? '#38BDF8' : '#94A3B8',
                     }}
                   >
@@ -6179,6 +6359,7 @@ export const KiboApp: React.FC = () => {
                     onClick={(e) => {
                       e.stopPropagation();
                       setIsTimerRunning(false);
+                      setIsTimerSessionActive(false);
                       setTimerAlarmRinging(false);
                       setIsKiboDancing(false);
                       setTimerSeconds(timerTotalSeconds);
@@ -6188,8 +6369,8 @@ export const KiboApp: React.FC = () => {
                       width: '21px',
                       height: '21px',
                       borderRadius: '999px',
-                      border: '1px solid rgba(239, 68, 68, 0.48)',
-                      background: 'rgba(239, 68, 68, 0.18)',
+                      border: '1px solid rgba(239, 68, 68, 0.55)',
+                      background: 'rgba(239, 68, 68, 0.2)',
                       color: '#F87171',
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -6199,7 +6380,15 @@ export const KiboApp: React.FC = () => {
                       transition: 'all 0.15s ease',
                     }}
                   >
-                    <SvgIcon name="reset" size={10} color="#F87171" />
+                    <span
+                      style={{
+                        width: '7px',
+                        height: '7px',
+                        borderRadius: '1.5px',
+                        background: '#F87171',
+                        display: 'block',
+                      }}
+                    />
                   </button>
                 </div>
               )}
@@ -6304,9 +6493,9 @@ export const KiboApp: React.FC = () => {
               >
                 <SoulCanvas
                   soul={currentSoul}
-                  width={84}
-                  height={64}
-                  scale={1.13}
+                  width={90}
+                  height={68}
+                  scale={1.22}
                   mode={soulMode}
                   expression={isBooting ? bootExpression : undefined}
                   isDull={isSoulDull}
@@ -6840,6 +7029,7 @@ export const KiboApp: React.FC = () => {
                           }
                         }}
                         style={{
+                          position: 'relative',
                           border: isConvertDragOver
                             ? '1.5px dashed #38BDF8'
                             : convertSourceFile
@@ -6849,7 +7039,7 @@ export const KiboApp: React.FC = () => {
                           background: isConvertDragOver
                             ? 'rgba(56, 189, 248, 0.1)'
                             : 'rgba(255, 255, 255, 0.025)',
-                          padding: '16px 14px',
+                          padding: '16px 32px 16px 14px',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
@@ -6861,6 +7051,40 @@ export const KiboApp: React.FC = () => {
                           minHeight: '96px',
                         }}
                       >
+                        {convertSourceFile && (
+                          <button
+                            type="button"
+                            title="Clear selected file"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setConvertSourceFile(null);
+                              setConvertStatusMsg(null);
+                              soundFX.playToggle(false);
+                            }}
+                            style={{
+                              position: 'absolute',
+                              top: '8px',
+                              right: '8px',
+                              width: '22px',
+                              height: '22px',
+                              borderRadius: '999px',
+                              border: '1px solid rgba(255, 255, 255, 0.14)',
+                              background: 'rgba(255, 255, 255, 0.08)',
+                              color: '#E2E8F0',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              fontWeight: 800,
+                              lineHeight: 1,
+                              padding: 0,
+                              transition: 'all 0.14s ease',
+                            }}
+                          >
+                            ×
+                          </button>
+                        )}
                         <SvgIcon
                           name={convertSourceFile ? 'file' : 'upload'}
                           size={22}
@@ -7233,6 +7457,7 @@ export const KiboApp: React.FC = () => {
                                         setTimerSeconds(secs);
                                         setTimerTotalSeconds(secs);
                                         setIsTimerRunning(false);
+                                        setIsTimerSessionActive(false);
                                         setTimerAlarmRinging(false);
                                       }}
                                       className={`companion-preset-chip ${isActive ? 'active' : ''}`}
@@ -7253,17 +7478,19 @@ export const KiboApp: React.FC = () => {
                                     } else {
                                       setTimerAlarmRinging(false);
                                       setIsKiboDancing(false);
+                                      setIsTimerSessionActive(true);
                                       setIsTimerRunning(true);
                                     }
                                   }}
                                   className="timer-start-btn"
                                   style={{ padding: '9px 0', fontSize: '12.5px' }}
                                 >
-                                  {isTimerRunning ? 'Stop' : 'Start Focus'}
+                                  {isTimerRunning ? 'Stop' : isTimerSessionActive ? 'Resume' : 'Start Focus'}
                                 </button>
                                 <button
                                   onClick={() => {
                                     setIsTimerRunning(false);
+                                    setIsTimerSessionActive(false);
                                     setTimerAlarmRinging(false);
                                     setIsKiboDancing(false);
                                     setSoulMode('LISTENING');
@@ -7375,92 +7602,425 @@ export const KiboApp: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Right Card: Live Kibo Companion Dance Stage & Priorities */}
+                    {/* Right Card: Interactive Focus Sticky Notes & Tasks Board (Tilts on hover, enlarges with paper sound on click) */}
                     <div
                       className="companion-glass-card"
                       style={{
-                        padding: '16px 18px',
+                        padding: '15px 16px',
                         display: 'flex',
                         flexDirection: 'column',
-                        alignItems: 'center',
                         justifyContent: 'space-between',
-                        textAlign: 'center',
-                        position: 'relative',
+                        gap: '10px',
+                        minHeight: 0,
+                        minWidth: 0,
                         overflow: 'hidden',
                       }}
                     >
-                      <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '12px', fontWeight: 800, color: '#FFFFFF' }}>
-                          Kibo Focus Stage
-                        </span>
-                        <span
-                          style={{
-                            fontSize: '10px',
-                            fontWeight: 700,
-                            padding: '2px 8px',
-                            borderRadius: '999px',
-                            background: isKiboDancing || timerAlarmRinging ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255,255,255,0.06)',
-                            color: isKiboDancing || timerAlarmRinging ? '#38BDF8' : '#94A3B8',
-                          }}
-                        >
-                          {isKiboDancing || timerAlarmRinging ? 'Dancing!' : isTimerRunning || stopwatchRunning ? 'Focusing' : 'Standing By'}
-                        </span>
-                      </div>
+                      {(() => {
+                        const activeSticky = stickyNotes.find((n) => n.id === expandedStickyId) || null;
+                        if (activeSticky) {
+                          return (
+                            <div
+                              style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '10px',
+                                flex: 1,
+                                minHeight: 0,
+                                background: activeSticky.bgTint,
+                                border: `1px solid ${activeSticky.borderTint}`,
+                                borderRadius: '14px',
+                                padding: '14px',
+                                position: 'relative',
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flex: 1, minWidth: 0 }}>
+                                  <span
+                                    style={{
+                                      width: '9px',
+                                      height: '9px',
+                                      borderRadius: '999px',
+                                      background: activeSticky.accent,
+                                      flexShrink: 0,
+                                    }}
+                                  />
+                                  <input
+                                    type="text"
+                                    value={activeSticky.title}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      updateStickyNotes((prev) =>
+                                        prev.map((n) => (n.id === activeSticky.id ? { ...n, title: val } : n))
+                                      );
+                                    }}
+                                    style={{
+                                      background: 'transparent',
+                                      border: 'none',
+                                      outline: 'none',
+                                      color: '#FFFFFF',
+                                      fontSize: '13.5px',
+                                      fontWeight: 800,
+                                      width: '100%',
+                                    }}
+                                    placeholder="Sticky Note Title..."
+                                  />
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    soundFX.playPaperRustle(false);
+                                    setExpandedStickyId(null);
+                                  }}
+                                  style={{
+                                    padding: '4px 10px',
+                                    borderRadius: '8px',
+                                    background: 'rgba(255, 255, 255, 0.08)',
+                                    border: '1px solid rgba(255, 255, 255, 0.14)',
+                                    color: '#F8FAFC',
+                                    fontSize: '11px',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  ← All Notes
+                                </button>
+                              </div>
 
-                      <div
-                        style={{
-                          position: 'relative',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          height: '120px',
-                          width: '100%',
-                        }}
-                      >
-                        <SoulCanvas
-                          soul={currentSoul}
-                          width={126}
-                          height={104}
-                          scale={1.32}
-                          mode={isKiboDancing || timerAlarmRinging ? 'DANCING' : soulMode}
-                          expression={
-                            isKiboDancing || timerAlarmRinging
-                              ? 'DANCING'
-                              : focusSubMode === 'stopwatch' && stopwatchRunning
-                              ? 'STOPWATCH'
-                              : isTimerRunning
-                              ? 'FOCUSING'
-                              : 'NORMAL'
-                          }
-                          interactive={true}
-                          onClick={() => triggerKiboCelebrationDance(5200)}
-                        />
-                      </div>
+                              <textarea
+                                value={activeSticky.body}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  updateStickyNotes((prev) =>
+                                    prev.map((n) => (n.id === activeSticky.id ? { ...n, body: val } : n))
+                                  );
+                                }}
+                                placeholder="Write quick thoughts, session goals, or reminders..."
+                                style={{
+                                  width: '100%',
+                                  minHeight: '78px',
+                                  resize: 'none',
+                                  background: 'rgba(0, 0, 0, 0.22)',
+                                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                                  borderRadius: '10px',
+                                  padding: '9px 11px',
+                                  color: '#E2E8F0',
+                                  fontSize: '12px',
+                                  lineHeight: 1.48,
+                                  fontFamily: 'inherit',
+                                  outline: 'none',
+                                }}
+                              />
 
-                      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <div style={{ fontSize: '11.5px', color: '#A1A1AA', lineHeight: 1.4 }}>
-                          {isKiboDancing || timerAlarmRinging
-                            ? 'Focus session complete! Kibo is doing his victory dance.'
-                            : 'Click Kibo or finish a timer session to trigger his celebration dance.'}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => triggerKiboCelebrationDance(5200)}
-                          style={{
-                            width: '100%',
-                            padding: '8px 12px',
-                            borderRadius: '10px',
-                            border: '1px solid rgba(56, 189, 248, 0.35)',
-                            background: 'rgba(56, 189, 248, 0.14)',
-                            color: '#BAE6FD',
-                            fontWeight: 700,
-                            fontSize: '12px',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          {isKiboDancing ? 'Dancing Now!' : 'Preview Victory Dance'}
-                        </button>
-                      </div>
+                              {/* Checklist inside enlarged sticky note */}
+                              <div
+                                style={{
+                                  flex: 1,
+                                  minHeight: 0,
+                                  overflowY: 'auto',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '5px',
+                                }}
+                              >
+                                {activeSticky.tasks.map((task) => (
+                                  <div
+                                    key={task.id}
+                                    onClick={() => {
+                                      updateStickyNotes((prev) =>
+                                        prev.map((n) =>
+                                          n.id === activeSticky.id
+                                            ? {
+                                                ...n,
+                                                tasks: n.tasks.map((t) =>
+                                                  t.id === task.id ? { ...t, done: !t.done } : t
+                                                ),
+                                              }
+                                            : n
+                                        )
+                                      );
+                                      soundFX.playToggle(!task.done);
+                                    }}
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'space-between',
+                                      gap: '8px',
+                                      padding: '6px 9px',
+                                      borderRadius: '8px',
+                                      background: 'rgba(255, 255, 255, 0.04)',
+                                      border: '1px solid rgba(255, 255, 255, 0.06)',
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                                      <span
+                                        style={{
+                                          width: '14px',
+                                          height: '14px',
+                                          borderRadius: '4px',
+                                          border: task.done
+                                            ? `1px solid ${activeSticky.accent}`
+                                            : '1px solid rgba(255,255,255,0.28)',
+                                          background: task.done ? activeSticky.accent : 'transparent',
+                                          color: '#09111E',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          fontSize: '10px',
+                                          fontWeight: 900,
+                                          flexShrink: 0,
+                                        }}
+                                      >
+                                        {task.done ? '✓' : ''}
+                                      </span>
+                                      <span
+                                        className="companion-truncate"
+                                        style={{
+                                          fontSize: '11.5px',
+                                          color: task.done ? '#71717A' : '#F8FAFC',
+                                          textDecoration: task.done ? 'line-through' : 'none',
+                                        }}
+                                      >
+                                        {task.text}
+                                      </span>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        updateStickyNotes((prev) =>
+                                          prev.map((n) =>
+                                            n.id === activeSticky.id
+                                              ? { ...n, tasks: n.tasks.filter((t) => t.id !== task.id) }
+                                              : n
+                                          )
+                                        );
+                                      }}
+                                      style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: '#71717A',
+                                        cursor: 'pointer',
+                                        fontSize: '12px',
+                                        padding: '0 2px',
+                                      }}
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+
+                              <div style={{ display: 'flex', gap: '6px' }}>
+                                <input
+                                  type="text"
+                                  value={newStickyTaskInput}
+                                  onChange={(e) => setNewStickyTaskInput(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && newStickyTaskInput.trim()) {
+                                      const text = newStickyTaskInput.trim();
+                                      updateStickyNotes((prev) =>
+                                        prev.map((n) =>
+                                          n.id === activeSticky.id
+                                            ? {
+                                                ...n,
+                                                tasks: [...n.tasks, { id: `st_${Date.now()}`, text, done: false }],
+                                              }
+                                            : n
+                                        )
+                                      );
+                                      setNewStickyTaskInput('');
+                                      soundFX.playClick();
+                                    }
+                                  }}
+                                  placeholder="Add checklist item + Enter..."
+                                  style={{
+                                    flex: 1,
+                                    background: 'rgba(0, 0, 0, 0.28)',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    borderRadius: '8px',
+                                    padding: '6px 10px',
+                                    color: '#FFFFFF',
+                                    fontSize: '11.5px',
+                                    outline: 'none',
+                                  }}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (!newStickyTaskInput.trim()) return;
+                                    const text = newStickyTaskInput.trim();
+                                    updateStickyNotes((prev) =>
+                                      prev.map((n) =>
+                                        n.id === activeSticky.id
+                                          ? {
+                                              ...n,
+                                              tasks: [...n.tasks, { id: `st_${Date.now()}`, text, done: false }],
+                                            }
+                                          : n
+                                      )
+                                    );
+                                    setNewStickyTaskInput('');
+                                    soundFX.playClick();
+                                  }}
+                                  style={{
+                                    padding: '6px 12px',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    background: activeSticky.accent,
+                                    color: '#09111E',
+                                    fontWeight: 800,
+                                    fontSize: '11.5px',
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  Add
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                                <SvgIcon name="note" size={14} color="#FACC15" />
+                                <span style={{ fontSize: '12.5px', fontWeight: 800, color: '#FFFFFF' }}>
+                                  Focus Sticky Notes
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const palette = [
+                                    { accent: '#FACC15', bgTint: 'rgba(250, 204, 21, 0.08)', borderTint: 'rgba(250, 204, 21, 0.28)' },
+                                    { accent: '#38BDF8', bgTint: 'rgba(56, 189, 248, 0.08)', borderTint: 'rgba(56, 189, 248, 0.28)' },
+                                    { accent: '#FF6B9D', bgTint: 'rgba(255, 107, 157, 0.08)', borderTint: 'rgba(255, 107, 157, 0.28)' },
+                                    { accent: '#10B981', bgTint: 'rgba(16, 185, 129, 0.08)', borderTint: 'rgba(16, 185, 129, 0.28)' },
+                                  ];
+                                  const pick = palette[stickyNotes.length % palette.length];
+                                  const newId = `note_${Date.now()}`;
+                                  updateStickyNotes((prev) => [
+                                    {
+                                      id: newId,
+                                      title: `Note ${prev.length + 1}`,
+                                      ...pick,
+                                      body: '',
+                                      tasks: [],
+                                    },
+                                    ...prev,
+                                  ]);
+                                  soundFX.playPaperRustle(true);
+                                  setExpandedStickyId(newId);
+                                }}
+                                style={{
+                                  padding: '4px 10px',
+                                  borderRadius: '8px',
+                                  background: 'rgba(250, 204, 21, 0.14)',
+                                  border: '1px solid rgba(250, 204, 21, 0.32)',
+                                  color: '#FEF08A',
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                + New Sticky
+                              </button>
+                            </div>
+
+                            <div
+                              style={{
+                                display: 'grid',
+                                gridTemplateColumns: '1fr 1fr',
+                                gap: '9px',
+                                flex: 1,
+                                minHeight: 0,
+                                overflowY: 'auto',
+                                padding: '3px 2px',
+                              }}
+                            >
+                              {stickyNotes.map((note, idx) => {
+                                const isNoteHovered = hoveredStickyId === note.id;
+                                const tiltDeg = idx % 2 === 0 ? -2.1 : 2.1;
+                                const doneCount = note.tasks.filter((t) => t.done).length;
+                                return (
+                                  <div
+                                    key={note.id}
+                                    onMouseEnter={() => setHoveredStickyId(note.id)}
+                                    onMouseLeave={() => setHoveredStickyId((curr) => (curr === note.id ? null : curr))}
+                                    onClick={() => {
+                                      soundFX.playPaperRustle(true);
+                                      setExpandedStickyId(note.id);
+                                    }}
+                                    style={{
+                                      background: note.bgTint,
+                                      border: `1px solid ${note.borderTint}`,
+                                      borderRadius: '12px',
+                                      padding: '10px 11px',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      justifyContent: 'space-between',
+                                      gap: '6px',
+                                      cursor: 'pointer',
+                                      position: 'relative',
+                                      transform: isNoteHovered
+                                        ? `translateY(-3px) rotate(${tiltDeg}deg) scale(1.025)`
+                                        : 'translateY(0) rotate(0deg) scale(1)',
+                                      boxShadow: isNoteHovered
+                                        ? '0 10px 22px rgba(0, 0, 0, 0.34)'
+                                        : '0 4px 10px rgba(0, 0, 0, 0.16)',
+                                      transition: 'transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s ease',
+                                    }}
+                                  >
+                                    <div>
+                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', marginBottom: '4px' }}>
+                                        <span
+                                          className="companion-truncate"
+                                          style={{ fontSize: '11.5px', fontWeight: 800, color: '#FFFFFF' }}
+                                        >
+                                          {note.title}
+                                        </span>
+                                        <span
+                                          style={{
+                                            width: '7px',
+                                            height: '7px',
+                                            borderRadius: '999px',
+                                            background: note.accent,
+                                            flexShrink: 0,
+                                          }}
+                                        />
+                                      </div>
+                                      <div
+                                        style={{
+                                          fontSize: '10.5px',
+                                          color: '#CBD5E1',
+                                          lineHeight: 1.38,
+                                          display: '-webkit-box',
+                                          WebkitLineClamp: 3,
+                                          WebkitBoxOrient: 'vertical',
+                                          overflow: 'hidden',
+                                        }}
+                                      >
+                                        {note.body || (note.tasks[0]?.text ? `• ${note.tasks[0].text}` : 'Click to open note & tasks...')}
+                                      </div>
+                                    </div>
+
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '9.5px', color: '#94A3B8' }}>
+                                      <span>
+                                        {note.tasks.length > 0 ? `${doneCount}/${note.tasks.length} tasks` : 'Sticky Note'}
+                                      </span>
+                                      <span style={{ color: note.accent, fontWeight: 700 }}>Expand ↗</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 )}
@@ -7967,969 +8527,6 @@ export const KiboApp: React.FC = () => {
                   </div>
                 )}
 
-                {activeTab === 'Controls' && (
-                  <div
-                    style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, justifyContent: 'space-between', position: 'relative' }}
-                    onClick={() => setActiveControlDropdown(null)}
-                  >
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
-                      <div className={`companion-adaptive-tile ${wifiEnabled ? 'is-on' : ''}`}>
-                        <div
-                          className="tile-left"
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            const next = !wifiEnabled;
-                            setWifiEnabled(next);
-                            setWifiSsid(next ? 'Connected' : 'Off');
-                            await window.kiboAPI?.toggleWifi?.(next);
-                          }}
-                        >
-                          <span className="tile-icon-circle">
-                            <SvgIcon name="wifi" size={14} />
-                          </span>
-                          <div className="tile-copy">
-                            <div className="tile-title">Wi-Fi</div>
-                            <div className="tile-sub">{wifiEnabled ? wifiSsid : 'Off'}</div>
-                          </div>
-                        </div>
-                        <div
-                          className="tile-chevron-zone"
-                          onClick={(e) => handleToggleControlDropdown('wifi', e)}
-                        >
-                          <span className="tile-chevron">⌄</span>
-                        </div>
-                      </div>
-
-                      <div className={`companion-adaptive-tile ${bluetoothEnabled ? 'is-on' : ''}`}>
-                        <div
-                          className="tile-left"
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            const next = !bluetoothEnabled;
-                            setBluetoothEnabled(next);
-                            await window.kiboAPI?.toggleBluetooth?.(next);
-                          }}
-                        >
-                          <span className="tile-icon-circle">
-                            <SvgIcon name="bluetooth" size={13} />
-                          </span>
-                          <div className="tile-copy">
-                            <div className="tile-title">Bluetooth</div>
-                            <div className="tile-sub">{bluetoothEnabled ? 'On' : 'Off'}</div>
-                          </div>
-                        </div>
-                        <div
-                          className="tile-chevron-zone"
-                          onClick={(e) => handleToggleControlDropdown('bluetooth', e)}
-                        >
-                          <span className="tile-chevron">⌄</span>
-                        </div>
-                      </div>
-
-                      <div className="companion-adaptive-tile is-on">
-                        <div
-                          className="tile-left"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setAudioDeviceIndex((i) => (i + 1) % audioDevicesList.length);
-                          }}
-                        >
-                          <span className="tile-icon-circle">
-                            <SvgIcon name="speaker" size={14} />
-                          </span>
-                          <div className="tile-copy">
-                            <div className="tile-title">Audio</div>
-                            <div className="tile-sub companion-truncate" style={{ maxWidth: '92px' }}>
-                              {audioOutput}
-                            </div>
-                          </div>
-                        </div>
-                        <div
-                          className="tile-chevron-zone"
-                          onClick={(e) => handleToggleControlDropdown('audio', e)}
-                        >
-                          <span className="tile-chevron">⌄</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {activeControlDropdown === 'wifi' && (
-                      <div
-                        className="audio-output-dropdown companion-scrollable-dropdown"
-                        style={{ left: 0, right: 'auto', width: '220px' }}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <div className="dropdown-section-label">Wi-Fi Networks</div>
-                        {wifiNetworksList.length === 0 ? (
-                          <div className="audio-device-option selected">
-                            <span>{wifiEnabled ? wifiSsid : 'Wi-Fi Off'}</span>
-                            {wifiEnabled && (
-                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <polyline points="20 6 9 17 4 12" />
-                              </svg>
-                            )}
-                          </div>
-                        ) : (
-                          wifiNetworksList.map((net) => (
-                            <button
-                              key={net.ssid}
-                              onClick={async () => {
-                                setWifiEnabled(true);
-                                setWifiSsid(net.ssid);
-                                setActiveControlDropdown(null);
-                                await window.kiboAPI?.toggleWifi?.(true, net.ssid);
-                              }}
-                              className={`audio-device-option ${wifiSsid === net.ssid ? 'selected' : ''}`}
-                            >
-                              <span className="companion-truncate" style={{ maxWidth: '145px' }}>
-                                {net.ssid}
-                              </span>
-                              <span className="companion-mono-tiny">{net.signal}%</span>
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    )}
-
-                    {activeControlDropdown === 'bluetooth' && (
-                      <div
-                        className="audio-output-dropdown companion-scrollable-dropdown"
-                        style={{ left: '198px', right: 'auto', width: '220px' }}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <div className="dropdown-section-label">Bluetooth Devices</div>
-                        {bluetoothDevicesList.length === 0 ? (
-                          <div className="audio-device-option">
-                            <span>No paired devices found</span>
-                          </div>
-                        ) : (
-                          bluetoothDevicesList.map((dev, i) => (
-                            <button
-                              key={`${dev.name}-${i}`}
-                              onClick={() => setActiveControlDropdown(null)}
-                              className={`audio-device-option ${dev.connected ? 'selected' : ''}`}
-                            >
-                              <span className="companion-truncate" style={{ maxWidth: '150px' }}>
-                                {dev.name}
-                              </span>
-                              <span className="companion-mono-tiny">{dev.connected ? 'On' : ''}</span>
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    )}
-
-                    {activeControlDropdown === 'audio' && (
-                      <div
-                        className="audio-output-dropdown companion-scrollable-dropdown"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <div className="dropdown-section-label">Output Devices</div>
-                        {audioDevicesList.map((dev, idx) => (
-                          <button
-                            key={`${dev}-${idx}`}
-                            onClick={() => {
-                              setAudioDeviceIndex(idx);
-                              setActiveControlDropdown(null);
-                            }}
-                            className={`audio-device-option ${audioDeviceIndex === idx ? 'selected' : ''}`}
-                          >
-                            <span className="companion-truncate" style={{ display: 'flex', alignItems: 'center', gap: '8px', maxWidth: '165px' }}>
-                              <SvgIcon name="speaker" size={12} /> {dev}
-                            </span>
-                            {audioDeviceIndex === idx && (
-                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <polyline points="20 6 9 17 4 12" />
-                              </svg>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', position: 'relative' }}>
-                      <div className={`companion-adaptive-tile ${nightLight ? 'is-on' : ''}`}>
-                        <div
-                          className="tile-left"
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            const next = !nightLight;
-                            setNightLight(next);
-                            await window.kiboAPI?.toggleNightLight?.(next, nightLightStrength);
-                          }}
-                        >
-                          <span className="tile-icon-circle">
-                            <SvgIcon name="moon" size={13} />
-                          </span>
-                          <div className="tile-copy">
-                            <div className="tile-title">Night Light</div>
-                            <div className="tile-sub">
-                              {nightLight ? `On · ${nightLightStrength}%` : 'Off'}
-                            </div>
-                          </div>
-                        </div>
-                        <div
-                          className="tile-chevron-zone"
-                          onClick={(e) => handleToggleControlDropdown('nightlight', e)}
-                        >
-                          <span className="tile-chevron">⌄</span>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          const nextDark = !systemDarkMode;
-                          setSystemDarkMode(nextDark);
-                          await window.kiboAPI?.toggleSystemDarkMode(nextDark);
-                        }}
-                        className={`companion-adaptive-tile ${systemDarkMode ? 'is-on' : ''}`}
-                      >
-                        <div className="tile-left">
-                          <span className="tile-icon-circle">
-                            <SvgIcon name="contrast" size={14} />
-                          </span>
-                          <div className="tile-copy">
-                            <div className="tile-title">Dark mode</div>
-                            <div className="tile-sub">{systemDarkMode ? 'On' : 'Off'}</div>
-                          </div>
-                        </div>
-                      </button>
-
-                      {activeControlDropdown === 'nightlight' && (
-                        <div
-                          className="audio-output-dropdown"
-                          style={{ top: '62px', left: 0, right: 'auto', width: '280px', padding: '12px 14px' }}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                            <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#ffffff' }}>
-                              Night Light Strength
-                            </span>
-                            <span className="companion-mono-tiny" style={{ color: 'var(--adaptive-accent)' }}>
-                              {nightLightStrength}%
-                            </span>
-                          </div>
-                          <input
-                            type="range"
-                            min={10}
-                            max={100}
-                            value={nightLightStrength}
-                            onChange={(e) => {
-                              const val = parseInt(e.target.value, 10);
-                              setNightLightStrength(val);
-                              setNightLight(true);
-                              window.kiboAPI?.toggleNightLight?.(true, val);
-                            }}
-                            className="nightlight-strength-slider"
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    <div
-                      ref={volumeTrackRef}
-                      className="companion-volume-pill-track"
-                      onPointerDown={(e) => {
-                        if (leaveCollapseTimerRef.current) {
-                          clearTimeout(leaveCollapseTimerRef.current);
-                        }
-                        isDraggingVolumeRef.current = true;
-                        setIsDraggingVolume(true);
-                        updateVolumeFromClientX(e.clientX);
-                      }}
-                      onWheel={(e) => {
-                        const delta = e.deltaY < 0 ? 4 : -4;
-                        applyUserVolumeChange(volumeLevel + delta);
-                      }}
-                    >
-                      <div
-                        className="companion-volume-pill-fill"
-                        style={{
-                          width: `${isMuted ? 8 : Math.max(8, volumeLevel)}%`,
-                          transition: isDraggingVolume ? 'none' : 'width 0.12s ease-out',
-                        }}
-                      >
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const nextMute = !isMuted;
-                            setIsMuted(nextMute);
-                            window.kiboAPI?.setMute?.(nextMute);
-                          }}
-                          className="volume-inner-speaker-btn"
-                        >
-                          <SvgIcon name={isMuted ? 'mute' : 'speaker'} size={14} />
-                        </button>
-                      </div>
-                      <span className="volume-right-pct">{isMuted ? '0%' : `${volumeLevel}%`}</span>
-                    </div>
-
-                    {hasMediaSession && (
-                      <div
-                        className="companion-media-card-v2"
-                        style={{
-                          background: `linear-gradient(135deg, rgba(${mediaArtPalette.rgb}, 0.30) 0%, rgba(${mediaArtPalette.rgb}, 0.09) 52%, #17171A 100%)`,
-                          border: `1px solid rgba(${mediaArtPalette.rgb}, 0.22)`,
-                        }}
-                      >
-                        <button
-                          onClick={(e) => handleToggleControlDropdown('audio', e)}
-                          className="media-speaker-tag"
-                        >
-                          <SvgIcon name="speaker" size={11} />
-                          <span>{audioOutput}</span>
-                        </button>
-
-                        <div className="media-middle-row">
-                          <div
-                            className="companion-album-art"
-                            style={
-                              activeMediaArtwork
-                                ? {
-                                    backgroundImage: `url("${activeMediaArtwork}")`,
-                                    backgroundSize: 'cover',
-                                    backgroundPosition: 'center',
-                                  }
-                                : {
-                                    background: mediaArtPalette.gradient,
-                                  }
-                            }
-                          />
-
-                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0, textAlign: 'left' }}>
-                            <div className="companion-truncate" style={{ fontSize: '15px', fontWeight: 700, color: '#ffffff', textAlign: 'left' }}>
-                              {activeMediaTitle}
-                            </div>
-                            <div className="companion-truncate" style={{ fontSize: '11.5px', color: '#D4D4D8', textAlign: 'left' }}>
-                              {activeMediaArtist}
-                            </div>
-                          </div>
-
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <button onClick={handleMediaPrev} className="media-circle-btn">
-                              <SvgIcon name="prev" size={14} color="#D4D4D8" />
-                            </button>
-                            <button onClick={toggleMediaPlayback} className="media-ivory-play-btn">
-                              <SvgIcon name={isPlayingMedia ? 'pause' : 'play'} size={16} color="#1C1917" />
-                            </button>
-                            <button onClick={handleMediaNext} className="media-circle-btn">
-                              <SvgIcon name="next" size={14} color="#D4D4D8" />
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="media-bottom-scrub">
-                          <span className="companion-mono-tiny">{formatTime(mediaProgress)}</span>
-                          <div
-                            ref={controlsScrubRef}
-                            className="companion-scrub-track"
-                            onPointerDown={(e) => {
-                              e.stopPropagation();
-                              if (leaveCollapseTimerRef.current) {
-                                clearTimeout(leaveCollapseTimerRef.current);
-                              }
-                              activeScrubRef.current = controlsScrubRef.current;
-                              isDraggingMediaScrubRef.current = true;
-                              setIsDraggingMediaScrub(true);
-                              updateMediaScrubFromClientX(e.clientX, true);
-                            }}
-                          >
-                            <div
-                              className="companion-scrub-fill adaptive"
-                              style={{
-                                width: `${Math.min(100, (mediaProgress / totalMediaDuration) * 100)}%`,
-                                background: mediaArtPalette.accent,
-                              }}
-                            >
-                              <div
-                                className="companion-scrub-thumb adaptive"
-                                style={{ background: mediaArtPalette.accent }}
-                              />
-                            </div>
-                          </div>
-                          <span className="companion-mono-tiny">{formatTime(totalMediaDuration)}</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {activeTab === 'Today' && (
-                  <div
-                    className="today-tab-grid"
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '310px 1fr',
-                      gap: '14px',
-                      width: '100%',
-                      flex: 1,
-                      minHeight: 0,
-                    }}
-                  >
-                    {/* Left Column: Briefing & Focus Session */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', minHeight: 0 }}>
-                      {/* Compact Briefing Card */}
-                      <div className="companion-glass-card" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div>
-                          <div style={{ fontSize: '20px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-                            {hoursStr}:{minsStr} <span style={{ fontSize: '12px', fontWeight: 600, color: '#94A3B8' }}>{ampmStr}</span>
-                          </div>
-                          <div style={{ fontSize: '11px', color: '#71717A', marginTop: '3px', fontWeight: 500 }}>
-                            {now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                          <SvgIcon name="sun" size={16} color="#F5B027" />
-                          <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#FFFFFF' }}>32°C</span>
-                        </div>
-                      </div>
-
-                      {/* Minimalist Focus Timer Card */}
-                      <div className="companion-glass-card" style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '14px', flex: 1, justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '12px', fontWeight: 700, color: '#FFFFFF', letterSpacing: '0.02em' }}>Focus Timer</span>
-                          <span className="companion-mono-tiny" style={{ color: isTimerRunning ? 'var(--adaptive-accent)' : '#71717A' }}>
-                            {isTimerRunning ? 'Session active' : 'Ready'}
-                          </span>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '22px' }}>
-                          <div style={{ position: 'relative', width: `${timerRingSize}px`, height: `${timerRingSize}px`, flexShrink: 0 }}>
-                            <svg width={timerRingSize} height={timerRingSize} style={{ transform: 'rotate(-90deg)' }}>
-                              <circle
-                                cx={timerRingSize / 2}
-                                cy={timerRingSize / 2}
-                                r={timerRadius}
-                                stroke="rgba(255, 255, 255, 0.08)"
-                                strokeWidth={timerStroke}
-                                fill="transparent"
-                              />
-                              <circle
-                                cx={timerRingSize / 2}
-                                cy={timerRingSize / 2}
-                                r={timerRadius}
-                                stroke="var(--adaptive-accent, #38BDF8)"
-                                strokeWidth={timerStroke}
-                                strokeDasharray={timerCircumference}
-                                strokeDashoffset={timerDashoffset}
-                                strokeLinecap="round"
-                                fill="transparent"
-                                style={{ transition: 'stroke-dashoffset 0.5s linear' }}
-                              />
-                            </svg>
-                            <div className="companion-timer-readout" style={{ fontSize: '17px', fontWeight: 800 }}>
-                              {String(Math.floor(timerSeconds / 60)).padStart(2, '0')}:
-                              {String(timerSeconds % 60).padStart(2, '0')}
-                            </div>
-                          </div>
-
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-                            <div style={{ display: 'flex', gap: '5px' }}>
-                              {(['15m', '25m', '45m'] as const).map((p) => {
-                                const isActive = timerPreset === p;
-                                return (
-                                  <button
-                                    key={p}
-                                    onClick={() => {
-                                      setTimerPreset(p);
-                                      const secs = parseInt(p, 10) * 60;
-                                      setTimerSeconds(secs);
-                                      setTimerTotalSeconds(secs);
-                                      setIsTimerRunning(false);
-                                      setTimerAlarmRinging(false);
-                                    }}
-                                    className={`companion-preset-chip ${isActive ? 'active' : ''}`}
-                                    style={{ flex: 1, padding: '5px 0', fontSize: '11px', textAlign: 'center' }}
-                                  >
-                                    {p}
-                                  </button>
-                                );
-                              })}
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                              <button
-                                onClick={() => {
-                                  setTimerAlarmRinging(false);
-                                  setIsTimerRunning(!isTimerRunning);
-                                }}
-                                className="timer-start-btn"
-                                style={{ padding: '8px 0', fontSize: '12px' }}
-                              >
-                                {isTimerRunning ? 'Pause' : 'Start'}
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setIsTimerRunning(false);
-                                  setTimerAlarmRinging(false);
-                                  setTimerSeconds(timerTotalSeconds);
-                                }}
-                                className="timer-reset-btn"
-                                style={{ padding: '8px 0', fontSize: '12px' }}
-                              >
-                                Reset
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Routine Banner / Next Schedule */}
-                        <div
-                          className="companion-event-banner"
-                          onClick={() => {
-                            if (routines.length > 0) {
-                              executeVoiceCommand(routines[0].command);
-                            }
-                          }}
-                          style={{ cursor: routines.length > 0 ? 'pointer' : 'default', padding: '8px 12px', margin: 0 }}
-                        >
-                          <div className="companion-event-bar" />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: '11px', fontWeight: 700, color: '#ffffff' }}>
-                              {routines.length > 0 ? routines[0].timeLabel : 'Autopilot Routines'}
-                            </div>
-                            <div className="companion-truncate" style={{ fontSize: '10px', color: '#8A8A93' }}>
-                              {routines.length > 0 ? routines[0].title : 'Say "Set a routine" to schedule tasks'}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="companion-glass-card today-todo-card" style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexShrink: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff' }}>Priorities</span>
-                          <span style={{ fontSize: '11px', color: '#94A3B8', background: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: '999px' }}>
-                            {completedTodosCount}/{todos.length} done
-                          </span>
-                        </div>
-                        <div style={{ position: 'relative', width: `${todoRingSize}px`, height: `${todoRingSize}px` }}>
-                          <svg width={todoRingSize} height={todoRingSize} style={{ transform: 'rotate(-90deg)' }}>
-                            <circle
-                              cx={todoRingSize / 2}
-                              cy={todoRingSize / 2}
-                              r={todoRingRadius}
-                              stroke="rgba(255, 255, 255, 0.1)"
-                              strokeWidth={todoRingStroke}
-                              fill="transparent"
-                            />
-                            <circle
-                              cx={todoRingSize / 2}
-                              cy={todoRingSize / 2}
-                              r={todoRingRadius}
-                              stroke="var(--adaptive-accent, #38BDF8)"
-                              strokeWidth={todoRingStroke}
-                              strokeDasharray={todoRingCircumference}
-                              strokeDashoffset={todoRingDashoffset}
-                              strokeLinecap="round"
-                              fill="transparent"
-                              style={{ transition: 'stroke-dashoffset 0.35s ease' }}
-                            />
-                          </svg>
-                          <span className="todo-ring-center-label" style={{ fontSize: '9px' }}>
-                            {Math.round((completedTodosCount / Math.max(1, todos.length)) * 100)}%
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="today-todo-scroll-list" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-                        {todos.map((todo) => (
-                          <div
-                            key={todo.id}
-                            onClick={() => handleToggleTodo(todo.id)}
-                            className={`companion-todo-row ${todo.completed ? 'completed' : ''}`}
-                            style={{ position: 'relative', flexShrink: 0, padding: '8px 10px', borderRadius: '10px' }}
-                          >
-                            <span className={`companion-todo-check ${todo.completed ? 'checked' : ''}`}>
-                              {todo.completed && (
-                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                                  <polyline points="20 6 9 17 4 12" />
-                                </svg>
-                              )}
-                            </span>
-
-                            <span className="companion-todo-text" style={{ fontSize: '12.5px' }}>{todo.text}</span>
-
-                            <button
-                              onClick={(e) => handleDeleteTodo(todo.id, e)}
-                              className="companion-todo-del-btn"
-                              title="Delete task"
-                            >
-                              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                                <path
-                                  d="M1.5 1.5L8.5 8.5M8.5 1.5L1.5 8.5"
-                                  stroke="currentColor"
-                                  strokeWidth="1.5"
-                                  strokeLinecap="round"
-                                />
-                              </svg>
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="todo-bottom-input-bar">
-                        <span style={{ color: '#71717A', fontSize: '14px', marginLeft: '4px' }}>+</span>
-                        <input
-                          type="text"
-                          placeholder="Add a to-do..."
-                          value={newTodoInput}
-                          onChange={(e) => setNewTodoInput(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleAddTodo()}
-                          className="companion-todo-input"
-                        />
-                        <button onClick={handleAddTodo} className="companion-todo-submit">
-                          →
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === 'Clipboard' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1, minHeight: 0 }}>
-                    <div className="clipboard-unified-bar">
-                      <span style={{ marginRight: '8px', display: 'flex', alignItems: 'center' }}>
-                        <SvgIcon name="search" size={13} color="#71717A" />
-                      </span>
-                      <input
-                        type="text"
-                        placeholder="Search clipboard..."
-                        value={clipboardSearch}
-                        onChange={(e) => setClipboardSearch(e.target.value)}
-                        className="companion-clean-input"
-                      />
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        {(['All', 'Text', 'Images', 'Links'] as const).map((cat) => {
-                          const isActive = clipboardCategory === cat;
-                          return (
-                            <button
-                              key={cat}
-                              onClick={() => setClipboardCategory(cat)}
-                              className={`clipboard-inline-filter ${isActive ? 'active' : ''}`}
-                            >
-                              {cat}
-                            </button>
-                          );
-                        })}
-                        <button
-                          onClick={() => openCompanionApp('settings', false)}
-                          className="clipboard-gear-btn"
-                        >
-                          <SvgIcon name="gear" size={13} />
-                        </button>
-                      </div>
-                    </div>
-
-                    {clipboardItems.length === 0 ? (
-                      <div className="companion-glass-card" style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: '6px', color: '#71717A' }}>
-                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#A1A1AA' }}>Clipboard is empty</div>
-                        <div style={{ fontSize: '11.5px' }}>Copy any text, link, code snippet, or screenshot on your PC to see it here.</div>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.32fr', gap: '14px', flex: 1, minHeight: 0 }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto' }}>
-                          {filteredClipboardItems.some((i) => i.isPinned) && (
-                            <div>
-                              <div className="companion-section-header">PINNED</div>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                                {filteredClipboardItems
-                                  .filter((i) => i.isPinned)
-                                  .map((item) => {
-                                    const isSelected = selectedClip?.id === item.id;
-                                    return (
-                                      <div
-                                        key={item.id}
-                                        onClick={() => {
-                                          setSelectedClipboardId(item.id);
-                                        }}
-                                        onDoubleClick={() => {
-                                          setSelectedClipboardId(item.id);
-                                          if (item.preview) {
-                                            navigator.clipboard?.writeText(item.preview).catch(() => {});
-                                            window.kiboAPI?.writeClipboardText?.(item.preview);
-                                            window.kiboAPI?.typeText?.(item.preview);
-                                          }
-                                          triggerClipboardToast('Pasted!');
-                                        }}
-                                        className={`clipboard-item-row ${isSelected ? 'selected' : ''}`}
-                                      >
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, overflow: 'hidden' }}>
-                                          <span className="clipboard-icon-box">
-                                            <SvgIcon name="pin" size={11} />
-                                          </span>
-                                          <span className="companion-truncate" style={{ fontSize: '12px', fontWeight: 700, color: '#ffffff' }}>
-                                            {item.label}
-                                          </span>
-                                        </div>
-                                        <div className="clipboard-row-actions">
-                                          {item.time && <span className="companion-mono-tiny">{item.time}</span>}
-                                          <button
-                                            type="button"
-                                            title="Options"
-                                            onPointerDown={(e) => e.stopPropagation()}
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setOpenMenuClipId((curr) => (curr === item.id ? null : item.id));
-                                            }}
-                                            className="clipboard-row-dots-btn"
-                                          >
-                                            <SvgIcon name="dots" size={13} color="#94A3B8" />
-                                          </button>
-                                        </div>
-
-                                        {openMenuClipId === item.id && (
-                                          <div
-                                            onPointerDown={(e) => e.stopPropagation()}
-                                            onClick={(e) => e.stopPropagation()}
-                                            className="clipboard-row-dropdown"
-                                          >
-                                            <button
-                                              type="button"
-                                              className="clipboard-dropdown-item"
-                                              onPointerDown={(e) => e.stopPropagation()}
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                setOpenMenuClipId(null);
-                                                setSelectedClipboardId(item.id);
-                                                handleCopyClip(item);
-                                              }}
-                                            >
-                                              <SvgIcon name="clipboard" size={11} />
-                                              <span>Copy</span>
-                                            </button>
-                                            <button
-                                              type="button"
-                                              className="clipboard-dropdown-item"
-                                              onPointerDown={(e) => e.stopPropagation()}
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                setOpenMenuClipId(null);
-                                                handleTogglePinClip(item.id);
-                                              }}
-                                            >
-                                              <SvgIcon name="pin" size={11} />
-                                              <span>Unpin</span>
-                                            </button>
-                                            <button
-                                              type="button"
-                                              className="clipboard-dropdown-item danger"
-                                              onPointerDown={(e) => e.stopPropagation()}
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                setOpenMenuClipId(null);
-                                                handleDeleteClip(item.id);
-                                              }}
-                                            >
-                                              <SvgIcon name="trash" size={11} />
-                                              <span>Delete</span>
-                                            </button>
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                              </div>
-                            </div>
-                          )}
-
-                          <div>
-                            <div className="companion-section-header">TODAY</div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                              {filteredClipboardItems
-                                .filter((i) => !i.isPinned)
-                                .map((item) => {
-                                  const isSelected = selectedClip?.id === item.id;
-                                  return (
-                                    <div
-                                      key={item.id}
-                                      onClick={() => {
-                                        setSelectedClipboardId(item.id);
-                                      }}
-                                      onDoubleClick={() => {
-                                        setSelectedClipboardId(item.id);
-                                        if (item.preview) {
-                                          navigator.clipboard?.writeText(item.preview).catch(() => {});
-                                          window.kiboAPI?.writeClipboardText?.(item.preview);
-                                          window.kiboAPI?.typeText?.(item.preview);
-                                        }
-                                        triggerClipboardToast('Pasted!');
-                                      }}
-                                      className={`clipboard-item-row ${isSelected ? 'selected' : ''}`}
-                                    >
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, overflow: 'hidden' }}>
-                                        <span className="clipboard-icon-box">
-                                          {item.iconType === 'link' ? (
-                                            <SvgIcon name="link" size={11} />
-                                          ) : item.iconType === 'image' ? (
-                                            <SvgIcon name="image" size={11} />
-                                          ) : item.iconType === 'code' ? (
-                                            '</>'
-                                          ) : (
-                                            '≡'
-                                          )}
-                                        </span>
-                                        <span className="companion-truncate" style={{ fontSize: '12px', fontWeight: 700, color: '#ffffff' }}>
-                                          {item.label}
-                                        </span>
-                                      </div>
-                                      <div className="clipboard-row-actions">
-                                        {item.time && <span className="companion-mono-tiny">{item.time}</span>}
-                                        <button
-                                          type="button"
-                                          title="Options"
-                                          onPointerDown={(e) => e.stopPropagation()}
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setOpenMenuClipId((curr) => (curr === item.id ? null : item.id));
-                                          }}
-                                          className="clipboard-row-dots-btn"
-                                        >
-                                          <SvgIcon name="dots" size={13} color="#94A3B8" />
-                                        </button>
-                                      </div>
-
-                                      {openMenuClipId === item.id && (
-                                        <div
-                                          onPointerDown={(e) => e.stopPropagation()}
-                                          onClick={(e) => e.stopPropagation()}
-                                          className="clipboard-row-dropdown"
-                                        >
-                                          <button
-                                            type="button"
-                                            className="clipboard-dropdown-item"
-                                            onPointerDown={(e) => e.stopPropagation()}
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setOpenMenuClipId(null);
-                                              setSelectedClipboardId(item.id);
-                                              handleCopyClip(item);
-                                            }}
-                                          >
-                                            <SvgIcon name="clipboard" size={11} />
-                                            <span>Copy</span>
-                                          </button>
-                                          <button
-                                            type="button"
-                                            className="clipboard-dropdown-item"
-                                            onPointerDown={(e) => e.stopPropagation()}
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setOpenMenuClipId(null);
-                                              handleTogglePinClip(item.id);
-                                            }}
-                                          >
-                                            <SvgIcon name="pin" size={11} />
-                                            <span>Pin</span>
-                                          </button>
-                                          <button
-                                            type="button"
-                                            className="clipboard-dropdown-item danger"
-                                            onPointerDown={(e) => e.stopPropagation()}
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setOpenMenuClipId(null);
-                                              handleDeleteClip(item.id);
-                                            }}
-                                          >
-                                            <SvgIcon name="trash" size={11} />
-                                            <span>Delete</span>
-                                          </button>
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                            </div>
-                          </div>
-                        </div>
-
-                        {selectedClip && (
-                          <div className="companion-glass-card" style={{ padding: '18px 20px', justifyContent: 'space-between', position: 'relative' }}>
-                            {clipboardToast && <div className="companion-floating-toast">{clipboardToast}</div>}
-                            {selectedClip.imageDataUrl ? (
-                              <img
-                                src={selectedClip.imageDataUrl}
-                                alt="Copied preview"
-                                style={{ maxHeight: '140px', objectFit: 'contain', borderRadius: '8px' }}
-                              />
-                            ) : (
-                              <div style={{ fontSize: '13.5px', lineHeight: 1.5, color: '#FFFFFF', fontWeight: 700, wordBreak: 'break-word', maxHeight: '145px', overflowY: 'auto' }}>
-                                {selectedClip.preview}
-                              </div>
-                            )}
-
-                            <div className="clipboard-meta-table">
-                              <div className="meta-row">
-                                <span className="meta-label">Type</span>
-                                <strong className="meta-val">{selectedClip.type}</strong>
-                              </div>
-                              <div className="meta-row">
-                                <span className="meta-label">Size</span>
-                                <strong className="meta-val">{selectedClip.size}</strong>
-                              </div>
-                              <div className="meta-row">
-                                <span className="meta-label">Copied</span>
-                                <strong className="meta-val">{selectedClip.copied}</strong>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="clipboard-footer-bar">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                        <button
-                          onClick={() => {
-                            if (!selectedClip) return;
-                            if (selectedClip.preview) {
-                              navigator.clipboard?.writeText(selectedClip.preview).catch(() => {});
-                              window.kiboAPI?.writeClipboardText?.(selectedClip.preview);
-                              window.kiboAPI?.typeText?.(selectedClip.preview);
-                            }
-                            triggerClipboardToast('Pasted!');
-                          }}
-                          className="clipboard-action-pair"
-                        >
-                          <span className="kbd-badge">↵</span>
-                          <span className="kbd-label">Paste</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (!selectedClip) return;
-                            handleCopyClip(selectedClip);
-                          }}
-                          className="clipboard-action-pair"
-                        >
-                          <span className="kbd-badge">Ctrl C</span>
-                          <span className="kbd-label">Copy</span>
-                        </button>
-                        <button
-                          onClick={() => selectedClip && handleTogglePinClip(selectedClip.id)}
-                          className="clipboard-action-pair"
-                        >
-                          <span className="kbd-badge">Ctrl P</span>
-                          <span className="kbd-label">{selectedClip?.isPinned ? 'Unpin' : 'Pin'}</span>
-                        </button>
-                        <button
-                          onClick={() => selectedClip && handleDeleteClip(selectedClip.id)}
-                          className="clipboard-action-pair"
-                        >
-                          <span className="kbd-badge">Del</span>
-                          <span className="kbd-label">Remove</span>
-                        </button>
-                      </div>
-                      <div className="companion-mono-tiny">
-                        ↑↓ Move · Ctrl/Shift pick several · Tab Filter
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {activeTab === 'Agents' && (
                   <AgentsNotchView
                     tasks={agentTasks}
@@ -8937,331 +8534,6 @@ export const KiboApp: React.FC = () => {
                       (window as any).kiboAPI?.openGeneratedPage?.(html, filePath);
                     }}
                   />
-                )}
-
-                {activeTab === 'Apps' && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '10px',
-                      flex: 1,
-                      minHeight: 0,
-                    }}
-                  >
-                    <div className="clipboard-unified-bar">
-                      <span style={{ marginRight: '8px', display: 'flex', alignItems: 'center' }}>
-                        <SvgIcon name="search" size={13} color="#71717A" />
-                      </span>
-                      <input
-                        type="text"
-                        value={appSearchQuery}
-                        onChange={(e) => setAppSearchQuery(e.target.value)}
-                        placeholder="Search apps..."
-                        className="companion-clean-input"
-                      />
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        {appSearchQuery.trim() && (
-                          <button
-                            onClick={() => {
-                              setIsExpanded(false);
-                              handleFindAndPoint(appSearchQuery);
-                            }}
-                            className="clipboard-inline-filter"
-                            style={{
-                              background: 'rgba(92, 184, 255, 0.18)',
-                              borderColor: 'rgba(92, 184, 255, 0.45)',
-                              color: '#BAE6FD',
-                              fontWeight: 700,
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                            }}
-                            title="Have Kibo fly across your monitor and point at this on screen"
-                          >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                              <circle cx="12" cy="12" r="9" />
-                              <line x1="12" y1="2" x2="12" y2="6" />
-                              <line x1="12" y1="18" x2="12" y2="22" />
-                              <line x1="2" y1="12" x2="6" y2="12" />
-                              <line x1="18" y1="12" x2="22" y2="12" />
-                            </svg>
-                            <span>Point Out</span>
-                          </button>
-                        )}
-                        {(['All', 'Starred', 'Games', 'Apps'] as const).map((tab) => (
-                          <button
-                            key={tab}
-                            onClick={() => setAppFilterTab(tab)}
-                            className={`clipboard-inline-filter ${appFilterTab === tab ? 'active' : ''}`}
-                          >
-                            {tab}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div
-                      className="companion-scrollable-list"
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '10px',
-                        flex: 1,
-                        overflowY: 'auto',
-                        paddingRight: '4px',
-                      }}
-                    >
-                      {appFilterTab === 'All' && !appSearchQuery && processedApps.some((a) => a.starred) && (
-                        <div>
-                          <div className="companion-section-header">STARRED</div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                            {processedApps
-                              .filter((a) => a.starred)
-                              .map((item) => (
-                                <div
-                                  key={`starred-${item.id}`}
-                                  onClick={() => handleLaunchApp(item.appId || item.name)}
-                                  className="companion-app-row highlighted"
-                                >
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    {item.iconUrl ? (
-                                      <img src={item.iconUrl} alt="" className="companion-native-app-icon" />
-                                    ) : (
-                                      <span className="companion-app-badge">{item.key}</span>
-                                    )}
-                                    <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#ffffff' }}>
-                                      {item.name}
-                                    </span>
-                                  </div>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <span className="companion-mono-tiny" style={{ color: '#8A8A93' }}>
-                                      {item.tag}
-                                    </span>
-                                    <button
-                                      onClick={(e) => toggleStarApp(item.name, e)}
-                                      className="companion-star-btn starred"
-                                    >
-                                      <SvgIcon name="star" size={13} color="var(--adaptive-accent)" />
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {alphabeticalAppGroups.map(([letter, items]) => (
-                        <div key={letter}>
-                          <div className="win11-alpha-header">{letter}</div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                            {items.map((item) => (
-                              <div
-                                key={item.id}
-                                onClick={() => handleLaunchApp(item.appId || item.name)}
-                                className="companion-app-row"
-                              >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                  {item.iconUrl ? (
-                                    <img src={item.iconUrl} alt="" className="companion-native-app-icon" />
-                                  ) : (
-                                    <span className="companion-app-badge">{item.key}</span>
-                                  )}
-                                  <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#ffffff' }}>
-                                    {item.name}
-                                  </span>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                  <span className="companion-mono-tiny" style={{ color: '#8A8A93' }}>
-                                    {item.tag}
-                                  </span>
-                                  <button
-                                    onClick={(e) => toggleStarApp(item.name, e)}
-                                    className={`companion-star-btn ${item.starred ? 'starred' : ''}`}
-                                  >
-                                    <SvgIcon
-                                      name="star"
-                                      size={13}
-                                      color={item.starred ? 'var(--adaptive-accent)' : '#3F3F46'}
-                                    />
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === 'Wallpaper' && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      flex: 1,
-                      justifyContent: 'space-between',
-                      minHeight: 0,
-                    }}
-                    onWheel={(e) => {
-                      const rail = document.getElementById('kibo-wallpaper-rail');
-                      if (rail) rail.scrollLeft += e.deltaY;
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <button
-                          onClick={() => setWallpaperSourceTab('Recent')}
-                          className={`companion-filter-pill ${wallpaperSourceTab === 'Recent' ? 'active' : ''}`}
-                        >
-                          Curated 4K
-                        </button>
-                        <button
-                          onClick={handlePickLocalWallpapers}
-                          className={`companion-filter-pill ${wallpaperSourceTab === 'My folder' ? 'active' : ''}`}
-                        >
-                          My folder
-                        </button>
-                        <span className="companion-mono-tiny" style={{ marginLeft: 6, color: '#71717A' }}>
-                          {wallpapersList.length} wallpapers
-                        </span>
-                      </div>
-                      <span style={{ fontSize: 11, color: '#71717A', fontWeight: 500 }}>
-                        Click to apply with shockwave ripple
-                      </span>
-                    </div>
-
-                    <div
-                      id="kibo-wallpaper-rail"
-                      style={{
-                        display: 'flex',
-                        gap: 10,
-                        overflowX: 'auto',
-                        overflowY: 'hidden',
-                        paddingBottom: 4,
-                        paddingTop: 2,
-                        scrollbarWidth: 'none',
-                        flex: 1,
-                        alignItems: 'center',
-                      }}
-                    >
-                      {wallpapersList.map((wp, idx) => {
-                        const isApplied = idx === appliedWallpaperIndex;
-                        return (
-                          <div
-                            key={wp.id || idx}
-                            onClick={() => applyWallpaperByIndex(idx)}
-                            style={{
-                              flexShrink: 0,
-                              width: 138,
-                              height: 72,
-                              position: 'relative',
-                              borderRadius: 12,
-                              overflow: 'hidden',
-                              cursor: 'pointer',
-                              border: isApplied ? `2px solid ${wp.accent || 'var(--adaptive-accent, #38BDF8)'}` : '1px solid rgba(255,255,255,0.08)',
-                              background: '#141519',
-                              boxShadow: isApplied ? `0 0 16px ${wp.accent || '#38BDF8'}55` : 'none',
-                              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                              transform: isApplied ? 'scale(1.02)' : 'scale(1)',
-                            }}
-                          >
-                            <div
-                              style={{
-                                width: '100%',
-                                height: '100%',
-                                backgroundImage: `url("${resolveWallpaperDisplayUrl(wp.thumb || wp.url)}")`,
-                                backgroundSize: 'cover',
-                                backgroundPosition: 'center',
-                                filter: isApplied ? 'brightness(0.95)' : 'brightness(0.75)',
-                                transition: 'filter 0.2s ease',
-                              }}
-                            />
-                            <div
-                              style={{
-                                position: 'absolute',
-                                inset: 0,
-                                background: 'linear-gradient(to top, rgba(10,12,16,0.85) 0%, transparent 60%)',
-                                display: 'flex',
-                                alignItems: 'flex-end',
-                                justifyContent: 'space-between',
-                                padding: '4px 6px',
-                              }}
-                            >
-                              <span style={{ fontSize: 10, fontWeight: 700, color: '#FFFFFF', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
-                                {wp.title}
-                              </span>
-                              {isApplied && (
-                                <span
-                                  style={{
-                                    fontSize: 8.5,
-                                    fontWeight: 800,
-                                    padding: '1.5px 5.5px',
-                                    borderRadius: 999,
-                                    background: wp.accent || 'var(--adaptive-accent, #38BDF8)',
-                                    color: '#0A0E17',
-                                  }}
-                                >
-                                  Applied
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === 'Power' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, justifyContent: 'center' }}>
-                    {pendingPowerAction ? (
-                      <div className="power-confirm-bar">
-                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff' }}>
-                          Are you sure you want to {pendingPowerAction === 'shutdown' ? 'shut down' : pendingPowerAction} your PC?
-                        </span>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <button onClick={confirmAndExecutePowerAction} className="power-confirm-btn danger">
-                            Confirm {pendingPowerAction}
-                          </button>
-                          <button onClick={() => setPendingPowerAction(null)} className="power-confirm-btn">
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
-                        <button onClick={() => setPendingPowerAction('lock')} className="companion-power-card">
-                          <SvgIcon name="padlock" size={18} color="#ffffff" />
-                          <span className="companion-power-label">Lock</span>
-                        </button>
-                        <button onClick={() => setPendingPowerAction('sleep')} className="companion-power-card">
-                          <SvgIcon name="moon" size={18} color="#ffffff" />
-                          <span className="companion-power-label">Sleep</span>
-                        </button>
-                        <button onClick={() => setPendingPowerAction('restart')} className="companion-power-card">
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 12a9 9 0 1 1-2.64-6.36" />
-                            <polyline points="21 3 21 9 15 9" />
-                          </svg>
-                          <span className="companion-power-label">Restart</span>
-                        </button>
-                        <button onClick={() => setPendingPowerAction('shutdown')} className="companion-power-card">
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
-                            <line x1="12" y1="2" x2="12" y2="12" />
-                          </svg>
-                          <span className="companion-power-label">Shut down</span>
-                        </button>
-                      </div>
-                    )}
-                    {powerFeedback && (
-                      <div className="companion-mono-tiny" style={{ textAlign: 'center', color: 'var(--adaptive-accent)' }}>
-                        {powerFeedback}
-                      </div>
-                    )}
-                  </div>
                 )}
 
                 {activeTab === 'Settings' && (
@@ -9931,11 +9203,19 @@ export const KiboApp: React.FC = () => {
 
                             {Object.values(APP_INTEGRATIONS).map((app) => {
                               const isConn = multitaskAgent.isAppConnected(app.id);
+                              const iconMap: Record<string, string> = {
+                                notion: 'notion',
+                                github: 'github',
+                                vscode: 'vscode',
+                                figma: 'figma',
+                                gmail: 'gmail',
+                              };
+                              const appIconName = iconMap[app.id] || 'plug';
                               return (
                                 <div key={app.id} className="kibo-settings-row">
                                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                    <div style={{ width: 28, height: 28, borderRadius: 7, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                      <SvgIcon name="plug" size={14} color={isConn ? '#34D399' : '#94A3B8'} />
+                                    <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                      <SvgIcon name={appIconName} size={15} color={isConn ? '#FFFFFF' : '#E2E8F0'} />
                                     </div>
                                     <div>
                                       <div className="kibo-settings-row-label">{app.name}</div>
@@ -9980,12 +9260,28 @@ export const KiboApp: React.FC = () => {
                               </div>
                             </div>
 
-                            {customIntegrations.map((conn) => (
+                            {customIntegrations.map((conn) => {
+                              const lowerConn = conn.name.toLowerCase();
+                              const customIcon = lowerConn.includes('meta')
+                                ? 'meta'
+                                : lowerConn.includes('linear')
+                                ? 'linear'
+                                : lowerConn.includes('github')
+                                ? 'github'
+                                : lowerConn.includes('gmail')
+                                ? 'gmail'
+                                : 'plug';
+                              return (
                               <div key={conn.id} className="kibo-settings-row">
-                                <div>
-                                  <div className="kibo-settings-row-label">{conn.name}</div>
-                                  <div className="kibo-settings-row-desc">
-                                    {conn.category} · <span style={{ fontFamily: 'var(--kibo-font-mono)', fontSize: 10.5 }}>{conn.endpointOrId}</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                  <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <SvgIcon name={customIcon} size={15} color={conn.connected ? '#38BDF8' : '#94A3B8'} />
+                                  </div>
+                                  <div>
+                                    <div className="kibo-settings-row-label">{conn.name}</div>
+                                    <div className="kibo-settings-row-desc">
+                                      {conn.category} · <span style={{ fontFamily: 'var(--kibo-font-mono)', fontSize: 10.5 }}>{conn.endpointOrId}</span>
+                                    </div>
                                   </div>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -10034,7 +9330,8 @@ export const KiboApp: React.FC = () => {
                                   </button>
                                 </div>
                               </div>
-                            ))}
+                              );
+                            })}
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr auto', gap: 6, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                               <input

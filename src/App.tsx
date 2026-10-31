@@ -78,19 +78,19 @@ const NOTCH_FEATURES = [
     name: 'Convert',
     summary: 'Drag any file into the closed notch or ask Kibo by voice to convert between PDF, Word (.docx), Markdown, CSV, JSON, HTML, and images while keeping your original file untouched.',
     previewTitle: 'Universal File Converter',
-    previewMeta: 'PDF ↔ Word · CSV ↔ JSON · Original Safe',
+    previewMeta: 'PDF ↔ Word · Voice Filename Match · Original Safe',
   },
   {
     name: 'Focus',
-    summary: 'Pomodoro countdown timer and precision lap stopwatch that live alongside Kibo in the compact notch—click to pause or resume, and watch Kibo dance when your session finishes.',
-    previewTitle: 'Focus Timer & Stopwatch',
-    previewMeta: 'Live Notch Readout · Kibo Victory Dance',
+    summary: 'Pomodoro countdown timer, precision lap stopwatch, and interactive Focus Sticky Notes that tilt on hover and zoom open with a crisp paper sound. Click the compact notch to pause or resume, and watch Kibo dance when your session finishes.',
+    previewTitle: 'Focus Timer, Stopwatch & Sticky Notes',
+    previewMeta: 'Interactive Sticky Notes · Live Notch Readout · Kibo Dance',
   },
   {
     name: 'Skills',
-    summary: 'Import or author modular SKILL.md instruction packs that upgrade how Kibo designs interfaces, writes code, and executes multi-step workflows.',
-    previewTitle: 'Modular SKILL.md Engine',
-    previewMeta: 'Import SKILL.md · Custom Capabilities',
+    summary: 'Import or author modular SKILL.md instruction packs and connect Chrome, Gmail, GitHub, Notion, Figma, VS Code, Linear, and Meta Ads.',
+    previewTitle: 'Modular SKILL.md & App Bridges',
+    previewMeta: 'Import SKILL.md · Chrome Extension · Brand Integrations',
   },
   {
     name: 'Media',
@@ -103,23 +103,23 @@ const NOTCH_FEATURES = [
 const FAQS = [
   {
     q: 'Does Kibo record my screen or send telemetry to third parties?',
-    a: 'No. Kibo is strictly local-first. Screen vision and voice queries only process in direct response to your held shortcuts (Win + Alt, Ctrl + Shift, Ctrl + Win) and communicate directly with Google Gemini using your personal API key stored in your local Windows userData. Zero telemetry, zero cloud logging, and zero middleman servers.',
+    a: 'No. Kibo is strictly local first. Screen vision and voice queries only process in direct response to your held shortcuts (Win + Alt, Ctrl + Shift, Ctrl + Win) and communicate directly with Google Gemini using your personal API key stored in your local Windows userData. Zero telemetry, zero cloud logging, and zero middleman servers.',
   },
   {
     q: 'Does Kibo remember my name, files, and preferences across restarts?',
     a: 'Yes. When you tell Kibo your name or preferences, Kibo saves them locally to your persistent profile so it greets you by name and remembers your context every time you launch your PC.',
   },
   {
-    q: 'Does Kibo interrupt games or full-screen videos?',
-    a: 'Never. When you launch a fullscreen game or media session, Kibo automatically tucks up into an 18px top-bezel sliver or hides completely, forwarding 100% of mouse and keyboard inputs to your application.',
+    q: 'Does Kibo interrupt games or fullscreen videos?',
+    a: 'Never. When you launch a fullscreen game or media session, Kibo automatically tucks up into an 18px top bezel sliver or hides completely, forwarding 100% of mouse and keyboard inputs to your application.',
   },
   {
     q: 'Can Kibo convert files or connect to Google Chrome and workspace apps?',
-    a: 'Yes. Drag any file toward the top notch—even when closed—to open the Kibo Storage drop box and convert between PDF, Word (.docx), CSV, JSON, Markdown, and images without deleting your original file. You can also install the Kibo Chrome Extension and connect Notion, GitHub, VS Code, Figma, Gmail, or custom APIs in Preferences -> Integrations.',
+    a: 'Yes. Drag any file toward the top notch, even when closed, to open the Kibo Storage drop box and convert between PDF, Word (.docx), CSV, JSON, Markdown, and images without deleting your original file. You can also install the Kibo Chrome Extension and connect Notion, GitHub, VS Code, Figma, Gmail, or custom APIs in Preferences under Integrations.',
   },
   {
     q: 'Can I customize the hotkeys, voices, and companion skin?',
-    a: 'Yes. In Preferences, you can remap your activation hotkeys, configure audio input/output devices and live captions, switch between 4 Google Gemini neural voices (Charon, Aoede, Fenrir, Puck), and select your favorite companion chassis pod.',
+    a: 'Yes. In Preferences, you can remap your activation hotkeys, configure audio input and output devices and live captions, switch between 4 Google Gemini neural voices (Charon, Aoede, Fenrir, Puck), and choose from 6 vibrant companion skins including MK I Cobalt, Sakura Mochi, Matcha Mint, Crimson Nova, Mango Sunburst, and Cyber Grape.',
   },
 ];
 
@@ -233,27 +233,43 @@ export function App() {
       );
     }, pageRef);
 
-    // Scroll-triggered section reveals
+    // Scroll-triggered section & child card reveals for smooth staggered fade-ins
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            gsap.to(entry.target, {
+            const target = entry.target as HTMLElement;
+            gsap.to(target, {
               y: 0,
               opacity: 1,
-              duration: 0.85,
+              duration: 0.9,
               ease: 'power3.out',
             });
-            observer.unobserve(entry.target);
+            const childItems = target.querySelectorAll('.kibo-card, .kibo-feature-btn, .kibo-faq-item, .kibo-notch-showcase > div');
+            if (childItems.length > 0) {
+              gsap.fromTo(
+                childItems,
+                { y: 24, opacity: 0 },
+                {
+                  y: 0,
+                  opacity: 1,
+                  duration: 0.72,
+                  stagger: 0.08,
+                  ease: 'power3.out',
+                  delay: 0.08,
+                }
+              );
+            }
+            observer.unobserve(target);
           }
         });
       },
-      { threshold: 0.14 }
+      { threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
     );
 
     const sections = document.querySelectorAll('.kibo-scroll-section');
     sections.forEach((sec) => {
-      gsap.set(sec, { y: 32, opacity: 0 });
+      gsap.set(sec, { y: 36, opacity: 0 });
       observer.observe(sec);
     });
 
@@ -306,12 +322,30 @@ export function App() {
   return (
     <div ref={pageRef} className="kibo-web-root">
       <style>{`
+        :root {
+          --kibo-web-font-primary: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+          --kibo-web-font-secondary: 'Figtree', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
         .kibo-web-root {
           min-height: 100vh;
-          background: #F7F7F4;
+          background-color: #F8F9FA;
+          background-image:
+            radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.11) 0%, rgba(56, 189, 248, 0) 48%),
+            radial-gradient(circle at 88% 28%, rgba(192, 132, 252, 0.08) 0%, rgba(192, 132, 252, 0) 42%),
+            radial-gradient(circle at 12% 68%, rgba(16, 185, 129, 0.06) 0%, rgba(16, 185, 129, 0) 45%),
+            radial-gradient(rgba(18, 19, 22, 0.075) 1px, transparent 1px);
+          background-size: 100% 100%, 100% 100%, 100% 100%, 26px 26px;
+          background-position: 0 0, 0 0, 0 0, -1px -1px;
           color: #121316;
-          font-family: 'Figtree', -apple-system, BlinkMacSystemFont, sans-serif;
+          font-family: var(--kibo-web-font-primary);
           -webkit-font-smoothing: antialiased;
+        }
+        .kibo-hero-sub,
+        .kibo-lead,
+        .kibo-card p,
+        .kibo-feature-btn p,
+        .kibo-faq-content {
+          font-family: var(--kibo-web-font-secondary);
         }
         .kibo-web-nav {
           position: sticky;

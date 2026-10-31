@@ -468,21 +468,24 @@ function createWindow() {
   mainWindow.setAlwaysOnTop(true, 'pop-up-menu');
 
   startHitTestLoop();
-  startClipboardWatcher(() => mainWindow);
-  startHotkeyWatcher((hotkeyAction) => {
-    if (!mainWindow || mainWindow.isDestroyed()) return;
-    if (hotkeyAction === 'LASSO_DOWN') {
-      isLassoActive = true;
-      mainWindow.setIgnoreMouseEvents(false);
-    } else if (hotkeyAction === 'LASSO_UP') {
-      isLassoActive = false;
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        isIgnoringMouse = true;
-        mainWindow.setIgnoreMouseEvents(true, { forward: true });
+  // Defer heavy PowerShell watchers until after the 2.25s startup wake-and-hide animation completes
+  setTimeout(() => {
+    startClipboardWatcher(() => mainWindow);
+    startHotkeyWatcher((hotkeyAction) => {
+      if (!mainWindow || mainWindow.isDestroyed()) return;
+      if (hotkeyAction === 'LASSO_DOWN') {
+        isLassoActive = true;
+        mainWindow.setIgnoreMouseEvents(false);
+      } else if (hotkeyAction === 'LASSO_UP') {
+        isLassoActive = false;
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          isIgnoringMouse = true;
+          mainWindow.setIgnoreMouseEvents(true, { forward: true });
+        }
       }
-    }
-    mainWindow.webContents.send('hotkey-event', hotkeyAction);
-  });
+      mainWindow.webContents.send('hotkey-event', hotkeyAction);
+    });
+  }, 2600);
 
   screen.on('display-metrics-changed', positionCanvasWindow);
 
@@ -548,6 +551,7 @@ function createWindow() {
           path.join(__dirname, '../release/Kibo-Setup-1.0.0.exe'),
           path.join(__dirname, '../release/win-unpacked/Kibo.exe'),
           path.join(__dirname, '../release/Kibo.exe'),
+          path.join(__dirname, '../public/download/Kibo-Setup.exe'),
         ];
         const exePath = candidates.find((p) => fs.existsSync(p));
         if (exePath) {
@@ -1269,6 +1273,23 @@ async function renderHtmlToPdfFile(htmlContent, outPdfPath) {
   }
 }
 
+function computeEditDistance(a, b) {
+  const m = a.length;
+  const n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+    }
+  }
+  return dp[m][n];
+}
+
 function findUserFileByName(query) {
   if (!query) return null;
   const rawStr = String(query).trim();
@@ -1293,6 +1314,28 @@ function findUserFileByName(query) {
   const queryExt = path.extname(cleaned).toLowerCase();
   const queryBase = (queryExt ? cleaned.slice(0, -queryExt.length) : cleaned).trim();
   if (!queryBase) return null;
+
+  // Build phonetic/ASR candidate variants (e.g., speech-to-text often hears "kibo" as "keyboard", "keybo", "keebo", "kilo")
+  const queryVariants = new Set([queryBase]);
+  const phoneticSwaps = [
+    ['keyboard', 'kibo'],
+    ['key board', 'kibo'],
+    ['keybo', 'kibo'],
+    ['keebo', 'kibo'],
+    ['kilo', 'kibo'],
+    ['tibo', 'kibo'],
+    ['gibo', 'kibo'],
+    ['cabo', 'kibo'],
+  ];
+  for (const [misheard, intended] of phoneticSwaps) {
+    if (queryBase.includes(misheard)) {
+      queryVariants.add(queryBase.replace(new RegExp(misheard, 'g'), intended).trim());
+    }
+    if (queryBase.includes(intended)) {
+      queryVariants.add(queryBase.replace(new RegExp(intended, 'g'), misheard).trim());
+    }
+  }
+  const variantList = Array.from(queryVariants).filter(Boolean);
 
   const extAliases = {
     '.txt': ['.txt', '.md', '.text', '.rtf'],
@@ -1327,7 +1370,6 @@ function findUserFileByName(query) {
 
   let bestPath = null;
   let bestScore = 0;
-  const compactQueryBase = queryBase.replace(/[\s_-]+/g, '');
 
   for (const dir of searchDirs) {
     try {
@@ -1338,30 +1380,43 @@ function findUserFileByName(query) {
         const ext = path.extname(lowerName).toLowerCase();
         const base = path.basename(lowerName, ext).trim();
         const compactBase = base.replace(/[\s_-]+/g, '');
-
-        let score = 0;
         const extMatches = !allowedExts || allowedExts.includes(ext);
 
-        if (lowerName === cleaned) {
-          score = 1000;
-        } else if (base === queryBase && extMatches) {
-          score = 960;
-        } else if (compactBase === compactQueryBase && compactQueryBase.length >= 2 && extMatches) {
-          score = 920;
-        } else if (base === queryBase) {
-          score = 860;
-        } else if (compactBase === compactQueryBase && compactQueryBase.length >= 2) {
-          score = 820;
-        } else if (queryBase.length >= 3 && base.startsWith(queryBase) && extMatches) {
-          score = 760;
-        } else if (queryBase.length >= 3 && compactBase.includes(compactQueryBase) && extMatches) {
-          score = 710;
-        }
+        for (let vIdx = 0; vIdx < variantList.length; vIdx++) {
+          const vBase = variantList[vIdx];
+          const compactVBase = vBase.replace(/[\s_-]+/g, '');
+          // Slight priority boost for exact original transcript over phonetic alias
+          const aliasPenalty = vIdx === 0 ? 0 : 15;
+          let score = 0;
 
-        if (score > bestScore) {
-          bestScore = score;
-          bestPath = path.join(dir, entry.name);
-          if (score === 1000) return bestPath;
+          if (lowerName === `${vBase}${queryExt}`) {
+            score = 1000 - aliasPenalty;
+          } else if (base === vBase && extMatches) {
+            score = 960 - aliasPenalty;
+          } else if (compactBase === compactVBase && compactVBase.length >= 2 && extMatches) {
+            score = 920 - aliasPenalty;
+          } else if (base === vBase) {
+            score = 860 - aliasPenalty;
+          } else if (compactBase === compactVBase && compactVBase.length >= 2) {
+            score = 820 - aliasPenalty;
+          } else if (vBase.length >= 3 && base.startsWith(vBase) && extMatches) {
+            score = 760 - aliasPenalty;
+          } else if (vBase.length >= 3 && compactBase.includes(compactVBase) && extMatches) {
+            score = 710 - aliasPenalty;
+          } else if (extMatches && compactBase.length >= 3 && compactVBase.length >= 3) {
+            const dist = computeEditDistance(compactBase, compactVBase);
+            const maxLen = Math.max(compactBase.length, compactVBase.length);
+            const similarity = 1 - dist / maxLen;
+            if (similarity >= 0.65) {
+              score = Math.round(680 + similarity * 120) - aliasPenalty;
+            }
+          }
+
+          if (score > bestScore) {
+            bestScore = score;
+            bestPath = path.join(dir, entry.name);
+            if (score === 1000) return bestPath;
+          }
         }
       }
     } catch (_) {}
@@ -1934,12 +1989,44 @@ ipcMain.on('start-extension-drag', (event) => {
 ipcMain.handle('open-chrome-extensions-page', async () => {
   try {
     clipboard.writeText('chrome://extensions');
-    exec('start chrome "chrome://extensions"', (err) => {
-      if (err) {
-        shell.openExternal('https://www.google.com/chrome/');
+    const localAppData = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
+    const programFiles = process.env.PROGRAMFILES || 'C:\\Program Files';
+    const programFilesX86 = process.env['PROGRAMFILES(X86)'] || 'C:\\Program Files (x86)';
+
+    // Resolve the user's most recently active Chrome profile from Local State so Chrome never shows the Profile Picker
+    let lastUsedProfile = 'Default';
+    try {
+      const localStatePath = path.join(localAppData, 'Google', 'Chrome', 'User Data', 'Local State');
+      if (fs.existsSync(localStatePath)) {
+        const stateJson = JSON.parse(fs.readFileSync(localStatePath, 'utf8'));
+        if (stateJson?.profile?.last_used) {
+          lastUsedProfile = stateJson.profile.last_used;
+        }
       }
-    });
-    return { success: true };
+    } catch (_) {}
+
+    const chromeCandidates = [
+      path.join(programFiles, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+      path.join(programFilesX86, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+      path.join(localAppData, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+    ];
+    const chromeExe = chromeCandidates.find((p) => fs.existsSync(p));
+
+    if (chromeExe) {
+      const child = spawn(
+        chromeExe,
+        [`--profile-directory=${lastUsedProfile}`, 'chrome://extensions/'],
+        { detached: true, stdio: 'ignore', windowsHide: false }
+      );
+      child.unref();
+    } else {
+      exec(`start chrome --profile-directory="${lastUsedProfile}" "chrome://extensions/"`, (err) => {
+        if (err) {
+          shell.openExternal('https://www.google.com/chrome/');
+        }
+      });
+    }
+    return { success: true, profile: lastUsedProfile };
   } catch (_) {
     return { success: false };
   }
@@ -2932,11 +3019,14 @@ function ensureLatestFrontendBuild() {
 
 app.whenReady().then(() => {
   ensureLatestFrontendBuild();
-  initSystemDaemon();
-  preCacheDefaultWallpapers();
   createWindow();
   createSystemTray();
-  startActiveAppWatcher();
+  // Defer background PowerShell daemons until after the 2.25s startup wake animation completes for 60fps smoothness
+  setTimeout(() => {
+    initSystemDaemon();
+    preCacheDefaultWallpapers();
+    startActiveAppWatcher();
+  }, 2600);
 
   app.on('second-instance', () => {
     if (mainWindow && !mainWindow.isDestroyed()) { mainWindow.webContents.reloadIgnoringCache(); }

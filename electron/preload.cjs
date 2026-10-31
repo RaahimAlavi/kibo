@@ -1,5 +1,8 @@
 const { contextBridge, ipcRenderer, clipboard, nativeImage, webUtils } = require('electron');
 
+// Prevent MaxListenersExceededWarning on IPC event re-registration
+ipcRenderer.setMaxListeners(50);
+
 const kiboAPI = {
   // Window State & Multi-Zone Hitbox Control
   setWindowMode: (mode, height) => ipcRenderer.send('set-window-mode', { mode, height }),

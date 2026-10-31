@@ -522,6 +522,50 @@ class KiboSoundEngine {
       sub.stop(now + t + d + 0.02);
     });
   }
+
+  // 17. Tactile Sticky Note Paper Flip / Rustle SFX (when enlarging or folding a sticky note)
+  public playPaperRustle(isOpening = true) {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const duration = 0.13;
+
+    const bufferSize = Math.floor(ctx.sampleRate * duration);
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      const progress = i / bufferSize;
+      // Crisp double-envelope paper slide texture
+      const env = Math.sin(progress * Math.PI) * (0.7 + 0.3 * Math.sin(progress * Math.PI * 5));
+      data[i] = (Math.random() * 2 - 1) * env;
+    }
+
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const bandpass = ctx.createBiquadFilter();
+    bandpass.type = 'bandpass';
+    bandpass.frequency.setValueAtTime(isOpening ? 1650 : 2300, now);
+    bandpass.frequency.exponentialRampToValueAtTime(isOpening ? 2850 : 1350, now + duration);
+    bandpass.Q.setValueAtTime(1.8, now);
+
+    const highpass = ctx.createBiquadFilter();
+    highpass.type = 'highpass';
+    highpass.frequency.setValueAtTime(650, now);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.075, now + 0.024);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    noise.connect(bandpass);
+    bandpass.connect(highpass);
+    highpass.connect(gain);
+    gain.connect(ctx.destination);
+
+    noise.start(now);
+    noise.stop(now + duration + 0.01);
+  }
 }
 
 export const soundFX = new KiboSoundEngine();
