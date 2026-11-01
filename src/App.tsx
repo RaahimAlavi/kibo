@@ -115,7 +115,7 @@ const FAQS = [
   },
   {
     q: 'Can Kibo convert files or connect to Google Chrome and workspace apps?',
-    a: 'Yes. Drag any file toward the top notch, even when closed, to open the Kibo Storage drop box and convert between PDF, Word (.docx), CSV, JSON, Markdown, and images without deleting your original file. You can also install the Kibo Chrome Extension and connect over 250+ cloud apps (Notion, GitHub, VS Code, Figma, Gmail, Slack, Discord, Jira, Spotify, etc.) via the native Composio Platform Engine in Preferences under Integrations.',
+    a: 'Yes. Drag any file toward the top notch, even when closed, to open the Kibo Storage drop box and convert between PDF, Word (.docx), CSV, JSON, Markdown, and images without deleting your original file. You can also install the Kibo Chrome Extension and connect your cloud apps (Notion, GitHub, VS Code, Figma, Gmail, Slack, Discord, Jira, Spotify, etc.) via Composio in Preferences under Integrations.',
   },
   {
     q: 'Can I customize the hotkeys, voices, and companion skin?',
