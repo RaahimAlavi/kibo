@@ -60,7 +60,7 @@ export const PrivacyPolicyPage: React.FC<PrivacyPolicyPageProps> = ({ onNavigate
             3. Purchase &amp; Financial Information
           </h2>
           <p style={{ margin: '0 0 16px' }}>
-            All payment transactions for Founders Edition licenses are processed exclusively by Merchant of Record partners (including Dodo Payments). Payment details, including credit card numbers, billing addresses, and tax identifiers, are handled in secure PCI-DSS compliant environments. Kibo never receives, stores, or has access to your raw payment card credentials.
+            All payment transactions for Founders Edition licenses are processed exclusively by Merchant of Record partners (including Lemon Squeezy). Payment details, including credit card numbers, billing addresses, and tax identifiers, are handled in secure PCI-DSS compliant environments. Kibo never receives, stores, or has access to your raw payment card credentials.
           </p>
 
           <h2 style={{ fontSize: 18, fontWeight: 700, color: '#121316', margin: '24px 0 12px' }}>

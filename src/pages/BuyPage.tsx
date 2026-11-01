@@ -28,12 +28,13 @@ export const BuyPage: React.FC<BuyPageProps> = ({ onNavigate }) => {
     }
 
     setIsProcessing(true);
-    // In production, this can open a Dodo Payments or Lemon Squeezy checkout link:
-    // window.location.href = `https://checkout.dodopayments.com/buy/... ?email=${encodeURIComponent(email)}`;
-    setTimeout(() => {
-      setIsProcessing(false);
-      setCheckoutNotice(true);
-    }, 600);
+    const cleanEmail = email.trim();
+    const checkoutBase = 'https://kiboai.lemonsqueezy.com/checkout/buy/82847c34-2c7d-416f-b407-68371e119df2';
+    const finalUrl = cleanEmail
+      ? `${checkoutBase}?checkout[email]=${encodeURIComponent(cleanEmail)}`
+      : checkoutBase;
+
+    window.location.href = finalUrl;
   };
 
   return (
@@ -342,7 +343,7 @@ export const BuyPage: React.FC<BuyPageProps> = ({ onNavigate }) => {
             }}
           >
             <div style={{ fontSize: 12, lineHeight: 1.5, color: '#68707C', textAlign: 'center' }}>
-              Secure checkout powered by Dodo Payments. Accepts Credit Cards, Apple Pay, Google Pay, and international local payment options.
+              Secure checkout powered by Lemon Squeezy. Accepts Credit Cards, Apple Pay, Google Pay, and international payment options.
             </div>
 
             <div style={{ textAlign: 'center' }}>
