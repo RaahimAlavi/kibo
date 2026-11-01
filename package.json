@@ -18,6 +18,7 @@
   "build": {
     "appId": "com.raahim.kibo",
     "productName": "Kibo",
+    "compression": "maximum",
     "directories": {
       "output": "release"
     },
@@ -25,6 +26,8 @@
       "dist/**/*",
       "electron/**/*",
       "public/**/*",
+      "!public/kibo-lemon-banner-*",
+      "!public/kibo-banner-*",
       "package.json"
     ],
     "win": {
@@ -38,24 +41,25 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Kibo"
+      "shortcutName": "Kibo",
+      "differentialPackage": false
     }
   },
   "dependencies": {
-    "@composio/core": "^0.27.0",
-    "@designcodeio/threeui": "^1.2.0",
-    "gsap": "^3.12.5",
-    "lenis": "^1.1.20",
-    "lucide-react": "^0.475.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "@composio/core": "^0.27.0"
   },
   "devDependencies": {
+    "@designcodeio/threeui": "^1.2.0",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
     "electron": "^44.7.1",
     "electron-builder": "^26.18.0",
+    "gsap": "^3.12.5",
+    "lenis": "^1.1.20",
+    "lucide-react": "^0.475.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "typescript": "^5.7.3",
     "vite": "^6.1.0"
   }

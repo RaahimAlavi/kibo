@@ -14,6 +14,7 @@ import { LicenseTermsPage } from './pages/LicenseTermsPage';
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
 import { RefundPolicyPage } from './pages/RefundPolicyPage';
 import { ContactGrievancesPage } from './pages/ContactGrievancesPage';
+import { DownloadSuccessPage } from './pages/DownloadSuccessPage';
 
 interface StoryScene {
   id: string;
@@ -157,6 +158,7 @@ export function App() {
     const h = window.location.hash.toLowerCase();
     if (p === '/buy' || p === '/buy/' || h === '#buy' || h === '#/buy') return 'buy';
     if (p === '/access' || p === '/portal' || h === '#access' || h === '#portal') return 'access';
+    if (p === '/download' || p === '/thank-you' || h === '#download') return 'download';
     if (p === '/requirements' || h === '#requirements') return 'requirements';
     if (p === '/terms' || p === '/license' || h === '#terms') return 'terms';
     if (p === '/privacy' || h === '#privacy') return 'privacy';
@@ -244,6 +246,8 @@ export function App() {
         setCurrentRoute('buy');
       } else if (p === '/access' || p === '/portal' || h === '#access' || h === '#portal') {
         setCurrentRoute('access');
+      } else if (p === '/download' || p === '/thank-you' || h === '#download') {
+        setCurrentRoute('download');
       } else if (p === '/requirements' || h === '#requirements') {
         setCurrentRoute('requirements');
       } else if (p === '/terms' || p === '/license' || h === '#terms') {
@@ -841,6 +845,7 @@ export function App() {
 
       {currentRoute === 'buy' && <BuyPage onNavigate={handleNavigate} />}
       {currentRoute === 'access' && <CustomerAccessPage onNavigate={handleNavigate} />}
+      {currentRoute === 'download' && <DownloadSuccessPage onNavigate={handleNavigate} />}
       {currentRoute === 'requirements' && <RequirementsPage onNavigate={handleNavigate} />}
       {currentRoute === 'terms' && <LicenseTermsPage onNavigate={handleNavigate} />}
       {currentRoute === 'privacy' && <PrivacyPolicyPage onNavigate={handleNavigate} />}

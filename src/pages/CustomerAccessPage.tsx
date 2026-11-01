@@ -211,10 +211,9 @@ export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNaviga
               )}
 
               {/* Direct Installer Download Button */}
-              <a
-                href={INSTALLER_DOWNLOAD_URL}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
+                onClick={() => onNavigate('download')}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -227,7 +226,8 @@ export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNaviga
                   color: '#FFFFFF',
                   fontSize: 15,
                   fontWeight: 700,
-                  textDecoration: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
                   boxSizing: 'border-box',
                   boxShadow: '0 4px 14px rgba(18, 19, 22, 0.12)',
                   transition: 'opacity 0.2s ease',
@@ -236,11 +236,11 @@ export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNaviga
               >
                 <WindowsLogoIcon size={16} />
                 <span>Download Kibo Setup (.exe)</span>
-              </a>
+              </button>
 
               <div style={{ textAlign: 'center', marginTop: 10 }}>
                 <span style={{ fontSize: 12, color: '#68707C' }}>
-                  Version 1.0.0 | 170.7 MB | Built for Windows 10 & 11 (64-bit)
+                  Version 1.0.0 | 109.6 MB | Built for Windows 10 &amp; 11 (64-bit)
                 </span>
               </div>
 
