@@ -3,6 +3,10 @@ import React, { useEffect, useState } from 'react';
 import { WebHeader, WindowsLogoIcon } from '../components/WebHeader';
 import { WebFooter } from '../components/WebFooter';
 
+const INSTALLER_DOWNLOAD_URL =
+  (import.meta as any).env?.VITE_INSTALLER_DOWNLOAD_URL ||
+  'https://github.com/RaahimAlavi/kibo/releases/download/v1.0.0/Kibo-Setup-1.0.0.exe';
+
 interface CustomerAccessPageProps {
   onNavigate: (route: string, anchor?: string) => void;
 }
@@ -208,8 +212,9 @@ export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNaviga
 
               {/* Direct Installer Download Button */}
               <a
-                href="./download/Kibo-Setup.exe"
-                download="Kibo-Setup.exe"
+                href={INSTALLER_DOWNLOAD_URL}
+                target="_blank"
+                rel="noopener noreferrer"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -235,7 +240,7 @@ export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNaviga
 
               <div style={{ textAlign: 'center', marginTop: 10 }}>
                 <span style={{ fontSize: 12, color: '#68707C' }}>
-                  Version 1.0.0 · 170.7 MB · Built for Windows 10 & 11 (64-bit)
+                  Version 1.0.0 | 170.7 MB | Built for Windows 10 & 11 (64-bit)
                 </span>
               </div>
 
