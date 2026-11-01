@@ -10,6 +10,7 @@ export interface GeminiFunctionCall {
     | 'find_and_point'
     | 'computer_action'
     | 'build_website'
+    | 'compose_email'
     | 'convert_file'
     | 'start_focus_timer'
     | 'remember_user_fact';
@@ -86,7 +87,15 @@ export function getActiveSkillsPromptBlock(): string {
     const blocks = active.map(
       (s: any) => `### ACTIVE SKILL: ${s.name} (${s.fileName || 'SKILL.md'})\n${String(s.content).slice(0, 3500)}`
     );
-    return `\n\n=== USER-ENABLED SKILL.MD INSTRUCTIONS (FOLLOW STRICTLY WHEN APPLICABLE) ===\n${blocks.join('\n\n')}\n=== END OF SKILLS ===`;
+
+    const multiSkillDirective = active.length > 1
+      ? `\n\n=== MULTI-SKILL HARMONIZATION DIRECTIVE ===\n` +
+        `You have ${active.length} active skills enabled (${active.map((s: any) => s.name).join(', ')}).\n` +
+        `CRITICAL RULE: NEVER use only one skill and ignore the others. When fulfilling creative, coding, or UI tasks, you MUST SYNTHESIZE all active skills together: blend their typography scales, layout structures, contrast discipline, spacing rules, and anti-generic principles into a cohesive, benchmark-quality result.\n` +
+        `=== END OF MULTI-SKILL DIRECTIVE ===\n`
+      : '';
+
+    return `\n\n=== USER-ENABLED SKILL.MD INSTRUCTIONS (FOLLOW STRICTLY WHEN APPLICABLE) ===\n${blocks.join('\n\n')}${multiSkillDirective}\n=== END OF SKILLS ===`;
   } catch (_) {
     return '';
   }
@@ -178,7 +187,7 @@ export const GEMINI_TOOLS = [
     functionDeclarations: [
       {
         name: 'open_application',
-        description: 'Launch any installed desktop software, game, website, or Windows utility on the user PC.',
+        description: 'Launch any installed desktop software, game, website, or Windows utility on the user PC. DO NOT call this when user asks to compose, write, or send an email (use compose_email instead).',
         parameters: {
           type: 'OBJECT',
           properties: {
@@ -188,6 +197,27 @@ export const GEMINI_TOOLS = [
             },
           },
           required: ['appName'],
+        },
+      },
+      {
+        name: 'compose_email',
+        description: 'Compose, draft, write, or send an email using the connected Gmail account or Composio integration. Use whenever the user asks to compose, send, write, or draft an email.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            recipient: {
+              type: 'STRING',
+              description: 'Target email address or name to receive the message',
+            },
+            subject: {
+              type: 'STRING',
+              description: 'Subject line of the email',
+            },
+            body: {
+              type: 'STRING',
+              description: 'Content, message, or notes to include in the email draft or message',
+            },
+          },
         },
       },
       {
@@ -289,7 +319,7 @@ export const GEMINI_TOOLS = [
       },
       {
         name: 'build_website',
-        description: 'Build, generate, create, design, or clone a modern webpage, website, landing page, or SaaS site from a user prompt or reference.',
+        description: 'Build, generate, create, design, or clone a modern webpage, website, landing page, or SaaS site. STRICT RULE: ONLY call when the user EXPLICITLY asks to build/design/code a new website or landing page. NEVER call when the user mentions websites in the context of databases, tables, curation, storing or saving in Notion or lists (e.g. "websites in the database").',
         parameters: {
           type: 'OBJECT',
           properties: {
@@ -402,14 +432,15 @@ export const GEMINI_TOOLS = [
 
 const BASE_SYSTEM_INSTRUCTION = `You are Kibo, a fast, intelligent desktop companion living in the user's Windows top notch.
 - If the user tells you their name (e.g. "I'm Raahim" or "My name is Raahim") or a personal fact to remember, call remember_user_fact and greet them warmly by name.
+- When the user asks to compose, draft, write, or send an email, ALWAYS call compose_email. DO NOT call open_application for emails.
 - When the user asks to convert any file (e.g. PDF to Word, Word to PDF, image format, CSV to JSON), ALWAYS call convert_file.
 - When the user asks to start a focus timer or stopwatch, call start_focus_timer.
 - When the user asks to click, play, select, or tap anything on screen OR write/type text on their PC, ALWAYS call computer_action.
 - When the user asks to find, locate, or point to an item without clicking it, call find_and_point.
 - When the user asks to search YouTube/Google/Amazon/GitHub/Spotify, call search_web.
 - When the user asks to play a song, artist, playlist, or music on Spotify, ALWAYS call play_spotify.
-- When the user asks to build, create, or update a website, call build_website.
-- When the user asks to open an app or change a system setting, call the matching tool.
+- When the user explicitly asks to design, code, or build a new website or landing page from scratch, call build_website. CRITICAL INTENT RULE: NEVER call build_website when the user talks about databases, tables, curation, storing or saving websites in Notion or bookmarks (e.g. "I want websites to be in the database").
+- When the user asks to open an app or launch an app, call open_application.
 - Keep spoken replies concise, helpful, and natural (1-2 short sentences).`;
 
 /**
@@ -581,6 +612,8 @@ export async function queryGemini(
       ? `Started your ${detectedCall.args.mode === 'stopwatch' ? 'stopwatch' : `${detectedCall.args.minutes || 25} minute focus timer`}.`
       : detectedCall.name === 'build_website'
       ? `Building website for "${detectedCall.args.topic || 'project'}" using your active skills.`
+      : detectedCall.name === 'compose_email'
+      ? `Composing email${detectedCall.args.recipient ? ` for ${detectedCall.args.recipient}` : ''} with your connected Gmail integration.`
       : detectedCall.name === 'search_web'
       ? `Searching ${detectedCall.args.platform || 'the web'} for ${detectedCall.args.query}.`
       : detectedCall.name === 'system_action'

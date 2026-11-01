@@ -174,6 +174,11 @@ const kiboAPI = {
     ipcRenderer.on('desktop-clicked-outside', listener);
     return () => ipcRenderer.removeListener('desktop-clicked-outside', listener);
   },
+  onIntegrationNotification: (callback) => {
+    const listener = (_event, data) => callback(data);
+    ipcRenderer.on('integration-notification', listener);
+    return () => ipcRenderer.removeListener('integration-notification', listener);
+  },
   onRoamingDismiss: (callback) => {
     const listener = () => callback();
     ipcRenderer.on('roaming-dismiss', listener);

@@ -807,6 +807,16 @@ const SvgIcon: React.FC<{ name: string; size?: number; color?: string }> = ({
           <path d="M17 10.5a2.5 2.5 0 1 0 0 3" />
         </svg>
       );
+    case 'grid':
+    case 'apps':
+      return (
+        <svg width={size} height={size} viewBox="0 0 16 16" fill={color} style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+          <rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1.5" />
+          <rect x="9" y="1.5" width="5.5" height="5.5" rx="1.5" />
+          <rect x="1.5" y="9" width="5.5" height="5.5" rx="1.5" />
+          <rect x="9" y="9" width="5.5" height="5.5" rx="1.5" />
+        </svg>
+      );
     case 'integrations':
     case 'plug':
       return (
@@ -815,6 +825,13 @@ const SvgIcon: React.FC<{ name: string; size?: number; color?: string }> = ({
           <path d="M9 8V2" />
           <path d="M15 8V2" />
           <path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z" />
+        </svg>
+      );
+    case 'bell':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
         </svg>
       );
     case 'chrome':
@@ -1280,6 +1297,7 @@ const NAV_TABS: ReadonlyArray<{
   { id: 'Focus', label: 'Focus', icon: 'timer', width: 66 },
   { id: 'Skills', label: 'Skills', icon: 'skill', width: 64 },
   { id: 'Media', label: 'Media', icon: 'music', width: 66 },
+  { id: 'Apps', label: 'Apps +', icon: 'apps', width: 78 },
 ];
 
 const DEFAULT_KIBO_SKILLS: KiboSkillItem[] = [
@@ -1495,7 +1513,7 @@ const INTEGRATION_APPS: IntegrationAppItem[] = [
     category: 'Media',
     description: 'Windows SMTC media playback, playlist controls, and dynamic album color glass.',
     logo: './logos/spotify.png',
-    viaComposio: true,
+    viaComposio: false,
   },
   {
     id: 'jira',
@@ -1721,6 +1739,12 @@ export const KiboApp: React.FC = () => {
     async (slug: string) => {
       const api = (window as any).kiboAPI;
       if (!api?.composioConnectApp) return;
+      if (slug === 'spotify') {
+        api?.openApp?.('spotify');
+        soundFX.playSuccessChime();
+        setComposioConnectingSlug(null);
+        return;
+      }
       if (composioPollTimerRef.current) {
         clearInterval(composioPollTimerRef.current);
         composioPollTimerRef.current = null;
@@ -1750,6 +1774,16 @@ export const KiboApp: React.FC = () => {
                   composioPollTimerRef.current = null;
                   setComposioConnectingSlug(null);
                   soundFX.playSuccessChime();
+                  const matchedApp = INTEGRATION_APPS.find((a) => a.slug.toLowerCase() === slug.toLowerCase());
+                  const appName = matchedApp?.name || (slug.charAt(0).toUpperCase() + slug.slice(1));
+                  setActiveNotchNotification({
+                    id: `conn_${Date.now()}`,
+                    appSlug: slug,
+                    appName,
+                    title: `${appName} Connected`,
+                    message: 'Account linked and ready for voice commands.',
+                    logo: matchedApp?.logo || `./logos/${slug}.png`,
+                  });
                   return;
                 }
               }
@@ -1763,12 +1797,18 @@ export const KiboApp: React.FC = () => {
           }, 2500);
         } else {
           setComposioConnectingSlug(null);
+          if (res?.error) {
+            showReplyWithSpeech(res.error, 'Integration Notice');
+          }
         }
-      } catch (_) {
+      } catch (err: any) {
         setComposioConnectingSlug(null);
+        if (err?.message) {
+          showReplyWithSpeech(err.message, 'Integration Notice');
+        }
       }
     },
-    [composioApiKey]
+    [composioApiKey, showReplyWithSpeech]
   );
 
   const handleDisconnectComposioAccount = useCallback(
@@ -2548,6 +2588,51 @@ export const KiboApp: React.FC = () => {
   const [userBubbleText, setUserBubbleText] = useState<string | null>(null);
   const [kiboReply, setKiboReply] = useState<{ bold?: string; rest?: string } | null>(null);
 
+  // Dynamic Island macOS-Style Integration Notifications (Discord, Calendar, Tasks)
+  const [activeNotchNotification, setActiveNotchNotification] = useState<{
+    id: string;
+    appSlug: string;
+    appName: string;
+    title: string;
+    message: string;
+    logo?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!activeNotchNotification) return;
+    const timer = setTimeout(() => {
+      setActiveNotchNotification(null);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [activeNotchNotification]);
+
+  useEffect(() => {
+    const unreg = (window as any).kiboAPI?.onIntegrationNotification?.((payload: any) => {
+      if (payload?.title && payload?.message) {
+        setActiveNotchNotification({
+          id: `notif_${Date.now()}`,
+          appSlug: payload.appSlug || '',
+          appName: payload.appName || 'Notification',
+          title: payload.title,
+          message: payload.message,
+          logo: payload.logo,
+        });
+        soundFX.playPop();
+      }
+    });
+    return () => unreg?.();
+  }, []);
+
+  // Auto-dismiss context card (e.g. "Opening YouTube") after 3.8 seconds
+  useEffect(() => {
+    if (!contextCard) return;
+    if (contextCard.header?.includes('Ember Waiting')) return;
+    const timer = setTimeout(() => {
+      setContextCard(null);
+    }, 3800);
+    return () => clearTimeout(timer);
+  }, [contextCard]);
+
   const [dictationState, setDictationState] = useState<'idle' | 'recording' | 'done'>('idle');
   const [dictationText, setDictationText] = useState('');
 
@@ -2946,15 +3031,21 @@ export const KiboApp: React.FC = () => {
   // Collapse expanded notch immediately when clicking outside into another desktop window
   useEffect(() => {
     if (!isExpanded && !showMediaNotch) return;
-    const onWindowBlur = () => {
+    const collapseOutside = () => {
       if (isNativeDialogOpenRef.current || isDraggingVolumeRef.current || isDraggingMediaScrubRef.current) return;
       setActiveControlDropdown(null);
       setShowMediaNotch(false);
       setIsExpanded(false);
       if (autoTuckEnabled) setIsTucked(true);
     };
-    window.addEventListener('blur', onWindowBlur);
-    return () => window.removeEventListener('blur', onWindowBlur);
+    window.addEventListener('blur', collapseOutside);
+    const unregIpc = window.kiboAPI?.onDesktopClickedOutside?.(() => {
+      collapseOutside();
+    });
+    return () => {
+      window.removeEventListener('blur', collapseOutside);
+      unregIpc?.();
+    };
   }, [isExpanded, showMediaNotch, autoTuckEnabled]);
 
   useEffect(() => {
@@ -4046,7 +4137,7 @@ export const KiboApp: React.FC = () => {
       Controls:  { w: 708, h: 396 },
       Today:     { w: 860, h: 440 },
       Clipboard: { w: 860, h: 444 },
-      Apps:      { w: 708, h: 560 },
+      Apps:      { w: 860, h: 500 },
       Wallpaper: { w: 680, h: 168 },
       Power:     { w: 708, h: 168 },
       Settings:  { w: 880, h: 540 },
@@ -4118,13 +4209,14 @@ export const KiboApp: React.FC = () => {
   );
 
   const showProactiveBanner = !isExpanded && !showCompanionWindow && Boolean(detectedAppId);
-  const isCompactAskBar = !showProactiveBanner && (askNotchPhase === 'speaking' || askNotchPhase === 'thinking');
-  const isStopwatchNotchActive = !isExpanded && !showProactiveBanner && !showMediaNotch && !isCompactAskBar && (stopwatchRunning || stopwatchMs > 0);
-  const isTimerNotchActive = !isExpanded && !showProactiveBanner && !showMediaNotch && !isCompactAskBar && (isTimerRunning || isTimerSessionActive || timerSeconds < timerTotalSeconds || timerAlarmRinging || isStopwatchNotchActive);
-  const isMiniMediaPill = (bootPhase === 'ready' || bootPhase === 'tucking') && !isExpanded && !showProactiveBanner && !showMediaNotch && !isCompactAskBar && !isTimerNotchActive && !notchApiAlert && !isFileDraggingOverNotch && hasMediaSession;
-  const isTuckedSliver = (isTucked || bootPhase === 'sleeping' || (bootPhase === 'tucking' && !hasMediaSession)) && !isExpanded && !showProactiveBanner && !showMediaNotch && !isTimerNotchActive && !isCompactAskBar && !isMiniMediaPill && !notchApiAlert && !isFileDraggingOverNotch;
+  const showNotchNotification = !isExpanded && !showCompanionWindow && !showProactiveBanner && !showMediaNotch && !isFileDraggingOverNotch && Boolean(activeNotchNotification);
+  const isCompactAskBar = !showProactiveBanner && !showNotchNotification && (askNotchPhase === 'speaking' || askNotchPhase === 'thinking');
+  const isStopwatchNotchActive = !isExpanded && !showProactiveBanner && !showNotchNotification && !showMediaNotch && !isCompactAskBar && (stopwatchRunning || stopwatchMs > 0);
+  const isTimerNotchActive = !isExpanded && !showProactiveBanner && !showNotchNotification && !showMediaNotch && !isCompactAskBar && (isTimerRunning || isTimerSessionActive || timerSeconds < timerTotalSeconds || timerAlarmRinging || isStopwatchNotchActive);
+  const isMiniMediaPill = (bootPhase === 'ready' || bootPhase === 'tucking') && !isExpanded && !showProactiveBanner && !showNotchNotification && !showMediaNotch && !isCompactAskBar && !isTimerNotchActive && !notchApiAlert && !isFileDraggingOverNotch && hasMediaSession;
+  const isTuckedSliver = (isTucked || bootPhase === 'sleeping' || (bootPhase === 'tucking' && !hasMediaSession)) && !isExpanded && !showProactiveBanner && !showNotchNotification && !showMediaNotch && !isTimerNotchActive && !isCompactAskBar && !isMiniMediaPill && !notchApiAlert && !isFileDraggingOverNotch;
 
-  const archSize = (isTuckedSliver || bootPhase === 'sleeping') ? 9 : showProactiveBanner || isFileDraggingOverNotch ? 20 : isMiniMediaPill || isCompactAskBar || isTimerNotchActive || notchApiAlert ? 16 : 22;
+  const archSize = (isTuckedSliver || bootPhase === 'sleeping') ? 9 : showProactiveBanner || isFileDraggingOverNotch || showNotchNotification ? 20 : isMiniMediaPill || isCompactAskBar || isTimerNotchActive || notchApiAlert ? 16 : 22;
 
   const notchShellWidth = isExpanded
     ? currentTabDimensions.w - archSize * 2
@@ -4132,6 +4224,8 @@ export const KiboApp: React.FC = () => {
     ? 336
     : showProactiveBanner
     ? 580 - archSize * 2
+    : showNotchNotification
+    ? 368 - archSize * 2
     : showMediaNotch
     ? 320
     : notchApiAlert
@@ -4156,6 +4250,8 @@ export const KiboApp: React.FC = () => {
     ? 108
     : showProactiveBanner
     ? 106
+    : showNotchNotification
+    ? 52
     : showMediaNotch
     ? 124
     : notchApiAlert
@@ -4176,7 +4272,7 @@ export const KiboApp: React.FC = () => {
 
   const bottomRadius = (isTuckedSliver || bootPhase === 'sleeping')
     ? 9
-    : showProactiveBanner || isFileDraggingOverNotch
+    : showProactiveBanner || isFileDraggingOverNotch || showNotchNotification
     ? 20
     : isMiniMediaPill || isCompactAskBar || isTimerNotchActive || notchApiAlert
     ? 15
@@ -4394,16 +4490,21 @@ export const KiboApp: React.FC = () => {
         return;
       }
 
-      // 1. Check Notion Database / Workspace Task FIRST so "create a database in Notion with websites" never triggers BUILD_PAGE!
+      // 1. Check Notion Database / Workspace Task FIRST so "create a database in Notion with websites" or "I want websites to be in the database" never triggers BUILD_PAGE!
       const isNotionDatabaseTask =
-        (lower.includes('notion') || lower.includes('database')) &&
-        (lower.includes('create') ||
-          lower.includes('make') ||
-          lower.includes('build') ||
-          lower.includes('add') ||
-          lower.includes('save') ||
-          lower.includes('websites') ||
-          lower.includes('awards'));
+        lower.includes('websites in the database') ||
+        lower.includes('websites to be in the database') ||
+        lower.includes('put websites in') ||
+        ((lower.includes('notion') || lower.includes('database')) &&
+          (lower.includes('create') ||
+            lower.includes('make') ||
+            lower.includes('build') ||
+            lower.includes('add') ||
+            lower.includes('save') ||
+            lower.includes('store') ||
+            lower.includes('curate') ||
+            lower.includes('websites') ||
+            lower.includes('awards')));
 
       const isClonePage =
         !isNotionDatabaseTask &&
@@ -4426,10 +4527,35 @@ export const KiboApp: React.FC = () => {
         !isNotionDatabaseTask &&
         !isClonePage &&
         !isSaveInspo &&
+        !lower.includes('database') &&
+        !lower.includes('in the database') &&
+        !lower.includes('table') &&
+        !lower.includes('store') &&
+        !lower.includes('save') &&
+        !lower.includes('in notion') &&
         (fc?.name === 'build_website' ||
           /\b(make|create|build|generate|design|code)\s+(me\s+)?(a\s+|an\s+|the\s+)?([a-z0-9_-]+\s+)*(website|webpage|landing\s*page|site|portfolio|saas)\b/i.test(
             lower
           ));
+
+      // 1B. Voice-Triggered Email Compose via Gmail Integration
+      const isComposeEmail =
+        fc?.name === 'compose_email' ||
+        ((lower.includes('email') || lower.includes('gmail') || lower.includes('mail')) &&
+          (lower.includes('compose') ||
+            lower.includes('send') ||
+            lower.includes('draft') ||
+            lower.includes('write an email') ||
+            lower.includes('mail to')));
+
+      if (isComposeEmail) {
+        multitaskAgent.spawnTask(text, 'gmail', { kind: 'EMAIL_COMPOSE' });
+        showReplyWithSpeech(
+          'Composing your email and preparing it with your connected Gmail.',
+          'Drafting email...'
+        );
+        return;
+      }
 
       if (isNotionDatabaseTask) {
         multitaskAgent.spawnTask(text, 'notion', { kind: 'NOTION_DATABASE' });
@@ -4772,6 +4898,14 @@ export const KiboApp: React.FC = () => {
           });
         } else if (fc.name === 'open_application') {
           const appName = String(fc.args.appName || '').trim();
+          if (
+            appName.toLowerCase() === 'gmail' &&
+            (lower.includes('compose') || lower.includes('send') || lower.includes('draft') || lower.includes('write') || lower.includes('mail to'))
+          ) {
+            multitaskAgent.spawnTask(text, 'gmail', { kind: 'EMAIL_COMPOSE' });
+            showReplyWithSpeech('Composing email draft in your connected Gmail.', 'Drafting email...');
+            return;
+          }
           const domainMap: Record<string, string> = {
             gmail: 'mail.google.com',
             youtube: 'youtube.com',
@@ -6245,6 +6379,650 @@ export const KiboApp: React.FC = () => {
     }
   };
 
+  const renderIntegrationsContent = () => (
+    <>
+      <div>
+        <h2 className="kibo-settings-header-title">Integrations</h2>
+        <p className="kibo-settings-header-sub">
+          Connect your apps, services, and developer tools.
+        </p>
+      </div>
+
+      {/* Composio API Key Card */}
+      <div className="kibo-settings-card">
+        <div className="kibo-settings-row">
+          <div>
+            <div className="kibo-settings-row-label">Composio Project API Key</div>
+            <div className="kibo-settings-row-desc">Required to authenticate and sync external app accounts</div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <input
+              type="password"
+              value={composioDraftKey}
+              onChange={(e) => setComposioDraftKey(e.target.value)}
+              placeholder="ak_..."
+              style={{
+                width: 200,
+                height: 32,
+                background: '#141519',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                borderRadius: 8,
+                padding: '0 10px',
+                fontSize: 12,
+                color: '#F8FAFC',
+                fontFamily: 'var(--kibo-font-mono)',
+                outline: 'none',
+              }}
+            />
+            <button
+              type="button"
+              onClick={async () => {
+                const cleanKey = composioDraftKey.trim();
+                if (!cleanKey) return;
+                setComposioApiKey(cleanKey);
+                localStorage.setItem('kibo_composio_key', cleanKey);
+                window.kiboAPI?.saveStoredSettings?.({ kibo_composio_key: cleanKey });
+                await refreshComposioStatus(cleanKey);
+                setComposioKeySavedAlert('Saved');
+                soundFX.playSuccessChime();
+                setTimeout(() => setComposioKeySavedAlert(null), 3000);
+              }}
+              className="config-pill-btn"
+              style={{
+                height: 32,
+                padding: '0 14px',
+                borderRadius: 8,
+                background: '#38BDF8',
+                color: '#0A0E17',
+                fontSize: 12,
+                fontWeight: 700,
+                border: 'none',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Verify & Save
+            </button>
+          </div>
+        </div>
+        {composioKeySavedAlert && (
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#34D399', textAlign: 'right' }}>
+            {composioKeySavedAlert}
+          </div>
+        )}
+      </div>
+
+      {/* Dedicated Connected Accounts Box (Above scrollable directory) */}
+      {(() => {
+        const activeList = composioStatus.accounts.filter((a) => a.status === 'ACTIVE');
+        return (
+          <div className="kibo-settings-card">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: activeList.length > 0 ? 12 : 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#FFFFFF' }}>Connected Accounts</span>
+                <span
+                  style={{
+                    fontSize: 10.5,
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: 999,
+                    background: activeList.length > 0 ? 'rgba(52, 211, 153, 0.15)' : 'rgba(255, 255, 255, 0.06)',
+                    color: activeList.length > 0 ? '#34D399' : '#94A3B8',
+                    border: activeList.length > 0 ? '1px solid rgba(52, 211, 153, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
+                  }}
+                >
+                  {activeList.length} active
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  soundFX.playClick();
+                  await refreshComposioStatus();
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  padding: '4px 10px',
+                  borderRadius: 7,
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  color: '#94A3B8',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+                title="Fetch realtime connection status from Composio"
+              >
+                <SvgIcon name="refresh" size={11} color="#94A3B8" />
+                <span>Sync</span>
+              </button>
+            </div>
+
+            {activeList.length === 0 ? (
+              <div style={{ fontSize: 11.5, color: '#64748B', paddingTop: 6 }}>
+                No accounts connected yet. Choose any app below to connect via 1-click OAuth.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 4 }}>
+                {activeList.map((acc) => {
+                  const matchedApp = INTEGRATION_APPS.find((a) => a.slug.toLowerCase() === acc.slug.toLowerCase());
+                  const logoSrc = matchedApp?.logo || `./logos/${acc.slug}.png`;
+                  const appName = matchedApp?.name || (acc.slug.charAt(0).toUpperCase() + acc.slug.slice(1));
+                  return (
+                    <div
+                      key={acc.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '9px 12px',
+                        borderRadius: 8,
+                        background: 'rgba(255, 255, 255, 0.03)',
+                        border: '1px solid rgba(255, 255, 255, 0.07)',
+                        gap: 12,
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+                        <div
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 8,
+                            background: 'rgba(255, 255, 255, 0.06)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            overflow: 'hidden',
+                            flexShrink: 0,
+                          }}
+                        >
+                          {acc.avatarUrl ? (
+                            <img src={acc.avatarUrl} width="32" height="32" alt={appName} style={{ objectFit: 'cover' }} />
+                          ) : (
+                            <img
+                              src={logoSrc}
+                              width="22"
+                              height="22"
+                              alt={appName}
+                              style={{ objectFit: 'contain' }}
+                              onError={(e) => {
+                                (e.currentTarget as HTMLElement).style.display = 'none';
+                              }}
+                            />
+                          )}
+                        </div>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: '#FFFFFF' }}>{appName}</span>
+                            {acc.profileName && (
+                              <span
+                                style={{
+                                  fontSize: 11.5,
+                                  fontWeight: 600,
+                                  color: '#38BDF8',
+                                  background: 'rgba(56, 189, 248, 0.12)',
+                                  border: '1px solid rgba(56, 189, 248, 0.28)',
+                                  padding: '1px 7px',
+                                  borderRadius: 5,
+                                }}
+                              >
+                                {acc.profileName}
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>
+                            {acc.workspaceName ? `${acc.workspaceName} · ` : ''}Realtime OAuth Active
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                        <span style={{ fontSize: 11, color: '#34D399', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#34D399' }} />
+                          Connected
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleDisconnectComposioAccount(acc.id, acc.slug)}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: 7,
+                            background: 'rgba(239, 68, 68, 0.12)',
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            color: '#F87171',
+                            fontSize: 11,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          Disconnect
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* App Directory Filters & Search */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          {(['All', 'Productivity', 'Developer', 'Communication', 'Media'] as const).map((cat) => {
+            const isActive = integrationsCategoryFilter === cat;
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setIntegrationsCategoryFilter(cat)}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: 8,
+                  fontSize: 11.5,
+                  fontWeight: 700,
+                  background: isActive ? '#38BDF8' : 'rgba(255, 255, 255, 0.05)',
+                  color: isActive ? '#09111E' : '#94A3B8',
+                  border: isActive ? '1px solid #38BDF8' : '1px solid rgba(255, 255, 255, 0.08)',
+                  cursor: 'pointer',
+                  transition: 'all 0.16s ease',
+                }}
+              >
+                {cat}
+              </button>
+            );
+          })}
+        </div>
+        <div style={{ position: 'relative', width: 200 }}>
+          <input
+            type="text"
+            value={integrationsSearch}
+            onChange={(e) => setIntegrationsSearch(e.target.value)}
+            placeholder="Search apps..."
+            style={{
+              width: '100%',
+              height: 32,
+              background: '#141519',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: 8,
+              padding: '0 10px 0 28px',
+              fontSize: 11.5,
+              color: '#F8FAFC',
+              outline: 'none',
+              boxSizing: 'border-box',
+            }}
+          />
+          <span style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center' }}>
+            <SvgIcon name="search" size={11} color="#64748B" />
+          </span>
+          {integrationsSearch && (
+            <button
+              type="button"
+              onClick={() => setIntegrationsSearch('')}
+              style={{
+                position: 'absolute',
+                right: 8,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'transparent',
+                border: 'none',
+                color: '#94A3B8',
+                cursor: 'pointer',
+                fontSize: 13,
+                padding: 0,
+              }}
+            >
+              ×
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* App Directory with Official Logo PNGs */}
+      <div className="kibo-settings-card">
+        {INTEGRATION_APPS.filter((app) => {
+          const matchesCat = integrationsCategoryFilter === 'All' || app.category === integrationsCategoryFilter;
+          const matchesQuery =
+            !integrationsSearch.trim() ||
+            app.name.toLowerCase().includes(integrationsSearch.toLowerCase()) ||
+            app.description.toLowerCase().includes(integrationsSearch.toLowerCase()) ||
+            app.slug.toLowerCase().includes(integrationsSearch.toLowerCase());
+          return matchesCat && matchesQuery;
+        }).map((app) => {
+          const composioAcc = composioStatus.accounts.find(
+            (a) => a.slug?.toLowerCase() === app.slug.toLowerCase() && a.status === 'ACTIVE'
+          );
+          const isComposioConn = Boolean(composioAcc);
+          const isLocalConn = !app.viaComposio && multitaskAgent.isAppConnected(app.id as any);
+          const isConnected = isComposioConn || isLocalConn;
+          const isConnecting = composioConnectingSlug === app.slug;
+
+          return (
+            <div key={app.id} className="kibo-settings-row">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
+                <div
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: 8,
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    flexShrink: 0,
+                  }}
+                >
+                  <img
+                    src={app.logo}
+                    width={22}
+                    height={22}
+                    alt={app.name}
+                    style={{ objectFit: 'contain' }}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                </div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#FFFFFF' }}>{app.name}</span>
+                    <span
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 600,
+                        color: '#94A3B8',
+                        padding: '1px 6px',
+                        borderRadius: 4,
+                        background: 'rgba(255, 255, 255, 0.06)',
+                      }}
+                    >
+                      {app.category}
+                    </span>
+                  </div>
+                  <div
+                    className="companion-truncate"
+                    style={{ fontSize: 11.5, color: '#64748B', marginTop: 2 }}
+                  >
+                    {app.description}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                {app.id === 'chrome' ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {chromeExtStatus && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          window.kiboAPI?.exportChromeExtension?.({ revealInExplorer: true });
+                        }}
+                        style={{
+                          padding: '4px 8px',
+                          borderRadius: 6,
+                          background: 'rgba(255, 255, 255, 0.06)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          color: '#94A3B8',
+                          fontSize: 11,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Show Folder
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const res = await window.kiboAPI?.exportChromeExtension?.({ revealInExplorer: false });
+                        await window.kiboAPI?.openChromeExtensionsPage?.();
+                        if (res?.success && res.extDir) {
+                          setChromeExtStatus(res.extDir);
+                          soundFX.playSuccessChime();
+                        } else {
+                          setChromeExtStatus('Kibo-Chrome-Extension');
+                        }
+                      }}
+                      className="config-pill-btn"
+                      style={{
+                        height: 30,
+                        padding: '0 12px',
+                        borderRadius: 8,
+                        background: chromeExtStatus ? 'rgba(56, 189, 248, 0.15)' : '#1E293B',
+                        color: chromeExtStatus ? '#38BDF8' : '#F8FAFC',
+                        border: chromeExtStatus ? '1px solid rgba(56, 189, 248, 0.35)' : '1px solid rgba(255, 255, 255, 0.12)',
+                        fontSize: 11.5,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {chromeExtStatus ? 'Open chrome://extensions/' : 'Install Extension'}
+                    </button>
+                  </div>
+                ) : app.id === 'vscode' ? (
+                  <span style={{ fontSize: 11, color: '#34D399', fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: 'rgba(52, 211, 153, 0.12)' }}>
+                    Active
+                  </span>
+                ) : isConnected ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {composioAcc?.profileName && (
+                      <span
+                        style={{
+                          fontSize: 11,
+                          color: '#94A3B8',
+                          background: 'rgba(255, 255, 255, 0.06)',
+                          padding: '2px 7px',
+                          borderRadius: 5,
+                        }}
+                      >
+                        {composioAcc.profileName}
+                      </span>
+                    )}
+                    <span style={{ fontSize: 11, color: '#34D399', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#34D399' }} />
+                      Connected
+                    </span>
+                    {composioAcc && (
+                      <button
+                        type="button"
+                        onClick={() => handleDisconnectComposioAccount(composioAcc.id, app.slug)}
+                        style={{
+                          padding: '3px 8px',
+                          borderRadius: 6,
+                          background: 'transparent',
+                          border: '1px solid rgba(255, 255, 255, 0.12)',
+                          color: '#94A3B8',
+                          fontSize: 10.5,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Disconnect
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={isConnecting}
+                    onClick={() => handleConnectComposioApp(app.slug)}
+                    className="config-pill-btn"
+                    style={{
+                      height: 30,
+                      padding: '0 14px',
+                      borderRadius: 8,
+                      background: isConnecting ? 'rgba(56, 189, 248, 0.25)' : '#1E293B',
+                      color: isConnecting ? '#38BDF8' : '#F8FAFC',
+                      border: isConnecting ? '1px solid #38BDF8' : '1px solid rgba(255, 255, 255, 0.12)',
+                      fontSize: 11.5,
+                      fontWeight: 700,
+                      cursor: isConnecting ? 'wait' : 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {isConnecting ? 'Opening...' : 'Connect'}
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Custom Connections (Meta Ads, Webhooks, APIs) */}
+      <div className="kibo-settings-card" style={{ marginTop: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+          <div>
+            <div className="kibo-settings-row-label">Custom Endpoints & Private Webhooks</div>
+            <div className="kibo-settings-row-desc">Add private webhooks, custom endpoints, or proprietary ad telemetry</div>
+          </div>
+        </div>
+
+        {customIntegrations.map((conn) => {
+          const lowerConn = conn.name.toLowerCase();
+          const customLogo = lowerConn.includes('meta')
+            ? './logos/meta.png'
+            : lowerConn.includes('linear')
+            ? './logos/linear.png'
+            : lowerConn.includes('github')
+            ? './logos/github.png'
+            : lowerConn.includes('gmail')
+            ? './logos/gmail.png'
+            : null;
+
+          return (
+            <div key={conn.id} className="kibo-settings-row">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 28, height: 28, borderRadius: 7, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                  {customLogo ? (
+                    <img src={customLogo} width="20" height="20" alt={conn.name} style={{ objectFit: 'contain' }} />
+                  ) : (
+                    <SvgIcon name="plug" size={14} color={conn.connected ? '#38BDF8' : '#94A3B8'} />
+                  )}
+                </div>
+                <div>
+                  <div className="kibo-settings-row-label">{conn.name}</div>
+                  <div className="kibo-settings-row-desc">
+                    {conn.category} · <span style={{ fontFamily: 'var(--kibo-font-mono)', fontSize: 10.5 }}>{conn.endpointOrId}</span>
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomIntegrations((prev) => {
+                      const next = prev.map((c) => (c.id === conn.id ? { ...c, connected: !c.connected } : c));
+                      localStorage.setItem('kibo_custom_integrations', JSON.stringify(next));
+                      return next;
+                    });
+                  }}
+                  style={{
+                    background: conn.connected ? 'rgba(56, 189, 248, 0.15)' : '#1E293B',
+                    color: conn.connected ? '#38BDF8' : '#94A3B8',
+                    border: conn.connected ? '1px solid rgba(56, 189, 248, 0.35)' : '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: 7,
+                    padding: '4px 10px',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {conn.connected ? 'Active' : 'Enable'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomIntegrations((prev) => {
+                      const next = prev.filter((c) => c.id !== conn.id);
+                      localStorage.setItem('kibo_custom_integrations', JSON.stringify(next));
+                      return next;
+                    });
+                  }}
+                  style={{
+                    background: 'transparent',
+                    color: '#64748B',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: 7,
+                    padding: '4px 8px',
+                    fontSize: 11,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          );
+        })}
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr auto', gap: 6, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <input
+            type="text"
+            value={newConnName}
+            onChange={(e) => setNewConnName(e.target.value)}
+            placeholder="Name (e.g. Meta Ads)"
+            style={{ background: '#141519', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '6px 9px', color: '#F8FAFC', fontSize: 11.5 }}
+          />
+          <input
+            type="text"
+            value={newConnCategory}
+            onChange={(e) => setNewConnCategory(e.target.value)}
+            placeholder="Role (e.g. Ad Analytics)"
+            style={{ background: '#141519', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '6px 9px', color: '#F8FAFC', fontSize: 11.5 }}
+          />
+          <input
+            type="text"
+            value={newConnEndpoint}
+            onChange={(e) => setNewConnEndpoint(e.target.value)}
+            placeholder="Account ID / API Endpoint"
+            style={{ background: '#141519', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '6px 9px', color: '#F8FAFC', fontSize: 11.5 }}
+          />
+          <button
+            type="button"
+            onClick={() => {
+              if (!newConnName.trim()) return;
+              const item: CustomIntegrationItem = {
+                id: `conn_${Date.now()}`,
+                name: newConnName.trim(),
+                category: newConnCategory.trim() || 'Custom Integration',
+                endpointOrId: newConnEndpoint.trim() || 'local-bridge',
+                connected: true,
+              };
+              setCustomIntegrations((prev) => {
+                const next = [...prev, item];
+                localStorage.setItem('kibo_custom_integrations', JSON.stringify(next));
+                return next;
+              });
+              setNewConnName('');
+              setNewConnCategory('');
+              setNewConnEndpoint('');
+              soundFX.playSuccessChime();
+            }}
+            style={{
+              background: '#38BDF8',
+              color: '#0A0E17',
+              border: 'none',
+              borderRadius: 7,
+              padding: '6px 12px',
+              fontSize: 11.5,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Add
+          </button>
+        </div>
+      </div>
+    </>
+  );
+
   return (
     <div
       className="kibo-companion-root"
@@ -6577,6 +7355,84 @@ export const KiboApp: React.FC = () => {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {showNotchNotification && activeNotchNotification && (
+            <div
+              className="kibo-notch-dynamic-notification"
+              onClick={() => {
+                if (activeNotchNotification.appSlug) {
+                  multitaskAgent.openApp(activeNotchNotification.appSlug as any);
+                }
+                setActiveNotchNotification(null);
+              }}
+              style={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0 12px',
+                gap: '10px',
+                cursor: 'pointer',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0, flex: 1 }}>
+                <div
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    overflow: 'hidden',
+                  }}
+                >
+                  {activeNotchNotification.logo ? (
+                    <img src={activeNotchNotification.logo} width="18" height="18" alt={activeNotchNotification.appName} style={{ objectFit: 'contain' }} />
+                  ) : (
+                    <SvgIcon name="bell" size={14} color="#38BDF8" />
+                  )}
+                </div>
+                <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#FFFFFF', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {activeNotchNotification.title || activeNotchNotification.appName}
+                  </div>
+                  <div style={{ fontSize: '10.5px', color: '#94A3B8', lineHeight: 1.2, marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {activeNotchNotification.message}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveNotchNotification(null);
+                }}
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '999px',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  color: '#94A3B8',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  padding: 0,
+                  fontSize: '13px',
+                  flexShrink: 0,
+                }}
+              >
+                ×
+              </button>
             </div>
           )}
 
@@ -8955,6 +9811,26 @@ export const KiboApp: React.FC = () => {
                   />
                 )}
 
+                {/* =========================================================
+                    TAB 6: APPS & INTEGRATIONS (Direct 1-Click Apps + Ecosystem)
+                    ========================================================= */}
+                {activeTab === 'Apps' && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '12px',
+                      flex: 1,
+                      minHeight: 0,
+                      width: '100%',
+                      overflowY: 'auto',
+                      paddingRight: '6px',
+                    }}
+                  >
+                    {renderIntegrationsContent()}
+                  </div>
+                )}
+
                 {activeTab === 'Settings' && (
                   <div className="kibo-notch-settings-panel">
                     {/* Left Sidebar */}
@@ -9302,12 +10178,12 @@ export const KiboApp: React.FC = () => {
                           </div>
 
                           <div className="kibo-settings-card">
-                            <div className="kibo-settings-row" style={{ flexWrap: 'wrap', gap: '10px' }}>
-                              <div style={{ flex: '1 1 240px', minWidth: 0, paddingRight: 8 }}>
+                            <div className="kibo-settings-row" style={{ flexWrap: 'wrap', gap: '8px' }}>
+                              <div style={{ flex: '1 1 180px', minWidth: 0, paddingRight: 6 }}>
                                 <div className="kibo-settings-row-label">Google Gemini Neural Voice</div>
                                 <div className="kibo-settings-row-desc">Unlimited-quota Gemini Live & TTS neural voice used when Kibo speaks</div>
                               </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, flexWrap: 'nowrap' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, flexWrap: 'nowrap' }}>
                                 <select
                                   value={equippedCards.Voice || 'voice_charon'}
                                   onChange={(e) => {
@@ -9316,15 +10192,15 @@ export const KiboApp: React.FC = () => {
                                     localStorage.setItem('kibo_loadout_voice', val);
                                   }}
                                   style={{
-                                    height: '34px',
-                                    maxWidth: '190px',
+                                    height: '32px',
+                                    maxWidth: '160px',
                                     boxSizing: 'border-box',
                                     background: '#141519',
                                     color: '#F8FAFC',
                                     border: '1px solid rgba(255,255,255,0.12)',
                                     borderRadius: 8,
-                                    padding: '0 8px',
-                                    fontSize: 12,
+                                    padding: '0 6px',
+                                    fontSize: 11.5,
                                     outline: 'none',
                                   }}
                                 >
@@ -9340,14 +10216,14 @@ export const KiboApp: React.FC = () => {
                                   }}
                                   className="config-pill-btn"
                                   style={{
-                                    height: '34px',
+                                    height: '32px',
                                     boxSizing: 'border-box',
                                     background: '#18191E',
                                     color: '#38BDF8',
                                     border: '1px solid rgba(56, 189, 248, 0.32)',
-                                    padding: '0 12px',
+                                    padding: '0 10px',
                                     borderRadius: 8,
-                                    fontSize: 12,
+                                    fontSize: 11.5,
                                     fontWeight: 700,
                                     whiteSpace: 'nowrap',
                                     flexShrink: 0,
@@ -9523,659 +10399,7 @@ export const KiboApp: React.FC = () => {
                       )}
 
                       {settingsCategory === 'Integrations' && (
-                        <>
-                          <div>
-                            <h2 className="kibo-settings-header-title">Integrations</h2>
-                            <p className="kibo-settings-header-sub">
-                              Connect your apps, services, and developer tools.
-                            </p>
-                          </div>
-
-                          {/* Composio API Key Card */}
-                          <div className="kibo-settings-card">
-                            <div className="kibo-settings-row">
-                              <div>
-                                <div className="kibo-settings-row-label">Composio Project API Key</div>
-                                <div className="kibo-settings-row-desc">Required to authenticate and sync external app accounts</div>
-                              </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                                <input
-                                  type="password"
-                                  value={composioDraftKey}
-                                  onChange={(e) => setComposioDraftKey(e.target.value)}
-                                  placeholder="ak_..."
-                                  style={{
-                                    width: 200,
-                                    height: 32,
-                                    background: '#141519',
-                                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                                    borderRadius: 8,
-                                    padding: '0 10px',
-                                    fontSize: 12,
-                                    color: '#F8FAFC',
-                                    fontFamily: 'var(--kibo-font-mono)',
-                                    outline: 'none',
-                                  }}
-                                />
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    const cleanKey = composioDraftKey.trim();
-                                    if (!cleanKey) return;
-                                    setComposioApiKey(cleanKey);
-                                    localStorage.setItem('kibo_composio_key', cleanKey);
-                                    window.kiboAPI?.saveStoredSettings?.({ kibo_composio_key: cleanKey });
-                                    await refreshComposioStatus(cleanKey);
-                                    setComposioKeySavedAlert('Saved');
-                                    soundFX.playSuccessChime();
-                                    setTimeout(() => setComposioKeySavedAlert(null), 3000);
-                                  }}
-                                  className="config-pill-btn"
-                                  style={{
-                                    height: 32,
-                                    padding: '0 14px',
-                                    borderRadius: 8,
-                                    background: '#38BDF8',
-                                    color: '#0A0E17',
-                                    fontSize: 12,
-                                    fontWeight: 700,
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    whiteSpace: 'nowrap',
-                                  }}
-                                >
-                                  Verify & Save
-                                </button>
-                              </div>
-                            </div>
-                            {composioKeySavedAlert && (
-                              <div style={{ fontSize: 11, fontWeight: 700, color: '#34D399', textAlign: 'right' }}>
-                                {composioKeySavedAlert}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Dedicated Connected Accounts Box (Above scrollable directory) */}
-                          {(() => {
-                            const activeList = composioStatus.accounts.filter((a) => a.status === 'ACTIVE');
-                            return (
-                              <div className="kibo-settings-card">
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: activeList.length > 0 ? 12 : 0 }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <span style={{ fontSize: 13, fontWeight: 700, color: '#FFFFFF' }}>Connected Accounts</span>
-                                    <span
-                                      style={{
-                                        fontSize: 10.5,
-                                        fontWeight: 700,
-                                        padding: '2px 8px',
-                                        borderRadius: 999,
-                                        background: activeList.length > 0 ? 'rgba(52, 211, 153, 0.15)' : 'rgba(255, 255, 255, 0.06)',
-                                        color: activeList.length > 0 ? '#34D399' : '#94A3B8',
-                                        border: activeList.length > 0 ? '1px solid rgba(52, 211, 153, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
-                                      }}
-                                    >
-                                      {activeList.length} active
-                                    </span>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={async () => {
-                                      soundFX.playClick();
-                                      await refreshComposioStatus();
-                                    }}
-                                    style={{
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: 5,
-                                      padding: '4px 10px',
-                                      borderRadius: 7,
-                                      background: 'rgba(255, 255, 255, 0.05)',
-                                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                                      color: '#94A3B8',
-                                      fontSize: 11,
-                                      fontWeight: 600,
-                                      cursor: 'pointer',
-                                    }}
-                                    title="Fetch realtime connection status from Composio"
-                                  >
-                                    <SvgIcon name="refresh" size={11} color="#94A3B8" />
-                                    <span>Sync</span>
-                                  </button>
-                                </div>
-
-                                {activeList.length === 0 ? (
-                                  <div style={{ fontSize: 11.5, color: '#64748B', paddingTop: 6 }}>
-                                    No accounts connected yet. Choose any app below to connect via 1-click OAuth.
-                                  </div>
-                                ) : (
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 4 }}>
-                                    {activeList.map((acc) => {
-                                      const matchedApp = INTEGRATION_APPS.find((a) => a.slug.toLowerCase() === acc.slug.toLowerCase());
-                                      const logoSrc = matchedApp?.logo || `./logos/${acc.slug}.png`;
-                                      const appName = matchedApp?.name || (acc.slug.charAt(0).toUpperCase() + acc.slug.slice(1));
-                                      return (
-                                        <div
-                                          key={acc.id}
-                                          style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            padding: '9px 12px',
-                                            borderRadius: 8,
-                                            background: 'rgba(255, 255, 255, 0.03)',
-                                            border: '1px solid rgba(255, 255, 255, 0.07)',
-                                            gap: 12,
-                                          }}
-                                        >
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
-                                            <div
-                                              style={{
-                                                width: 32,
-                                                height: 32,
-                                                borderRadius: 8,
-                                                background: 'rgba(255, 255, 255, 0.06)',
-                                                border: '1px solid rgba(255, 255, 255, 0.1)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                overflow: 'hidden',
-                                                flexShrink: 0,
-                                              }}
-                                            >
-                                              {acc.avatarUrl ? (
-                                                <img src={acc.avatarUrl} width="32" height="32" alt={appName} style={{ objectFit: 'cover' }} />
-                                              ) : (
-                                                <img
-                                                  src={logoSrc}
-                                                  width="22"
-                                                  height="22"
-                                                  alt={appName}
-                                                  style={{ objectFit: 'contain' }}
-                                                  onError={(e) => {
-                                                    (e.currentTarget as HTMLElement).style.display = 'none';
-                                                  }}
-                                                />
-                                              )}
-                                            </div>
-                                            <div style={{ minWidth: 0, flex: 1 }}>
-                                              <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-                                                <span style={{ fontSize: 13, fontWeight: 700, color: '#FFFFFF' }}>{appName}</span>
-                                                {acc.profileName && (
-                                                  <span
-                                                    style={{
-                                                      fontSize: 11.5,
-                                                      fontWeight: 600,
-                                                      color: '#38BDF8',
-                                                      background: 'rgba(56, 189, 248, 0.12)',
-                                                      border: '1px solid rgba(56, 189, 248, 0.28)',
-                                                      padding: '1px 7px',
-                                                      borderRadius: 5,
-                                                    }}
-                                                  >
-                                                    {acc.profileName}
-                                                  </span>
-                                                )}
-                                              </div>
-                                              <div style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>
-                                                {acc.workspaceName ? `${acc.workspaceName} · ` : ''}Realtime OAuth Active
-                                              </div>
-                                            </div>
-                                          </div>
-
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                                            <span style={{ fontSize: 11, color: '#34D399', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#34D399' }} />
-                                              Connected
-                                            </span>
-                                            <button
-                                              type="button"
-                                              onClick={() => handleDisconnectComposioAccount(acc.id, acc.slug)}
-                                              style={{
-                                                padding: '4px 10px',
-                                                borderRadius: 7,
-                                                background: 'rgba(239, 68, 68, 0.12)',
-                                                border: '1px solid rgba(239, 68, 68, 0.3)',
-                                                color: '#F87171',
-                                                fontSize: 11,
-                                                fontWeight: 600,
-                                                cursor: 'pointer',
-                                                transition: 'all 0.15s ease',
-                                              }}
-                                            >
-                                              Disconnect
-                                            </button>
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })()}
-
-                          {/* App Directory Filters & Search */}
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                              {(['All', 'Productivity', 'Developer', 'Communication', 'Media'] as const).map((cat) => {
-                                const isActive = integrationsCategoryFilter === cat;
-                                return (
-                                  <button
-                                    key={cat}
-                                    type="button"
-                                    onClick={() => setIntegrationsCategoryFilter(cat)}
-                                    style={{
-                                      padding: '5px 12px',
-                                      borderRadius: 8,
-                                      fontSize: 11.5,
-                                      fontWeight: 700,
-                                      background: isActive ? '#38BDF8' : 'rgba(255, 255, 255, 0.05)',
-                                      color: isActive ? '#09111E' : '#94A3B8',
-                                      border: isActive ? '1px solid #38BDF8' : '1px solid rgba(255, 255, 255, 0.08)',
-                                      cursor: 'pointer',
-                                      transition: 'all 0.16s ease',
-                                    }}
-                                  >
-                                    {cat}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                            <div style={{ position: 'relative', width: 200 }}>
-                              <input
-                                type="text"
-                                value={integrationsSearch}
-                                onChange={(e) => setIntegrationsSearch(e.target.value)}
-                                placeholder="Search apps..."
-                                style={{
-                                  width: '100%',
-                                  height: 32,
-                                  background: '#141519',
-                                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                                  borderRadius: 8,
-                                  padding: '0 10px 0 28px',
-                                  fontSize: 11.5,
-                                  color: '#F8FAFC',
-                                  outline: 'none',
-                                  boxSizing: 'border-box',
-                                }}
-                              />
-                              <span style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center' }}>
-                                <SvgIcon name="search" size={11} color="#64748B" />
-                              </span>
-                              {integrationsSearch && (
-                                <button
-                                  type="button"
-                                  onClick={() => setIntegrationsSearch('')}
-                                  style={{
-                                    position: 'absolute',
-                                    right: 8,
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    background: 'transparent',
-                                    border: 'none',
-                                    color: '#94A3B8',
-                                    cursor: 'pointer',
-                                    fontSize: 13,
-                                    padding: 0,
-                                  }}
-                                >
-                                  ×
-                                </button>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* App Directory with Official Logo PNGs */}
-                          <div className="kibo-settings-card">
-                            {INTEGRATION_APPS.filter((app) => {
-                              const matchesCat = integrationsCategoryFilter === 'All' || app.category === integrationsCategoryFilter;
-                              const matchesQuery =
-                                !integrationsSearch.trim() ||
-                                app.name.toLowerCase().includes(integrationsSearch.toLowerCase()) ||
-                                app.description.toLowerCase().includes(integrationsSearch.toLowerCase()) ||
-                                app.slug.toLowerCase().includes(integrationsSearch.toLowerCase());
-                              return matchesCat && matchesQuery;
-                            }).map((app) => {
-                              const composioAcc = composioStatus.accounts.find(
-                                (a) => a.slug?.toLowerCase() === app.slug.toLowerCase() && a.status === 'ACTIVE'
-                              );
-                              const isComposioConn = Boolean(composioAcc);
-                              const isLocalConn = !app.viaComposio && multitaskAgent.isAppConnected(app.id as any);
-                              const isConnected = isComposioConn || isLocalConn;
-                              const isConnecting = composioConnectingSlug === app.slug;
-
-                              return (
-                                <div key={app.id} className="kibo-settings-row">
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
-                                    {/* Official Logo PNG */}
-                                    <div
-                                      style={{
-                                        width: 30,
-                                        height: 30,
-                                        borderRadius: 8,
-                                        background: 'rgba(255, 255, 255, 0.05)',
-                                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        overflow: 'hidden',
-                                        flexShrink: 0,
-                                      }}
-                                    >
-                                      <img
-                                        src={app.logo}
-                                        width={22}
-                                        height={22}
-                                        alt={app.name}
-                                        style={{ objectFit: 'contain' }}
-                                        onError={(e) => {
-                                          (e.currentTarget as HTMLElement).style.display = 'none';
-                                        }}
-                                      />
-                                    </div>
-                                    <div style={{ minWidth: 0, flex: 1 }}>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                                        <span style={{ fontSize: 13, fontWeight: 700, color: '#FFFFFF' }}>{app.name}</span>
-                                        <span
-                                          style={{
-                                            fontSize: 10,
-                                            fontWeight: 600,
-                                            color: '#94A3B8',
-                                            padding: '1px 6px',
-                                            borderRadius: 4,
-                                            background: 'rgba(255, 255, 255, 0.06)',
-                                          }}
-                                        >
-                                          {app.category}
-                                        </span>
-                                      </div>
-                                      <div
-                                        className="companion-truncate"
-                                        style={{ fontSize: 11.5, color: '#64748B', marginTop: 2 }}
-                                      >
-                                        {app.description}
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                                    {app.id === 'chrome' ? (
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        {chromeExtStatus && (
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              window.kiboAPI?.exportChromeExtension?.({ revealInExplorer: true });
-                                            }}
-                                            style={{
-                                              padding: '4px 8px',
-                                              borderRadius: 6,
-                                              background: 'rgba(255, 255, 255, 0.06)',
-                                              border: '1px solid rgba(255, 255, 255, 0.1)',
-                                              color: '#94A3B8',
-                                              fontSize: 11,
-                                              cursor: 'pointer',
-                                            }}
-                                          >
-                                            Show Folder
-                                          </button>
-                                        )}
-                                        <button
-                                          type="button"
-                                          onClick={async () => {
-                                            const res = await window.kiboAPI?.exportChromeExtension?.({ revealInExplorer: false });
-                                            await window.kiboAPI?.openChromeExtensionsPage?.();
-                                            if (res?.success && res.extDir) {
-                                              setChromeExtStatus(res.extDir);
-                                              soundFX.playSuccessChime();
-                                            } else {
-                                              setChromeExtStatus('Kibo-Chrome-Extension');
-                                            }
-                                          }}
-                                          className="config-pill-btn"
-                                          style={{
-                                            height: 30,
-                                            padding: '0 12px',
-                                            borderRadius: 8,
-                                            background: chromeExtStatus ? 'rgba(56, 189, 248, 0.15)' : '#1E293B',
-                                            color: chromeExtStatus ? '#38BDF8' : '#F8FAFC',
-                                            border: chromeExtStatus ? '1px solid rgba(56, 189, 248, 0.35)' : '1px solid rgba(255, 255, 255, 0.12)',
-                                            fontSize: 11.5,
-                                            fontWeight: 700,
-                                            cursor: 'pointer',
-                                            whiteSpace: 'nowrap',
-                                          }}
-                                        >
-                                          {chromeExtStatus ? 'Open chrome://extensions/' : 'Install Extension'}
-                                        </button>
-                                      </div>
-                                    ) : app.id === 'vscode' ? (
-                                      <span style={{ fontSize: 11, color: '#34D399', fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: 'rgba(52, 211, 153, 0.12)' }}>
-                                        Active
-                                      </span>
-                                    ) : isConnected ? (
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                        {composioAcc?.profileName && (
-                                          <span
-                                            style={{
-                                              fontSize: 11,
-                                              color: '#38BDF8',
-                                              fontWeight: 600,
-                                              background: 'rgba(56, 189, 248, 0.1)',
-                                              padding: '2px 6px',
-                                              borderRadius: 4,
-                                              maxWidth: 140,
-                                              overflow: 'hidden',
-                                              textOverflow: 'ellipsis',
-                                              whiteSpace: 'nowrap',
-                                            }}
-                                          >
-                                            {composioAcc.profileName}
-                                          </span>
-                                        )}
-                                        <span style={{ fontSize: 11, color: '#34D399', fontWeight: 700 }}>
-                                          Connected
-                                        </span>
-                                        {composioAcc && (
-                                          <button
-                                            type="button"
-                                            onClick={() => handleDisconnectComposioAccount(composioAcc.id, app.slug)}
-                                            style={{
-                                              padding: '3px 8px',
-                                              borderRadius: 6,
-                                              background: 'transparent',
-                                              border: '1px solid rgba(255, 255, 255, 0.1)',
-                                              color: '#94A3B8',
-                                              fontSize: 10.5,
-                                              cursor: 'pointer',
-                                            }}
-                                          >
-                                            Disconnect
-                                          </button>
-                                        )}
-                                      </div>
-                                    ) : (
-                                      <button
-                                        type="button"
-                                        disabled={isConnecting}
-                                        onClick={() => {
-                                          if (app.viaComposio) {
-                                            handleConnectComposioApp(app.slug);
-                                          } else {
-                                            multitaskAgent.connectApp(app.id as any);
-                                            soundFX.playToggle(true);
-                                          }
-                                        }}
-                                        className="config-pill-btn"
-                                        style={{
-                                          height: 30,
-                                          padding: '0 14px',
-                                          borderRadius: 8,
-                                          background: isConnecting ? 'rgba(56, 189, 248, 0.25)' : '#1E293B',
-                                          color: isConnecting ? '#38BDF8' : '#F8FAFC',
-                                          border: isConnecting ? '1px solid #38BDF8' : '1px solid rgba(255, 255, 255, 0.12)',
-                                          fontSize: 11.5,
-                                          fontWeight: 700,
-                                          cursor: isConnecting ? 'wait' : 'pointer',
-                                          whiteSpace: 'nowrap',
-                                        }}
-                                      >
-                                        {isConnecting ? 'Opening...' : 'Connect'}
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-
-                          {/* Custom Connections (Meta Ads, Webhooks, APIs) */}
-                          <div className="kibo-settings-card" style={{ marginTop: 10 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                              <div>
-                                <div className="kibo-settings-row-label">Custom Endpoints & Private Webhooks</div>
-                                <div className="kibo-settings-row-desc">Add private webhooks, custom endpoints, or proprietary ad telemetry</div>
-                              </div>
-                            </div>
-
-                            {customIntegrations.map((conn) => {
-                              const lowerConn = conn.name.toLowerCase();
-                              const customLogo = lowerConn.includes('meta')
-                                ? './logos/meta.png'
-                                : lowerConn.includes('linear')
-                                ? './logos/linear.png'
-                                : lowerConn.includes('github')
-                                ? './logos/github.png'
-                                : lowerConn.includes('gmail')
-                                ? './logos/gmail.png'
-                                : null;
-
-                              return (
-                                <div key={conn.id} className="kibo-settings-row">
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                    <div style={{ width: 28, height: 28, borderRadius: 7, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-                                      {customLogo ? (
-                                        <img src={customLogo} width="20" height="20" alt={conn.name} style={{ objectFit: 'contain' }} />
-                                      ) : (
-                                        <SvgIcon name="plug" size={14} color={conn.connected ? '#38BDF8' : '#94A3B8'} />
-                                      )}
-                                    </div>
-                                    <div>
-                                      <div className="kibo-settings-row-label">{conn.name}</div>
-                                      <div className="kibo-settings-row-desc">
-                                        {conn.category} · <span style={{ fontFamily: 'var(--kibo-font-mono)', fontSize: 10.5 }}>{conn.endpointOrId}</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setCustomIntegrations((prev) => {
-                                          const next = prev.map((c) => (c.id === conn.id ? { ...c, connected: !c.connected } : c));
-                                          localStorage.setItem('kibo_custom_integrations', JSON.stringify(next));
-                                          return next;
-                                        });
-                                      }}
-                                      style={{
-                                        background: conn.connected ? 'rgba(56, 189, 248, 0.15)' : '#1E293B',
-                                        color: conn.connected ? '#38BDF8' : '#94A3B8',
-                                        border: conn.connected ? '1px solid rgba(56, 189, 248, 0.35)' : '1px solid rgba(255,255,255,0.08)',
-                                        borderRadius: 7,
-                                        padding: '4px 10px',
-                                        fontSize: 11,
-                                        fontWeight: 700,
-                                        cursor: 'pointer',
-                                      }}
-                                    >
-                                      {conn.connected ? 'Active' : 'Enable'}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setCustomIntegrations((prev) => {
-                                          const next = prev.filter((c) => c.id !== conn.id);
-                                          localStorage.setItem('kibo_custom_integrations', JSON.stringify(next));
-                                          return next;
-                                        });
-                                      }}
-                                      style={{
-                                        background: 'transparent',
-                                        color: '#64748B',
-                                        border: '1px solid rgba(255,255,255,0.08)',
-                                        borderRadius: 7,
-                                        padding: '4px 8px',
-                                        fontSize: 11,
-                                        cursor: 'pointer',
-                                      }}
-                                    >
-                                      Remove
-                                    </button>
-                                  </div>
-                                </div>
-                              );
-                            })}
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr auto', gap: 6, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                              <input
-                                type="text"
-                                value={newConnName}
-                                onChange={(e) => setNewConnName(e.target.value)}
-                                placeholder="Name (e.g. Meta Ads)"
-                                style={{ background: '#141519', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '6px 9px', color: '#F8FAFC', fontSize: 11.5 }}
-                              />
-                              <input
-                                type="text"
-                                value={newConnCategory}
-                                onChange={(e) => setNewConnCategory(e.target.value)}
-                                placeholder="Role (e.g. Ad Analytics)"
-                                style={{ background: '#141519', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '6px 9px', color: '#F8FAFC', fontSize: 11.5 }}
-                              />
-                              <input
-                                type="text"
-                                value={newConnEndpoint}
-                                onChange={(e) => setNewConnEndpoint(e.target.value)}
-                                placeholder="Account ID / API Endpoint"
-                                style={{ background: '#141519', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '6px 9px', color: '#F8FAFC', fontSize: 11.5 }}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (!newConnName.trim()) return;
-                                  const item: CustomIntegrationItem = {
-                                    id: `conn_${Date.now()}`,
-                                    name: newConnName.trim(),
-                                    category: newConnCategory.trim() || 'Custom Integration',
-                                    endpointOrId: newConnEndpoint.trim() || 'local-bridge',
-                                    connected: true,
-                                  };
-                                  setCustomIntegrations((prev) => {
-                                    const next = [...prev, item];
-                                    localStorage.setItem('kibo_custom_integrations', JSON.stringify(next));
-                                    return next;
-                                  });
-                                  setNewConnName('');
-                                  setNewConnCategory('');
-                                  setNewConnEndpoint('');
-                                  soundFX.playSuccessChime();
-                                }}
-                                style={{
-                                  background: '#38BDF8',
-                                  color: '#0A0E17',
-                                  border: 'none',
-                                  borderRadius: 7,
-                                  padding: '6px 12px',
-                                  fontSize: 11.5,
-                                  fontWeight: 700,
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                Add
-                              </button>
-                            </div>
-                          </div>
-                        </>
+                        renderIntegrationsContent()
                       )}
 
                       {settingsCategory === 'Agents' && (

@@ -10,6 +10,7 @@ export type TaskKind =
   | 'EDIT_PAGE'
   | 'SAVE_INSPO'
   | 'NOTION_DATABASE'
+  | 'EMAIL_COMPOSE'
   | 'DATA_FETCH'
   | 'APP_WORKFLOW'
   | 'GENERAL';
@@ -157,7 +158,17 @@ async function generateCustomHtmlWithGemini(
   if (!apiKey || !apiKey.trim()) return '';
 
   const skillsContext = getActiveSkillsPromptBlock();
-  const fullPrompt = skillsContext ? `${promptText}\n${skillsContext}` : promptText;
+  const multiSkillGuidance = `
+=== MASTER FRONTEND DESIGN DIRECTIVE ===
+You are an award-winning Principal Design Engineer. When building this website:
+1. Synthesize and unify all enabled skills into a harmonious, world-class interface.
+2. Maintain meticulous typography hierarchy, spacious editorial padding, subtle tactile surfaces, and purposeful micro-interactions.
+3. Strictly NO generic AI purple-blue gradients or lazy templates. Produce authentic, high-fidelity single-file HTML/CSS/JS.
+=== END OF MASTER DIRECTIVE ===
+`;
+  const fullPrompt = skillsContext
+    ? `${promptText}\n${multiSkillGuidance}\n${skillsContext}`
+    : `${promptText}\n${multiSkillGuidance}`;
 
   const parts: any[] = [{ text: fullPrompt }];
   if (screenshotDataUrl && screenshotDataUrl.includes('base64,')) {
@@ -354,14 +365,35 @@ class MultitaskAgentManager {
     const lower = prompt.toLowerCase();
     const hasPreviousPage = Boolean(this.getLatestGeneratedPageTask());
 
-    // 1. Notion Database / Workspace Table
+    // 0. Email Compose / Send Email Intent
+    if (
+      (lower.includes('email') || lower.includes('gmail') || lower.includes('mail')) &&
+      (lower.includes('compose') ||
+        lower.includes('send') ||
+        lower.includes('draft') ||
+        lower.includes('write an email') ||
+        lower.includes('mail to'))
+    ) {
+      return 'EMAIL_COMPOSE';
+    }
+
+    // 1. Notion Database / Workspace Table / Data Curation
     if (
       (lower.includes('notion') || lower.includes('database')) &&
       (lower.includes('database') ||
         lower.includes('notion') ||
         lower.includes('table') ||
         lower.includes('list') ||
+        lower.includes('websites') ||
         lower.includes('awards'))
+    ) {
+      return 'NOTION_DATABASE';
+    }
+
+    if (
+      lower.includes('websites in the database') ||
+      lower.includes('websites to be in the database') ||
+      (lower.includes('database') && (lower.includes('websites') || lower.includes('store') || lower.includes('save')))
     ) {
       return 'NOTION_DATABASE';
     }
@@ -405,8 +437,12 @@ class MultitaskAgentManager {
       (lower.includes('create') || lower.includes('build') || lower.includes('make') || lower.includes('design') || lower.includes('generate')) &&
       (lower.includes('landing page') || lower.includes('website') || lower.includes('webpage') || lower.includes('ui') || lower.includes('portfolio')) &&
       !lower.includes('database') &&
+      !lower.includes('in the database') &&
       !lower.includes('in notion') &&
-      !lower.includes('in my notion')
+      !lower.includes('in my notion') &&
+      !lower.includes('table') &&
+      !lower.includes('bookmark') &&
+      !lower.includes('store')
     ) {
       return 'BUILD_PAGE';
     }
@@ -661,6 +697,57 @@ Return ONLY valid JSON in this exact format:
             syncedCount > 0
               ? `Synced ${syncedCount} websites to Notion & saved to your Inspo DB.`
               : `Added ${newInspoItems.length} websites to your Inspo DB (and copied Notion table to clipboard).`,
+        });
+        soundFX.playSuccessChime();
+        return;
+      }
+
+      // ======================================================================
+      // WORKFLOW 1B: GMAIL / COMPOSIO EMAIL DRAFT & COMPOSE WORKFLOW
+      // ======================================================================
+      if (task.kind === 'EMAIL_COMPOSE') {
+        this.updateTask(task.id, {
+          status: 'RUNNING',
+          progress: 30,
+          stepText: 'Drafting email with connected Gmail account...',
+        });
+
+        const promptForDraft = `You are Kibo's Gmail assistant. The user requested: "${task.prompt}".
+Generate a clean, professional email draft.
+Output in JSON format with "subject", "recipient", and "body" keys. No markdown backticks.`;
+
+        let draftSubject = 'Update from Kibo';
+        let draftRecipient = '';
+        let draftBody = task.prompt;
+
+        try {
+          const res = await queryGemini(promptForDraft, apiKey);
+          const raw = res.text || '';
+          const cleanJson = raw.replace(/^```json|^```|```$/gi, '').trim();
+          const parsed = JSON.parse(cleanJson);
+          if (parsed.subject) draftSubject = parsed.subject;
+          if (parsed.recipient) draftRecipient = parsed.recipient;
+          if (parsed.body) draftBody = parsed.body;
+        } catch (_) {}
+
+        this.updateTask(task.id, {
+          status: 'RUNNING',
+          progress: 75,
+          stepText: 'Preparing email in Gmail...',
+        });
+
+        try {
+          api?.writeClipboardText?.(`Subject: ${draftSubject}\n\n${draftBody}`);
+          const composeUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(draftRecipient)}&su=${encodeURIComponent(draftSubject)}&body=${encodeURIComponent(draftBody)}`;
+          api?.openUrl?.(composeUrl);
+        } catch (_) {}
+
+        this.stopSmoothProgress(task.id);
+        this.updateTask(task.id, {
+          status: 'COMPLETED',
+          progress: 100,
+          stepText: 'Email prepared in Gmail',
+          resultText: `Drafted "${draftSubject}"${draftRecipient ? ` to ${draftRecipient}` : ''} and opened in Gmail.`,
         });
         soundFX.playSuccessChime();
         return;

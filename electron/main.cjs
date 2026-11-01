@@ -1033,6 +1033,13 @@ ipcMain.handle('save-stored-settings', (_event, patch) => {
   return writeKiboSettings(patch);
 });
 
+ipcMain.handle('send-notch-notification', (_event, payload) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('integration-notification', payload);
+  }
+  return { success: true };
+});
+
 ipcMain.handle('get-startup-setting', () => {
   return app.getLoginItemSettings().openAtLogin;
 });
@@ -1322,6 +1329,12 @@ function findUserFileByName(query) {
   const queryBase = (queryExt ? cleaned.slice(0, -queryExt.length) : cleaned).trim();
   if (!queryBase) return null;
 
+  // Prevent generic stopwords from fuzzy matching random files
+  const genericWords = new Set(['document', 'file', 'text', 'temp', 'doc', 'test', 'data', 'item', 'something', 'pdf', 'word']);
+  if (genericWords.has(queryBase.toLowerCase())) {
+    return null;
+  }
+
   // Build phonetic/ASR candidate variants (e.g., speech-to-text often hears "kibo" as "keyboard", "keybo", "keebo", "kilo")
   const queryVariants = new Set([queryBase]);
   const phoneticSwaps = [
@@ -1354,6 +1367,7 @@ function findUserFileByName(query) {
   const allowedExts = queryExt ? extAliases[queryExt] || [queryExt] : null;
 
   const rootDirs = [
+    process.cwd(),
     app.getPath('desktop'),
     app.getPath('downloads'),
     app.getPath('documents'),
@@ -1368,7 +1382,7 @@ function findUserFileByName(query) {
       searchDirs.push(dir);
       const subEntries = fs.readdirSync(dir, { withFileTypes: true });
       for (const entry of subEntries) {
-        if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'node_modules') {
+        if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'node_modules' && entry.name !== '.git') {
           searchDirs.push(path.join(dir, entry.name));
         }
       }
@@ -1392,7 +1406,6 @@ function findUserFileByName(query) {
         for (let vIdx = 0; vIdx < variantList.length; vIdx++) {
           const vBase = variantList[vIdx];
           const compactVBase = vBase.replace(/[\s_-]+/g, '');
-          // Slight priority boost for exact original transcript over phonetic alias
           const aliasPenalty = vIdx === 0 ? 0 : 15;
           let score = 0;
 
@@ -1406,16 +1419,16 @@ function findUserFileByName(query) {
             score = 860 - aliasPenalty;
           } else if (compactBase === compactVBase && compactVBase.length >= 2) {
             score = 820 - aliasPenalty;
-          } else if (vBase.length >= 3 && base.startsWith(vBase) && extMatches) {
+          } else if (vBase.length >= 4 && base.startsWith(vBase) && extMatches) {
             score = 760 - aliasPenalty;
-          } else if (vBase.length >= 3 && compactBase.includes(compactVBase) && extMatches) {
-            score = 710 - aliasPenalty;
+          } else if (vBase.length >= 4 && compactBase.includes(compactVBase) && extMatches) {
+            score = 720 - aliasPenalty;
           } else if (extMatches && compactBase.length >= 3 && compactVBase.length >= 3) {
             const dist = computeEditDistance(compactBase, compactVBase);
             const maxLen = Math.max(compactBase.length, compactVBase.length);
             const similarity = 1 - dist / maxLen;
-            if (similarity >= 0.65) {
-              score = Math.round(680 + similarity * 120) - aliasPenalty;
+            if (similarity >= 0.78) {
+              score = Math.round(740 + similarity * 120) - aliasPenalty;
             }
           }
 
@@ -1429,7 +1442,7 @@ function findUserFileByName(query) {
     } catch (_) {}
   }
 
-  return bestScore >= 700 ? bestPath : null;
+  return bestScore >= 750 ? bestPath : null;
 }
 
 ipcMain.handle('pick-file-for-convert', async () => {
@@ -2947,6 +2960,8 @@ function getComposioClient(customKey) {
   return composioInstance;
 }
 
+const discordProfileCache = new Map();
+
 function parseAccountProfile(a, slug) {
   const data = a.data || a.state?.val || a.params || {};
   let profileName = null;
@@ -2954,7 +2969,20 @@ function parseAccountProfile(a, slug) {
   let avatarUrl = null;
   let email = null;
 
+  // 1. Check if Composio provided a valid non-redacted displayName
+  const rawDisplayName = String(data.displayName || a.displayName || '').trim();
+  const validDisplayName = rawDisplayName && !rawDisplayName.toUpperCase().includes('REDACTED') ? rawDisplayName : null;
+
   if (slug === 'discord') {
+    if (discordProfileCache.has(a.id)) {
+      const cached = discordProfileCache.get(a.id);
+      return {
+        profileName: cached.profileName,
+        workspaceName: null,
+        avatarUrl: cached.avatarUrl,
+        email: cached.email,
+      };
+    }
     const u = data.user || data;
     const gName = u.global_name || u.globalName;
     const uName = u.username || u.userName;
@@ -2971,32 +2999,50 @@ function parseAccountProfile(a, slug) {
       avatarUrl = `https://cdn.discordapp.com/avatars/${uid}/${av}.png`;
     }
   } else if (slug === 'notion') {
-    workspaceName = data.workspace_name || data.workspace_title || data.workspaceName || (data.owner && data.owner.user && data.owner.user.name);
-    if (workspaceName) {
-      profileName = /space|workspace/i.test(workspaceName) ? workspaceName : `${workspaceName}'s Space`;
+    if (validDisplayName) {
+      profileName = validDisplayName;
+      workspaceName = validDisplayName;
+    } else {
+      const rawWs = data.workspace_name || data.workspace_title || data.workspaceName || (data.owner && data.owner.user && data.owner.user.name);
+      if (rawWs && !String(rawWs).toUpperCase().includes('REDACTED')) {
+        workspaceName = rawWs;
+        profileName = /space|workspace/i.test(workspaceName) ? workspaceName : `${workspaceName}'s Space`;
+      }
     }
-    avatarUrl = data.workspace_icon || data.workspaceIcon || null;
+    const rawIcon = data.workspace_icon || data.workspaceIcon || null;
+    if (rawIcon && !String(rawIcon).toUpperCase().includes('REDACTED')) {
+      avatarUrl = rawIcon;
+    }
   } else if (slug === 'slack') {
-    const tName = (data.team && data.team.name) || data.team_name || data.teamName;
-    const uName = (data.authed_user && data.authed_user.name) || data.user_name || data.userName;
-    if (tName && uName) profileName = `${tName} (${uName})`;
-    else if (tName) profileName = tName;
-    else if (uName) profileName = uName;
+    if (validDisplayName) {
+      profileName = validDisplayName;
+    } else {
+      const tName = (data.team && data.team.name) || data.team_name || data.teamName;
+      const uName = (data.authed_user && data.authed_user.name) || data.user_name || data.userName;
+      if (tName && !String(tName).toUpperCase().includes('REDACTED') && uName) profileName = `${tName} (${uName})`;
+      else if (tName && !String(tName).toUpperCase().includes('REDACTED')) profileName = tName;
+      else if (uName) profileName = uName;
+    }
     avatarUrl = (data.team && data.team.icon && data.team.icon.image_68) || (data.user && data.user.image_72) || null;
   } else if (slug === 'github') {
     const login = data.login || data.username || (data.user && data.user.login);
-    profileName = login ? `@${login}` : (data.name || (data.user && data.user.name) || null);
+    profileName = validDisplayName || (login ? `@${login}` : (data.name || (data.user && data.user.name) || null));
     avatarUrl = data.avatar_url || data.avatarUrl || (data.user && data.user.avatar_url) || null;
   } else if (slug === 'gmail' || slug === 'googlecalendar' || slug === 'googledrive') {
     email = data.email || (data.user && data.user.email) || data.emailAddress;
-    profileName = email || data.name || null;
+    profileName = validDisplayName || email || data.name || (slug === 'googlecalendar' ? 'Personal Calendar' : null);
   } else if (slug === 'spotify') {
     profileName = data.display_name ? data.display_name : (data.id ? `@${data.id}` : null);
     avatarUrl = (data.images && data.images[0] && data.images[0].url) || null;
   }
 
+  if (!profileName && validDisplayName) {
+    profileName = validDisplayName;
+  }
+
   if (!profileName) {
-    profileName = a.alias || data.email || data.name || data.username || (a.word_id ? a.word_id : 'Connected Account');
+    const fallback = a.alias || data.email || data.name || data.username || (a.word_id && !String(a.word_id).toUpperCase().includes('REDACTED') ? a.word_id : null);
+    profileName = fallback && !String(fallback).toUpperCase().includes('REDACTED') ? fallback : `${slug.charAt(0).toUpperCase() + slug.slice(1)} Account`;
   }
 
   return { profileName, workspaceName, avatarUrl, email };
@@ -3025,6 +3071,37 @@ ipcMain.handle('composio-get-status', async (_event, customKey) => {
 
     // Only ACTIVE accounts are considered connected
     const activeAccounts = accounts.filter((a) => a.status === 'ACTIVE');
+
+    // Asynchronously resolve rich profiles for Discord and external providers
+    for (const a of activeAccounts) {
+      const slug = (a.toolkit?.slug || a.appUniqueId || a.app_unique_id || '').toLowerCase();
+      if (slug === 'discord' && !discordProfileCache.has(a.id)) {
+        try {
+          const discRes = await client.tools.proxy({
+            connected_account_id: a.id,
+            user_id: a.user_id || 'kibo_user_default',
+            endpoint: '/users/@me',
+            method: 'GET',
+          });
+          const dData = discRes?.data;
+          if (dData && (dData.username || dData.global_name)) {
+            const pName =
+              dData.global_name && dData.username && dData.global_name !== dData.username
+                ? `${dData.global_name} (@${dData.username})`
+                : `@${dData.username || dData.global_name}`;
+            const avUrl =
+              dData.id && dData.avatar
+                ? `https://cdn.discordapp.com/avatars/${dData.id}/${dData.avatar}.png`
+                : null;
+            discordProfileCache.set(a.id, {
+              profileName: pName,
+              avatarUrl: avUrl,
+              email: dData.email || null,
+            });
+          }
+        } catch (_) {}
+      }
+    }
 
     const maskedKey = comp._kiboApiKey.length > 8
       ? `${comp._kiboApiKey.slice(0, 7)}...${comp._kiboApiKey.slice(-4)}`
