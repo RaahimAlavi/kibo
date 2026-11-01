@@ -2947,6 +2947,61 @@ function getComposioClient(customKey) {
   return composioInstance;
 }
 
+function parseAccountProfile(a, slug) {
+  const data = a.data || a.state?.val || a.params || {};
+  let profileName = null;
+  let workspaceName = null;
+  let avatarUrl = null;
+  let email = null;
+
+  if (slug === 'discord') {
+    const u = data.user || data;
+    const gName = u.global_name || u.globalName;
+    const uName = u.username || u.userName;
+    if (gName && uName && gName !== uName) {
+      profileName = `${gName} (@${uName})`;
+    } else if (uName) {
+      profileName = `@${uName}`;
+    } else if (gName) {
+      profileName = gName;
+    }
+    const uid = u.id || u.userId;
+    const av = u.avatar || u.userAvatar;
+    if (uid && av) {
+      avatarUrl = `https://cdn.discordapp.com/avatars/${uid}/${av}.png`;
+    }
+  } else if (slug === 'notion') {
+    workspaceName = data.workspace_name || data.workspace_title || data.workspaceName || (data.owner && data.owner.user && data.owner.user.name);
+    if (workspaceName) {
+      profileName = /space|workspace/i.test(workspaceName) ? workspaceName : `${workspaceName}'s Space`;
+    }
+    avatarUrl = data.workspace_icon || data.workspaceIcon || null;
+  } else if (slug === 'slack') {
+    const tName = (data.team && data.team.name) || data.team_name || data.teamName;
+    const uName = (data.authed_user && data.authed_user.name) || data.user_name || data.userName;
+    if (tName && uName) profileName = `${tName} (${uName})`;
+    else if (tName) profileName = tName;
+    else if (uName) profileName = uName;
+    avatarUrl = (data.team && data.team.icon && data.team.icon.image_68) || (data.user && data.user.image_72) || null;
+  } else if (slug === 'github') {
+    const login = data.login || data.username || (data.user && data.user.login);
+    profileName = login ? `@${login}` : (data.name || (data.user && data.user.name) || null);
+    avatarUrl = data.avatar_url || data.avatarUrl || (data.user && data.user.avatar_url) || null;
+  } else if (slug === 'gmail' || slug === 'googlecalendar' || slug === 'googledrive') {
+    email = data.email || (data.user && data.user.email) || data.emailAddress;
+    profileName = email || data.name || null;
+  } else if (slug === 'spotify') {
+    profileName = data.display_name ? data.display_name : (data.id ? `@${data.id}` : null);
+    avatarUrl = (data.images && data.images[0] && data.images[0].url) || null;
+  }
+
+  if (!profileName) {
+    profileName = a.alias || data.email || data.name || data.username || (a.word_id ? a.word_id : 'Connected Account');
+  }
+
+  return { profileName, workspaceName, avatarUrl, email };
+}
+
 ipcMain.handle('composio-get-status', async (_event, customKey) => {
   try {
     const comp = getComposioClient(customKey);
@@ -2959,6 +3014,18 @@ ipcMain.handle('composio-get-status', async (_event, customKey) => {
       accounts = accList?.items || [];
     } catch (_) {}
 
+    // Clean up expired or failed accounts silently
+    for (const a of accounts) {
+      if (a.status === 'EXPIRED' || a.status === 'FAILED') {
+        try {
+          await client.connectedAccounts.delete(a.id);
+        } catch (_) {}
+      }
+    }
+
+    // Only ACTIVE accounts are considered connected
+    const activeAccounts = accounts.filter((a) => a.status === 'ACTIVE');
+
     const maskedKey = comp._kiboApiKey.length > 8
       ? `${comp._kiboApiKey.slice(0, 7)}...${comp._kiboApiKey.slice(-4)}`
       : 'ak_***';
@@ -2968,13 +3035,21 @@ ipcMain.handle('composio-get-status', async (_event, customKey) => {
       connected: true,
       apiKey: comp._kiboApiKey,
       maskedKey,
-      accountsCount: accounts.length,
-      accounts: accounts.map((a) => ({
-        id: a.id,
-        slug: a.toolkit?.slug || a.appUniqueId || a.app_unique_id,
-        status: a.status,
-        createdAt: a.created_at || a.createdAt,
-      })),
+      accountsCount: activeAccounts.length,
+      accounts: activeAccounts.map((a) => {
+        const slug = (a.toolkit?.slug || a.appUniqueId || a.app_unique_id || '').toLowerCase();
+        const profile = parseAccountProfile(a, slug);
+        return {
+          id: a.id,
+          slug,
+          status: a.status,
+          profileName: profile.profileName,
+          workspaceName: profile.workspaceName,
+          avatarUrl: profile.avatarUrl,
+          email: profile.email,
+          createdAt: a.created_at || a.createdAt,
+        };
+      }),
     };
   } catch (err) {
     return { success: false, connected: false, error: err?.message || 'Composio connection failed' };
@@ -3011,12 +3086,21 @@ ipcMain.handle('composio-get-connected-accounts', async (_event, customKey) => {
     if (!comp) return { success: false, accounts: [] };
     const client = comp.getClient();
     const list = await client.connectedAccounts.list();
-    const items = (list?.items || []).map((a) => ({
-      id: a.id,
-      slug: a.toolkit?.slug || a.appUniqueId,
-      status: a.status,
-      createdAt: a.created_at || a.createdAt,
-    }));
+    const active = (list?.items || []).filter((a) => a.status === 'ACTIVE');
+    const items = active.map((a) => {
+      const slug = (a.toolkit?.slug || a.appUniqueId || '').toLowerCase();
+      const profile = parseAccountProfile(a, slug);
+      return {
+        id: a.id,
+        slug,
+        status: a.status,
+        profileName: profile.profileName,
+        workspaceName: profile.workspaceName,
+        avatarUrl: profile.avatarUrl,
+        email: profile.email,
+        createdAt: a.created_at || a.createdAt,
+      };
+    });
     return { success: true, accounts: items };
   } catch (err) {
     return { success: false, accounts: [], error: err.message };
@@ -3026,12 +3110,13 @@ ipcMain.handle('composio-get-connected-accounts', async (_event, customKey) => {
 ipcMain.handle('composio-disconnect-account', async (_event, accountId, customKey) => {
   try {
     const comp = getComposioClient(customKey);
-    if (!comp) return { success: false };
+    if (!comp) return { success: false, error: 'Composio not initialized' };
     const client = comp.getClient();
-    await client.connectedAccounts.delete({ connectedAccountId: accountId });
+    await client.connectedAccounts.delete(accountId);
     return { success: true };
   } catch (err) {
-    return { success: false, error: err.message };
+    console.error('[Kibo] Failed to disconnect account:', err?.message);
+    return { success: false, error: err?.message };
   }
 });
 

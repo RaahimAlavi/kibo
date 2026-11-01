@@ -1588,14 +1588,32 @@ export const KiboApp: React.FC = () => {
     connected: boolean;
     maskedKey?: string;
     accountsCount: number;
-    accounts: Array<{ id: string; slug: string; status: string; createdAt?: string }>;
+    accounts: Array<{
+      id: string;
+      slug: string;
+      status: string;
+      profileName?: string;
+      workspaceName?: string;
+      avatarUrl?: string;
+      email?: string;
+      createdAt?: string;
+    }>;
   }>({
     connected: true,
     maskedKey: 'ak_WRHA...wcRK',
-    accountsCount: 1,
+    accountsCount: 0,
     accounts: [],
   });
   const [composioConnectingSlug, setComposioConnectingSlug] = useState<string | null>(null);
+  const composioPollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (composioPollTimerRef.current) {
+        clearInterval(composioPollTimerRef.current);
+      }
+    };
+  }, []);
   const [integrationsCategoryFilter, setIntegrationsCategoryFilter] = useState<'All' | 'Productivity' | 'Developer' | 'Communication' | 'Media'>('All');
   const [integrationsSearch, setIntegrationsSearch] = useState<string>('');
   const [showConnectModal, setShowConnectModal] = useState<boolean>(false);
@@ -1703,17 +1721,46 @@ export const KiboApp: React.FC = () => {
     async (slug: string) => {
       const api = (window as any).kiboAPI;
       if (!api?.composioConnectApp) return;
+      if (composioPollTimerRef.current) {
+        clearInterval(composioPollTimerRef.current);
+        composioPollTimerRef.current = null;
+      }
       setComposioConnectingSlug(slug);
       try {
         const res = await api.composioConnectApp(slug, composioApiKey);
         if (res && res.success) {
           soundFX.playSuccessChime();
-          setTimeout(() => refreshComposioStatus(), 3000);
-          setTimeout(() => refreshComposioStatus(), 8000);
-          setTimeout(() => {
-            refreshComposioStatus();
-            setComposioConnectingSlug(null);
-          }, 15000);
+          let pollAttempts = 0;
+          composioPollTimerRef.current = setInterval(async () => {
+            pollAttempts++;
+            try {
+              const statusRes = await api.composioGetStatus(composioApiKey);
+              if (statusRes?.success) {
+                setComposioStatus({
+                  connected: true,
+                  maskedKey: statusRes.maskedKey,
+                  accountsCount: statusRes.accountsCount || (statusRes.accounts?.length || 0),
+                  accounts: statusRes.accounts || [],
+                });
+                const isNowConnected = (statusRes.accounts || []).some(
+                  (a: any) => a.slug?.toLowerCase() === slug.toLowerCase() && a.status === 'ACTIVE'
+                );
+                if (isNowConnected) {
+                  if (composioPollTimerRef.current) clearInterval(composioPollTimerRef.current);
+                  composioPollTimerRef.current = null;
+                  setComposioConnectingSlug(null);
+                  soundFX.playSuccessChime();
+                  return;
+                }
+              }
+            } catch (_) {}
+
+            if (pollAttempts >= 24) {
+              if (composioPollTimerRef.current) clearInterval(composioPollTimerRef.current);
+              composioPollTimerRef.current = null;
+              setComposioConnectingSlug(null);
+            }
+          }, 2500);
         } else {
           setComposioConnectingSlug(null);
         }
@@ -1721,16 +1768,19 @@ export const KiboApp: React.FC = () => {
         setComposioConnectingSlug(null);
       }
     },
-    [composioApiKey, refreshComposioStatus]
+    [composioApiKey]
   );
 
   const handleDisconnectComposioAccount = useCallback(
-    async (accountId: string) => {
+    async (accountId: string, slug?: string) => {
       const api = (window as any).kiboAPI;
       if (!api?.composioDisconnectAccount) return;
       try {
         await api.composioDisconnectAccount(accountId, composioApiKey);
-        soundFX.playClick();
+        if (slug) {
+          multitaskAgent.unlinkApp(slug);
+        }
+        soundFX.playToggle(false);
         await refreshComposioStatus();
       } catch (_) {}
     },
@@ -9522,6 +9572,165 @@ export const KiboApp: React.FC = () => {
                             )}
                           </div>
 
+                          {/* Dedicated Connected Accounts Box (Above scrollable directory) */}
+                          {(() => {
+                            const activeList = composioStatus.accounts.filter((a) => a.status === 'ACTIVE');
+                            return (
+                              <div className="kibo-settings-card">
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: activeList.length > 0 ? 12 : 0 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <span style={{ fontSize: 13, fontWeight: 700, color: '#FFFFFF' }}>Connected Accounts</span>
+                                    <span
+                                      style={{
+                                        fontSize: 10.5,
+                                        fontWeight: 700,
+                                        padding: '2px 8px',
+                                        borderRadius: 999,
+                                        background: activeList.length > 0 ? 'rgba(52, 211, 153, 0.15)' : 'rgba(255, 255, 255, 0.06)',
+                                        color: activeList.length > 0 ? '#34D399' : '#94A3B8',
+                                        border: activeList.length > 0 ? '1px solid rgba(52, 211, 153, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
+                                      }}
+                                    >
+                                      {activeList.length} active
+                                    </span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      soundFX.playClick();
+                                      await refreshComposioStatus();
+                                    }}
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: 5,
+                                      padding: '4px 10px',
+                                      borderRadius: 7,
+                                      background: 'rgba(255, 255, 255, 0.05)',
+                                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                                      color: '#94A3B8',
+                                      fontSize: 11,
+                                      fontWeight: 600,
+                                      cursor: 'pointer',
+                                    }}
+                                    title="Fetch realtime connection status from Composio"
+                                  >
+                                    <SvgIcon name="refresh" size={11} color="#94A3B8" />
+                                    <span>Sync</span>
+                                  </button>
+                                </div>
+
+                                {activeList.length === 0 ? (
+                                  <div style={{ fontSize: 11.5, color: '#64748B', paddingTop: 6 }}>
+                                    No accounts connected yet. Choose any app below to connect via 1-click OAuth.
+                                  </div>
+                                ) : (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 4 }}>
+                                    {activeList.map((acc) => {
+                                      const matchedApp = INTEGRATION_APPS.find((a) => a.slug.toLowerCase() === acc.slug.toLowerCase());
+                                      const logoSrc = matchedApp?.logo || `./logos/${acc.slug}.png`;
+                                      const appName = matchedApp?.name || (acc.slug.charAt(0).toUpperCase() + acc.slug.slice(1));
+                                      return (
+                                        <div
+                                          key={acc.id}
+                                          style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            padding: '9px 12px',
+                                            borderRadius: 8,
+                                            background: 'rgba(255, 255, 255, 0.03)',
+                                            border: '1px solid rgba(255, 255, 255, 0.07)',
+                                            gap: 12,
+                                          }}
+                                        >
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+                                            <div
+                                              style={{
+                                                width: 32,
+                                                height: 32,
+                                                borderRadius: 8,
+                                                background: 'rgba(255, 255, 255, 0.06)',
+                                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                overflow: 'hidden',
+                                                flexShrink: 0,
+                                              }}
+                                            >
+                                              {acc.avatarUrl ? (
+                                                <img src={acc.avatarUrl} width="32" height="32" alt={appName} style={{ objectFit: 'cover' }} />
+                                              ) : (
+                                                <img
+                                                  src={logoSrc}
+                                                  width="22"
+                                                  height="22"
+                                                  alt={appName}
+                                                  style={{ objectFit: 'contain' }}
+                                                  onError={(e) => {
+                                                    (e.currentTarget as HTMLElement).style.display = 'none';
+                                                  }}
+                                                />
+                                              )}
+                                            </div>
+                                            <div style={{ minWidth: 0, flex: 1 }}>
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+                                                <span style={{ fontSize: 13, fontWeight: 700, color: '#FFFFFF' }}>{appName}</span>
+                                                {acc.profileName && (
+                                                  <span
+                                                    style={{
+                                                      fontSize: 11.5,
+                                                      fontWeight: 600,
+                                                      color: '#38BDF8',
+                                                      background: 'rgba(56, 189, 248, 0.12)',
+                                                      border: '1px solid rgba(56, 189, 248, 0.28)',
+                                                      padding: '1px 7px',
+                                                      borderRadius: 5,
+                                                    }}
+                                                  >
+                                                    {acc.profileName}
+                                                  </span>
+                                                )}
+                                              </div>
+                                              <div style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>
+                                                {acc.workspaceName ? `${acc.workspaceName} · ` : ''}Realtime OAuth Active
+                                              </div>
+                                            </div>
+                                          </div>
+
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                                            <span style={{ fontSize: 11, color: '#34D399', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#34D399' }} />
+                                              Connected
+                                            </span>
+                                            <button
+                                              type="button"
+                                              onClick={() => handleDisconnectComposioAccount(acc.id, acc.slug)}
+                                              style={{
+                                                padding: '4px 10px',
+                                                borderRadius: 7,
+                                                background: 'rgba(239, 68, 68, 0.12)',
+                                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                                color: '#F87171',
+                                                fontSize: 11,
+                                                fontWeight: 600,
+                                                cursor: 'pointer',
+                                                transition: 'all 0.15s ease',
+                                              }}
+                                            >
+                                              Disconnect
+                                            </button>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
+
                           {/* App Directory Filters & Search */}
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -9606,10 +9815,10 @@ export const KiboApp: React.FC = () => {
                               return matchesCat && matchesQuery;
                             }).map((app) => {
                               const composioAcc = composioStatus.accounts.find(
-                                (a) => a.slug?.toLowerCase() === app.slug.toLowerCase()
+                                (a) => a.slug?.toLowerCase() === app.slug.toLowerCase() && a.status === 'ACTIVE'
                               );
                               const isComposioConn = Boolean(composioAcc);
-                              const isLocalConn = multitaskAgent.isAppConnected(app.id as any);
+                              const isLocalConn = !app.viaComposio && multitaskAgent.isAppConnected(app.id as any);
                               const isConnected = isComposioConn || isLocalConn;
                               const isConnecting = composioConnectingSlug === app.slug;
 
@@ -9724,13 +9933,31 @@ export const KiboApp: React.FC = () => {
                                       </span>
                                     ) : isConnected ? (
                                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        {composioAcc?.profileName && (
+                                          <span
+                                            style={{
+                                              fontSize: 11,
+                                              color: '#38BDF8',
+                                              fontWeight: 600,
+                                              background: 'rgba(56, 189, 248, 0.1)',
+                                              padding: '2px 6px',
+                                              borderRadius: 4,
+                                              maxWidth: 140,
+                                              overflow: 'hidden',
+                                              textOverflow: 'ellipsis',
+                                              whiteSpace: 'nowrap',
+                                            }}
+                                          >
+                                            {composioAcc.profileName}
+                                          </span>
+                                        )}
                                         <span style={{ fontSize: 11, color: '#34D399', fontWeight: 700 }}>
                                           Connected
                                         </span>
                                         {composioAcc && (
                                           <button
                                             type="button"
-                                            onClick={() => handleDisconnectComposioAccount(composioAcc.id)}
+                                            onClick={() => handleDisconnectComposioAccount(composioAcc.id, app.slug)}
                                             style={{
                                               padding: '3px 8px',
                                               borderRadius: 6,
