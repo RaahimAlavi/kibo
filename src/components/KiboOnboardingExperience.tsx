@@ -136,7 +136,7 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
       setSoulMode('TALKING');
       setSoulExpr('HAPPY');
       setDialogueTitle('Voice Command Detected!');
-      setDialogueSub(`Heard: "${heard}" — Kibo can answer, search YouTube, or control apps!`);
+      setDialogueSub(`Heard: "${heard}" :  Kibo can answer, search YouTube, or control apps!`);
       onSpeak(`Searching for "${heard}"! That's how easy it is to summon my voice.`);
     }
   }, [act, liveSpeechText, voiceHeard, flashEmberReward, onSpeak]);
@@ -190,7 +190,7 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
     flySoulTo(50, 30, 1.05, 0.75);
     const line = `Last power! Hold ${customShortcuts.dictate} to test Clean Dictation in any document or chat.`;
     setDialogueTitle(`Quest 4 · Clean Dictation (${customShortcuts.dictate})`);
-    setDialogueSub('Talk messy in any app—Kibo removes filler words and types clean prose.');
+    setDialogueSub('Talk messy in any app: Kibo removes filler words and types clean prose.');
     onSpeak(line);
   }, [customShortcuts.dictate, flySoulTo, onSpeak]);
 
@@ -287,7 +287,7 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
     setSoulMode('TALKING');
     setSoulExpr('HAPPY');
     setDialogueTitle('Voice Command Tested!');
-    setDialogueSub(`Heard: "${phrase}" — Kibo searches YouTube and opens the result!`);
+    setDialogueSub(`Heard: "${phrase}" :  Kibo searches YouTube and opens the result!`);
     onSpeak(`Searching YouTube for "${phrase}"! That's how quick it is.`);
   };
 
@@ -297,7 +297,7 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
     setSoulMode('TALKING');
     setSoulExpr('HAPPY');
     setDialogueTitle('Clean Dictation Verified!');
-    setDialogueSub(`Cleaned: "${phrase}" — Ready to type 5x faster than typing.`);
+    setDialogueSub(`Cleaned: "${phrase}" :  Ready to type 5x faster than typing.`);
     onSpeak('Clean Dictation verified! Ready to type five times faster than typing.');
   };
 
@@ -333,7 +333,7 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
         setIslandOpened(true);
         flashEmberReward(10);
         setDialogueTitle('Dynamic Island Opened!');
-        setDialogueSub('Look at the top of your screen—all 8 tabs are right here.');
+        setDialogueSub('Look at the top of your screen: all 8 tabs are right here.');
         onSpeak('Look up top! All eight of your tabs are one flick away.');
         return;
       }
@@ -363,7 +363,7 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
         setIslandOpened(true);
         flashEmberReward(10);
         setDialogueTitle('Dynamic Island Opened!');
-        setDialogueSub('Look at the top of your screen—all 8 tabs are right here.');
+        setDialogueSub('Look at the top of your screen: all 8 tabs are right here.');
         onSpeak('Look up top! All eight of your tabs are one flick away.');
       }
     };
@@ -550,7 +550,7 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
                   setIslandOpened(true);
                   flashEmberReward(10);
                   setDialogueTitle('Dynamic Island Opened!');
-                  setDialogueSub('Look at the top of your screen—all 8 tabs are right here.');
+                  setDialogueSub('Look at the top of your screen: all 8 tabs are right here.');
                   onSpeak('Look up top! All eight of your tabs are one flick away.');
                 }}
                 className="spatial-glow-cta"

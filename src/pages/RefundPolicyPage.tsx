@@ -45,7 +45,7 @@ export const RefundPolicyPage: React.FC<RefundPolicyPageProps> = ({ onNavigate }
             2. Our 14-Day Technical Resolution Guarantee
           </h2>
           <p style={{ margin: '0 0 12px' }}>
-            We stand firmly behind the technical quality of Kibo. If you experience an irrecoverable technical defect on a supported Windows machine—such as a failure to launch, fatal crash on startup, or corrupt installation—you are protected under our 14-Day Technical Resolution Guarantee:
+            We stand firmly behind the technical quality of Kibo. If you experience an irrecoverable technical defect on a supported Windows machine (such as a failure to launch, fatal crash on startup, or corrupt installation), you are protected under our 14-Day Technical Resolution Guarantee:
           </p>
           <ol style={{ margin: '0 0 16px', paddingLeft: 20 }}>
             <li>Contact support within 14 days of your purchase date detailing the failure and providing the diagnostic log file.</li>

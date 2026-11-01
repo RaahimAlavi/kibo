@@ -878,29 +878,10 @@ export function App() {
                 <button
                   onClick={() => handleNavigate('buy')}
                   className="kibo-web-pill-cta"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 9, padding: '12px 26px', fontSize: 14.5, border: 'none', cursor: 'pointer' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 9, padding: '13px 28px', fontSize: 14.5, border: 'none', cursor: 'pointer' }}
                 >
                   <span>Get Founders Edition · $8</span>
                 </button>
-                <a
-                  href="./download/Kibo-Setup.exe"
-                  download="Kibo-Setup.exe"
-                  className="kibo-web-pill-cta"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    padding: '12px 20px',
-                    fontSize: 14,
-                    background: 'transparent',
-                    color: '#121316',
-                    border: '1px solid rgba(18, 19, 22, 0.16)',
-                    textDecoration: 'none',
-                  }}
-                >
-                  <WindowsLogoIcon size={14} />
-                  <span>Download (.exe)</span>
-                </a>
                 <span style={{ fontSize: 13, color: '#68707C', fontWeight: 500 }}>
                   Windows 10 & 11 · One-Time Payment
                 </span>
@@ -1149,10 +1130,10 @@ export function App() {
           </div>
         </section>
 
-        {/* Section 3: Local-First Setup & Download */}
-        <section id="download" className="kibo-section kibo-scroll-section">
+        {/* Section 3: Local-First Setup */}
+        <section id="setup" className="kibo-section kibo-scroll-section">
           <div className="kibo-section-header">
-            <span className="kibo-eyebrow">Download & Setup</span>
+            <span className="kibo-eyebrow">Local-First Setup</span>
             <h2 className="kibo-h2">Runs directly on your machine with your own keys.</h2>
             <p className="kibo-lead">
               Kibo connects straight from your PC to Google Gemini and Tavily using
@@ -1165,21 +1146,18 @@ export function App() {
             <div className="kibo-card">
               <div>
                 <h3 style={{ fontSize: 19, fontWeight: 700, margin: '6px 0 10px' }}>
-                  Download & Launch
+                  Reserve Founders Access
                 </h3>
                 <p style={{ fontSize: 14.5, lineHeight: 1.6, color: '#5A5E68', margin: '0 0 16px' }}>
-                  Run <code style={{ fontFamily: "'JetBrains Mono', monospace", background: '#F1F2EE', padding: '2px 6px', borderRadius: 5 }}>npm run app</code> to start, or build your standalone Windows installer with <code style={{ fontFamily: "'JetBrains Mono', monospace", background: '#F1F2EE', padding: '2px 6px', borderRadius: 5 }}>npm run dist</code>.
+                  Secure your $8 perpetual license to receive immediate digital delivery and permanent access to all Founders updates.
                 </p>
-                <a
-                  href="./download/Kibo-Setup.exe"
-                  download="Kibo-Setup.exe"
+                <button
+                  onClick={() => handleNavigate('buy')}
                   className="kibo-web-pill-cta"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, textDecoration: 'none' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, border: 'none', cursor: 'pointer' }}
                 >
-                  <WindowsLogoIcon size={13} />
-                  <span>Download Installer (.exe)</span>
-                  <span style={{ opacity: 0.6 }}>↓</span>
-                </a>
+                  <span>Get Founders Edition · $8</span>
+                </button>
               </div>
             </div>
 
@@ -1384,7 +1362,7 @@ export function App() {
                   gap: 9,
                   background: '#FFFFFF',
                   color: '#0C0D12',
-                  padding: '12px 24px',
+                  padding: '13px 26px',
                   fontSize: 14,
                   fontWeight: 700,
                   border: 'none',
@@ -1393,25 +1371,6 @@ export function App() {
               >
                 <span>Get Founders Edition · $8</span>
               </button>
-              <a
-                href="./download/Kibo-Setup.exe"
-                download="Kibo-Setup.exe"
-                className="kibo-web-pill-cta"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  color: '#FFFFFF',
-                  padding: '12px 20px',
-                  fontSize: 14,
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                }}
-              >
-                <WindowsLogoIcon size={14} />
-                <span>Installer (.exe)</span>
-              </a>
             </div>
           </div>
 

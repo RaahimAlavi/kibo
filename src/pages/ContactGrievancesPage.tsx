@@ -63,7 +63,7 @@ export const ContactGrievancesPage: React.FC<ContactGrievancesPageProps> = ({ on
                 support@kiboai.com
               </a>
               <div style={{ fontSize: 12, color: '#68707C', marginTop: 2 }}>
-                Typical response window: 24 to 48 hours (Monday – Friday)
+                Typical response window: 24 to 48 hours (Monday to Friday)
               </div>
             </div>
 

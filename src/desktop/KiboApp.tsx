@@ -2375,7 +2375,7 @@ export const KiboApp: React.FC = () => {
       setKiboReply({ bold: boldHeader || text, rest: boldHeader ? text : undefined });
       appendChatMessage({
         role: 'kibo',
-        text: boldHeader ? `${boldHeader} — ${text}` : text,
+        text: boldHeader ? `${boldHeader} :  ${text}` : text,
         actionFilePath,
         actionLabel,
       });
@@ -3770,7 +3770,7 @@ export const KiboApp: React.FC = () => {
   const [powerFeedback, setPowerFeedback] = useState<string | null>(null);
 
   const [systemStats, setSystemStats] = useState<any>({
-    cpu: { percent: 18, model: 'Loading Processor...', speed: '— GHz', processes: 0 },
+    cpu: { percent: 18, model: 'Loading Processor...', speed: ':  GHz', processes: 0 },
     gpu: { percent: 8, name: 'Detecting Graphics...', model: 'Detecting Graphics...', vramUsed: '0.0', vramTotal: '0.0' },
     ram: { percent: 45, usedGb: '0.0', totalGb: '0.0', freeGb: '0.0' },
     disk: { usedGb: 0, totalGb: 0 },
@@ -6338,9 +6338,9 @@ export const KiboApp: React.FC = () => {
   }, [orbitRenderTick]);
 
   const getEquippedCardName = (slot: LoadoutSlotType) => {
-    if (slot === 'Abilities' && equippedCards.Abilities === 'none') return '—';
+    if (slot === 'Abilities' && equippedCards.Abilities === 'none') return ': ';
     const card = LOADOUT_CARDS.find((c) => c.id === equippedCards[slot]);
-    return card ? card.name : '—';
+    return card ? card.name : ': ';
   };
 
 
@@ -8487,7 +8487,7 @@ export const KiboApp: React.FC = () => {
                       >
                         <strong>Voice Command:</strong> Say{' '}
                         <em>"Convert my report.pdf to Word"</em> or{' '}
-                        <em>"Convert notes.docx to PDF"</em> — Kibo locates the file and creates the converted copy alongside it.
+                        <em>"Convert notes.docx to PDF"</em> :  Kibo locates the file and creates the converted copy alongside it.
                       </div>
 
                       <div
@@ -10975,7 +10975,7 @@ export const KiboApp: React.FC = () => {
                           <div className="config-row-desc">
                             {apiKey
                               ? 'Stored encrypted on this PC, never shown again once saved'
-                              : 'No Gemini key saved yet — click Change to add your key'}
+                              : 'No Gemini key saved yet :  click Change to add your key'}
                           </div>
                         </div>
                         <button
@@ -11072,7 +11072,7 @@ export const KiboApp: React.FC = () => {
                         <div className="config-row-copy">
                           <div className="config-row-title">What it sends</div>
                           <div className="config-row-desc" style={{ lineHeight: 1.45 }}>
-                            Only your research question goes to Tavily, from this PC under your own account. Tavily may use searches to improve its AI — don't research passwords, ID numbers or health details. Deep research only when you ask for it (about 7 credits)
+                            Only your research question goes to Tavily, from this PC under your own account. Tavily may use searches to improve its AI :  don't research passwords, ID numbers or health details. Deep research only when you ask for it (about 7 credits)
                           </div>
                         </div>
                       </div>

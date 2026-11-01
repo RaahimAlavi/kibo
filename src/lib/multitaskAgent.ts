@@ -947,7 +947,7 @@ CRITICAL INSTRUCTIONS:
             ? `You are an elite frontend engineer with Design MCP codebase access and visual perception.
 User instruction: "${task.prompt}"
 ${designMcpContext}
-CRITICAL INSTRUCTIONS — REPLICATE THE EXACT TARGET DESIGN:
+CRITICAL INSTRUCTIONS :  REPLICATE THE EXACT TARGET DESIGN:
 1. Use the exact extracted CSS custom properties, hex color palette (whether light mode, cream, dark mode, or colorful), and Google Fonts listed in the Design MCP metadata AND shown in the screenshot.
 2. Replicate the exact navigation bar links, hero heading copy/hierarchy, button shapes, border radii, and section structure.
 3. Apply any custom tweaks or ideas the user requested in "${task.prompt}".
