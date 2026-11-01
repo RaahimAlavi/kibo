@@ -5,7 +5,7 @@ import { WebFooter } from '../components/WebFooter';
 
 const INSTALLER_DOWNLOAD_URL =
   (import.meta as any).env?.VITE_INSTALLER_DOWNLOAD_URL ||
-  'https://github.com/RaahimAlavi/kibo/releases/download/v1.0.0/Kibo-Setup-1.0.0.exe';
+  'https://drive.usercontent.google.com/download?id=1gGN14ZXwv8GCovkptjgFgPWAFDAVOKxD&export=download&confirm=t';
 
 interface DownloadSuccessPageProps {
   onNavigate: (route: string, anchor?: string) => void;
@@ -17,14 +17,19 @@ export const DownloadSuccessPage: React.FC<DownloadSuccessPageProps> = ({ onNavi
 
   const triggerDownload = () => {
     setDownloadTriggered(true);
-    const link = document.createElement('a');
-    link.href = INSTALLER_DOWNLOAD_URL;
-    link.setAttribute('download', 'Kibo-Setup-1.0.0.exe');
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = INSTALLER_DOWNLOAD_URL;
+    document.body.appendChild(iframe);
+    setTimeout(() => {
+      try {
+        if (iframe.parentNode) {
+          document.body.removeChild(iframe);
+        }
+      } catch {
+        // ignore
+      }
+    }, 60000);
   };
 
   useEffect(() => {
@@ -166,9 +171,10 @@ export const DownloadSuccessPage: React.FC<DownloadSuccessPageProps> = ({ onNavi
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={triggerDownload}
+          <a
+            href={INSTALLER_DOWNLOAD_URL}
+            download="Kibo-Setup-1.0.0.exe"
+            onClick={() => setDownloadTriggered(true)}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -179,7 +185,7 @@ export const DownloadSuccessPage: React.FC<DownloadSuccessPageProps> = ({ onNavi
               color: '#FFFFFF',
               fontSize: 13,
               fontWeight: 700,
-              border: 'none',
+              textDecoration: 'none',
               cursor: 'pointer',
               letterSpacing: '-0.01em',
               transition: 'opacity 0.2s',
@@ -187,7 +193,7 @@ export const DownloadSuccessPage: React.FC<DownloadSuccessPageProps> = ({ onNavi
           >
             <WindowsLogoIcon size={13} />
             <span>Download .exe</span>
-          </button>
+          </a>
         </div>
 
         {/* 3 Step Instructions Grid */}
