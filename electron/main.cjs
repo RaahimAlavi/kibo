@@ -170,7 +170,7 @@ function startHitTestLoop() {
     if (shouldIgnore !== isIgnoringMouse) {
       isIgnoringMouse = shouldIgnore;
       if (shouldIgnore) {
-        mainWindow.setIgnoreMouseEvents(true, { forward: true });
+        mainWindow.setIgnoreMouseEvents(true);
       } else {
         mainWindow.setIgnoreMouseEvents(false);
       }
@@ -467,7 +467,13 @@ function createWindow() {
   // Use 'pop-up-menu' level instead of 'screen-saver' so Windows DWM keeps hardware video overlays alive
   mainWindow.setAlwaysOnTop(true, 'pop-up-menu');
   isIgnoringMouse = true;
-  mainWindow.setIgnoreMouseEvents(true, { forward: true });
+  mainWindow.setIgnoreMouseEvents(true);
+
+  mainWindow.on('blur', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('desktop-clicked-outside');
+    }
+  });
 
   startHitTestLoop();
   // Defer heavy PowerShell watchers until after the 2.25s startup wake-and-hide animation completes
@@ -482,7 +488,7 @@ function createWindow() {
         isLassoActive = false;
         if (mainWindow && !mainWindow.isDestroyed()) {
           isIgnoringMouse = true;
-          mainWindow.setIgnoreMouseEvents(true, { forward: true });
+          mainWindow.setIgnoreMouseEvents(true);
         }
       }
       mainWindow.webContents.send('hotkey-event', hotkeyAction);
@@ -2224,7 +2230,7 @@ ipcMain.handle('set-lasso-active', async (_event, active) => {
       mainWindow.setIgnoreMouseEvents(false);
     } else {
       isIgnoringMouse = true;
-      mainWindow.setIgnoreMouseEvents(true, { forward: true });
+      mainWindow.setIgnoreMouseEvents(true);
     }
   }
   return { success: true };
@@ -2914,6 +2920,119 @@ ipcMain.handle('sync-to-notion', async (event, { apiKey, databaseId, pageData })
     req.write(payload);
     req.end();
   });
+});
+
+// ============================================================================
+// COMPOSIO PLATFORM 250+ APP INTEGRATION BRIDGE & OAUTH ENGINE
+// ============================================================================
+let composioInstance = null;
+const DEFAULT_COMPOSIO_API_KEY = 'ak_WRHAv3a87hZMLRtQwcRK';
+
+function getComposioClient(customKey) {
+  const settings = readKiboSettings();
+  const key = (customKey && typeof customKey === 'string' && customKey.trim())
+    ? customKey.trim()
+    : (settings.kibo_composio_key || process.env.COMPOSIO_API_KEY || DEFAULT_COMPOSIO_API_KEY);
+
+  if (!composioInstance || composioInstance._kiboApiKey !== key) {
+    try {
+      const { Composio } = require('@composio/core');
+      composioInstance = new Composio({ apiKey: key });
+      composioInstance._kiboApiKey = key;
+    } catch (err) {
+      console.error('[Kibo] Failed to initialize Composio SDK:', err.message);
+      return null;
+    }
+  }
+  return composioInstance;
+}
+
+ipcMain.handle('composio-get-status', async (_event, customKey) => {
+  try {
+    const comp = getComposioClient(customKey);
+    if (!comp) return { success: false, connected: false, error: 'Composio SDK not initialized' };
+
+    const client = comp.getClient();
+    let accounts = [];
+    try {
+      const accList = await client.connectedAccounts.list();
+      accounts = accList?.items || [];
+    } catch (_) {}
+
+    const maskedKey = comp._kiboApiKey.length > 8
+      ? `${comp._kiboApiKey.slice(0, 7)}...${comp._kiboApiKey.slice(-4)}`
+      : 'ak_***';
+
+    return {
+      success: true,
+      connected: true,
+      apiKey: comp._kiboApiKey,
+      maskedKey,
+      accountsCount: accounts.length,
+      accounts: accounts.map((a) => ({
+        id: a.id,
+        slug: a.toolkit?.slug || a.appUniqueId || a.app_unique_id,
+        status: a.status,
+        createdAt: a.created_at || a.createdAt,
+      })),
+    };
+  } catch (err) {
+    return { success: false, connected: false, error: err?.message || 'Composio connection failed' };
+  }
+});
+
+ipcMain.handle('composio-connect-app', async (_event, toolkitSlug, customKey) => {
+  try {
+    const comp = getComposioClient(customKey);
+    if (!comp) return { success: false, error: 'Composio SDK not initialized' };
+
+    const session = await comp.create('kibo_user_default');
+    const authRes = await session.authorize(toolkitSlug);
+
+    if (authRes && authRes.redirectUrl) {
+      await shell.openExternal(authRes.redirectUrl);
+      return {
+        success: true,
+        redirectUrl: authRes.redirectUrl,
+        connectionId: authRes.id,
+        status: authRes.status,
+      };
+    } else {
+      return { success: false, error: 'No authorization redirect URL returned from Composio.' };
+    }
+  } catch (err) {
+    return { success: false, error: err?.message || 'Failed to initiate Composio authorization' };
+  }
+});
+
+ipcMain.handle('composio-get-connected-accounts', async (_event, customKey) => {
+  try {
+    const comp = getComposioClient(customKey);
+    if (!comp) return { success: false, accounts: [] };
+    const client = comp.getClient();
+    const list = await client.connectedAccounts.list();
+    const items = (list?.items || []).map((a) => ({
+      id: a.id,
+      slug: a.toolkit?.slug || a.appUniqueId,
+      status: a.status,
+      createdAt: a.created_at || a.createdAt,
+    }));
+    return { success: true, accounts: items };
+  } catch (err) {
+    return { success: false, accounts: [], error: err.message };
+  }
+});
+
+ipcMain.handle('composio-disconnect-account', async (_event, accountId, customKey) => {
+  try {
+    const comp = getComposioClient(customKey);
+    if (!comp) return { success: false };
+    const client = comp.getClient();
+    await client.connectedAccounts.delete({ connectedAccountId: accountId });
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
 });
 
 function getNewestMtimeInDir(dirPath) {

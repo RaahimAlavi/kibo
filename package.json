@@ -42,6 +42,7 @@
     }
   },
   "dependencies": {
+    "@composio/core": "^0.17.0",
     "@designcodeio/threeui": "^1.2.0",
     "gsap": "^3.12.5",
     "lenis": "^1.1.20",

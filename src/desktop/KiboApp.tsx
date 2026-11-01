@@ -32,6 +32,7 @@ declare global {
       setRoamingTargetRect?: (rect: any) => void;
       setRoamingActive?: (active: boolean) => void;
       setAgentDockActive?: (active: boolean | { active: boolean; isHovered?: boolean }, isHovered?: boolean) => void;
+      onDesktopClickedOutside?: (callback: () => void) => () => void;
       onRoamingDismiss?: (callback: () => void) => () => void;
       onContextAppDetected?: (callback: (appId: any) => void) => () => void;
       openGeneratedPage?: (
@@ -157,6 +158,31 @@ declare global {
         description?: string;
         content?: string;
         filePath?: string;
+        error?: string;
+      }>;
+      composioGetStatus?: (customKey?: string) => Promise<{
+        success: boolean;
+        connected: boolean;
+        apiKey?: string;
+        maskedKey?: string;
+        accountsCount?: number;
+        accounts?: Array<{ id: string; slug: string; status: string; createdAt?: string }>;
+        error?: string;
+      }>;
+      composioConnectApp?: (toolkitSlug: string, customKey?: string) => Promise<{
+        success: boolean;
+        redirectUrl?: string;
+        connectionId?: string;
+        status?: string;
+        error?: string;
+      }>;
+      composioGetConnectedAccounts?: (customKey?: string) => Promise<{
+        success: boolean;
+        accounts: Array<{ id: string; slug: string; status: string; createdAt?: string }>;
+        error?: string;
+      }>;
+      composioDisconnectAccount?: (accountId: string, customKey?: string) => Promise<{
+        success: boolean;
         error?: string;
       }>;
     };
@@ -867,56 +893,35 @@ const SvgIcon: React.FC<{ name: string; size?: number; color?: string }> = ({
         </svg>
       );
     case 'gmail':
-      return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-          <path d="M20 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.9 21.1 4 20 4Z" stroke="#EA4335" strokeWidth="1.8" />
-          <path d="M22 6L12 13L2 6" stroke="#EA4335" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      );
     case 'github':
-      return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
-          <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
-        </svg>
-      );
     case 'notion':
-      return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="4" y="3" width="16" height="18" rx="2.5" />
-          <path d="M8.5 16.5V7.5L15.5 16.5V7.5" />
-        </svg>
-      );
     case 'figma':
-      return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-          <path d="M8.5 2H12V9H8.5C6.567 9 5 7.433 5 5.5C5 3.567 6.567 2 8.5 2Z" fill="#F24E1E" />
-          <path d="M12 2H15.5C17.433 2 19 3.567 19 5.5C19 7.433 17.433 9 15.5 9H12V2Z" fill="#FF7262" />
-          <path d="M12 9H15.5C17.433 9 19 10.567 19 12.5C19 14.433 17.433 16 15.5 16H12V9Z" fill="#1ABCFE" />
-          <path d="M8.5 9H12V16H8.5C6.567 16 5 14.433 5 12.5C5 10.567 6.567 9 8.5 9Z" fill="#A259FF" />
-          <path d="M8.5 16H12V19.5C12 21.433 10.433 23 8.5 23C6.567 23 5 21.433 5 19.5C5 17.567 6.567 16 8.5 16Z" fill="#0ACF83" />
-        </svg>
-      );
     case 'vscode':
-      return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#38BDF8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M16.5 3L7 12l9.5 9 4.5-2.2V5.2L16.5 3z" />
-          <path d="M3 8.5L7 12l-4 3.5" />
-          <path d="M16.5 3v18" />
-        </svg>
-      );
     case 'meta':
-      return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#38BDF8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M18.178 8c5.096 0 5.096 8 0 8-5.095 0-7.133-8-12.739-8-4.585 0-4.585 8 0 8 5.606 0 7.644-8 12.74-8z" />
-        </svg>
-      );
     case 'linear':
+    case 'slack':
+    case 'discord':
+    case 'googlecalendar':
+    case 'googlesheets':
+    case 'spotify':
+    case 'jira':
+    case 'twitter':
+    case 'asana':
+    case 'trello':
+    case 'hubspot':
+    case 'supabase':
+    case 'composio':
       return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#818CF8" strokeWidth="2" strokeLinecap="round">
-          <circle cx="12" cy="12" r="9" />
-          <path d="M4.5 15.5l8-8" />
-          <path d="M8.5 19.5l11-11" />
-        </svg>
+        <img
+          src={`./logos/${name}.png`}
+          width={size}
+          height={size}
+          alt={name}
+          style={{ objectFit: 'contain', display: 'inline-block', verticalAlign: 'middle' }}
+          onError={(e) => {
+            (e.currentTarget as HTMLElement).style.display = 'none';
+          }}
+        />
       );
     default:
       return null;
@@ -1373,6 +1378,190 @@ if (typeof localStorage !== 'undefined') {
   }
 }
 
+interface IntegrationAppItem {
+  id: string;
+  slug: string;
+  name: string;
+  category: 'Productivity' | 'Developer' | 'Communication' | 'Media';
+  description: string;
+  logo: string;
+  viaComposio?: boolean;
+}
+
+const INTEGRATION_APPS: IntegrationAppItem[] = [
+  {
+    id: 'gmail',
+    slug: 'gmail',
+    name: 'Gmail',
+    category: 'Productivity',
+    description: 'Read & send emails, search threads, draft executive replies and organize inbox.',
+    logo: './logos/gmail.png',
+    viaComposio: true,
+  },
+  {
+    id: 'github',
+    slug: 'github',
+    name: 'GitHub',
+    category: 'Developer',
+    description: 'Manage repositories, pull requests, issue workflows, branches, and CI actions.',
+    logo: './logos/github.png',
+    viaComposio: true,
+  },
+  {
+    id: 'notion',
+    slug: 'notion',
+    name: 'Notion',
+    category: 'Productivity',
+    description: 'Query, read, and append to databases, design docs, wikis, and sprint trackers.',
+    logo: './logos/notion.png',
+    viaComposio: true,
+  },
+  {
+    id: 'googlecalendar',
+    slug: 'googlecalendar',
+    name: 'Google Calendar',
+    category: 'Productivity',
+    description: 'Schedule meetings, check upcoming agenda, create event invites and focus blocks.',
+    logo: './logos/googlecalendar.png',
+    viaComposio: true,
+  },
+  {
+    id: 'googlesheets',
+    slug: 'googlesheets',
+    name: 'Google Sheets',
+    category: 'Productivity',
+    description: 'Read, populate, and analyze spreadsheet rows, format columns, and export data.',
+    logo: './logos/googlesheets.png',
+    viaComposio: true,
+  },
+  {
+    id: 'slack',
+    slug: 'slack',
+    name: 'Slack',
+    category: 'Communication',
+    description: 'Send direct messages, post channel updates, monitor unread discussions and alerts.',
+    logo: './logos/slack.png',
+    viaComposio: true,
+  },
+  {
+    id: 'discord',
+    slug: 'discord',
+    name: 'Discord',
+    category: 'Communication',
+    description: 'Trigger community bots, post notifications to servers, manage webhooks.',
+    logo: './logos/discord.png',
+    viaComposio: true,
+  },
+  {
+    id: 'linear',
+    slug: 'linear',
+    name: 'Linear',
+    category: 'Developer',
+    description: 'Sync issue tracking, sprint cycles, roadmap milestones, and team backlogs.',
+    logo: './logos/linear.png',
+    viaComposio: true,
+  },
+  {
+    id: 'figma',
+    slug: 'figma',
+    name: 'Figma',
+    category: 'Developer',
+    description: 'Inspect design frames, extract color palettes, export SVGs and generate React UI.',
+    logo: './logos/figma.png',
+    viaComposio: true,
+  },
+  {
+    id: 'vscode',
+    slug: 'vscode',
+    name: 'Visual Studio Code',
+    category: 'Developer',
+    description: 'Live active editor context, open workspace folders, and execute file modifications.',
+    logo: './logos/vscode.png',
+    viaComposio: false,
+  },
+  {
+    id: 'chrome',
+    slug: 'chrome',
+    name: 'Google Chrome',
+    category: 'Developer',
+    description: 'Read foreground web tab URL & DOM, automate browser tasks with Dev Mode bridge.',
+    logo: './logos/chrome.png',
+    viaComposio: false,
+  },
+  {
+    id: 'spotify',
+    slug: 'spotify',
+    name: 'Spotify',
+    category: 'Media',
+    description: 'Windows SMTC media playback, playlist controls, and dynamic album color glass.',
+    logo: './logos/spotify.png',
+    viaComposio: true,
+  },
+  {
+    id: 'jira',
+    slug: 'jira',
+    name: 'Jira Software',
+    category: 'Productivity',
+    description: 'Enterprise ticket workflows, agile Kanban boards, and issue lifecycle updates.',
+    logo: './logos/jira.png',
+    viaComposio: true,
+  },
+  {
+    id: 'twitter',
+    slug: 'twitter',
+    name: 'Twitter / X',
+    category: 'Media',
+    description: 'Post threads, monitor brand keywords, fetch tweets, and track social engagement.',
+    logo: './logos/twitter.png',
+    viaComposio: true,
+  },
+  {
+    id: 'meta',
+    slug: 'meta',
+    name: 'Meta Ads Manager',
+    category: 'Media',
+    description: 'Telemetry queries across Facebook & Instagram ad campaigns, budgets, and CTR.',
+    logo: './logos/meta.png',
+    viaComposio: true,
+  },
+  {
+    id: 'supabase',
+    slug: 'supabase',
+    name: 'Supabase',
+    category: 'Developer',
+    description: 'Execute Postgres queries, manage user authentication tables and storage buckets.',
+    logo: './logos/supabase.png',
+    viaComposio: true,
+  },
+  {
+    id: 'asana',
+    slug: 'asana',
+    name: 'Asana',
+    category: 'Productivity',
+    description: 'Manage cross-functional team projects, assign deadlines, and update task boards.',
+    logo: './logos/asana.png',
+    viaComposio: true,
+  },
+  {
+    id: 'trello',
+    slug: 'trello',
+    name: 'Trello',
+    category: 'Productivity',
+    description: 'Organize cards, lists, checklists, and project workflows visually.',
+    logo: './logos/trello.png',
+    viaComposio: true,
+  },
+  {
+    id: 'hubspot',
+    slug: 'hubspot',
+    name: 'HubSpot CRM',
+    category: 'Productivity',
+    description: 'Manage sales pipelines, log customer interactions, and synchronize contact leads.',
+    logo: './logos/hubspot.png',
+    viaComposio: true,
+  },
+];
+
 export const KiboApp: React.FC = () => {
   const isElectron = typeof window !== 'undefined' && Boolean(window.kiboAPI);
 
@@ -1388,6 +1577,27 @@ export const KiboApp: React.FC = () => {
   });
   const [tavilyKey, setTavilyKey] = useState<string>(() => localStorage.getItem('kibo_tavily_key') || '');
   const [tavilyDraftKey, setTavilyDraftKey] = useState<string>(() => localStorage.getItem('kibo_tavily_key') || '');
+  const [composioApiKey, setComposioApiKey] = useState<string>(() => {
+    return localStorage.getItem('kibo_composio_key') || 'ak_WRHAv3a87hZMLRtQwcRK';
+  });
+  const [composioDraftKey, setComposioDraftKey] = useState<string>(() => {
+    return localStorage.getItem('kibo_composio_key') || 'ak_WRHAv3a87hZMLRtQwcRK';
+  });
+  const [composioKeySavedAlert, setComposioKeySavedAlert] = useState<string | null>(null);
+  const [composioStatus, setComposioStatus] = useState<{
+    connected: boolean;
+    maskedKey?: string;
+    accountsCount: number;
+    accounts: Array<{ id: string; slug: string; status: string; createdAt?: string }>;
+  }>({
+    connected: true,
+    maskedKey: 'ak_WRHA...wcRK',
+    accountsCount: 1,
+    accounts: [],
+  });
+  const [composioConnectingSlug, setComposioConnectingSlug] = useState<string | null>(null);
+  const [integrationsCategoryFilter, setIntegrationsCategoryFilter] = useState<'All' | 'Productivity' | 'Developer' | 'Communication' | 'Media'>('All');
+  const [integrationsSearch, setIntegrationsSearch] = useState<string>('');
   const [showConnectModal, setShowConnectModal] = useState<boolean>(false);
   const [notchApiAlert, setNotchApiAlert] = useState<{ type: 'missing_key' | 'rate_limit'; text: string } | null>(null);
   const [settingsCategory, setSettingsCategory] = useState<'Account' | 'General' | 'Core' | 'Voice' | 'Integrations' | 'Agents' | 'Shortcuts' | 'System'>('Account');
@@ -1460,8 +1670,72 @@ export const KiboApp: React.FC = () => {
       if (stored.kibo_user_memory && typeof stored.kibo_user_memory === 'string') {
         localStorage.setItem('kibo_user_memory', stored.kibo_user_memory);
       }
+      if (stored.kibo_composio_key && typeof stored.kibo_composio_key === 'string') {
+        const val = stored.kibo_composio_key.trim();
+        setComposioApiKey(val);
+        setComposioDraftKey(val);
+        localStorage.setItem('kibo_composio_key', val);
+      }
     }).catch(() => {});
   }, []);
+
+  const refreshComposioStatus = useCallback(async (keyOverride?: string) => {
+    const api = (window as any).kiboAPI;
+    if (!api?.composioGetStatus) return;
+    try {
+      const res = await api.composioGetStatus(keyOverride || composioApiKey);
+      if (res && res.success) {
+        setComposioStatus({
+          connected: true,
+          maskedKey: res.maskedKey,
+          accountsCount: res.accountsCount || (res.accounts?.length || 0),
+          accounts: res.accounts || [],
+        });
+      }
+    } catch (_) {}
+  }, [composioApiKey]);
+
+  useEffect(() => {
+    refreshComposioStatus();
+  }, [refreshComposioStatus]);
+
+  const handleConnectComposioApp = useCallback(
+    async (slug: string) => {
+      const api = (window as any).kiboAPI;
+      if (!api?.composioConnectApp) return;
+      setComposioConnectingSlug(slug);
+      try {
+        const res = await api.composioConnectApp(slug, composioApiKey);
+        if (res && res.success) {
+          soundFX.playSuccessChime();
+          setTimeout(() => refreshComposioStatus(), 3000);
+          setTimeout(() => refreshComposioStatus(), 8000);
+          setTimeout(() => {
+            refreshComposioStatus();
+            setComposioConnectingSlug(null);
+          }, 15000);
+        } else {
+          setComposioConnectingSlug(null);
+        }
+      } catch (_) {
+        setComposioConnectingSlug(null);
+      }
+    },
+    [composioApiKey, refreshComposioStatus]
+  );
+
+  const handleDisconnectComposioAccount = useCallback(
+    async (accountId: string) => {
+      const api = (window as any).kiboAPI;
+      if (!api?.composioDisconnectAccount) return;
+      try {
+        await api.composioDisconnectAccount(accountId, composioApiKey);
+        soundFX.playClick();
+        await refreshComposioStatus();
+      } catch (_) {}
+    },
+    [composioApiKey, refreshComposioStatus]
+  );
 
   // Extract dynamic color theme from active Windows desktop wallpaper (deferred past startup animation)
   useEffect(() => {
@@ -3149,7 +3423,18 @@ export const KiboApp: React.FC = () => {
         })
       : () => {};
 
-    // 4. Focus/Sync reader (supports both Electron direct readers and Browser navigator.clipboard)
+    // 4. Subscribe to outside desktop click / blur to immediately collapse expanded notch
+    const unregOutsideClick = window.kiboAPI?.onDesktopClickedOutside
+      ? window.kiboAPI.onDesktopClickedOutside(() => {
+          if (isNativeDialogOpenRef.current || isDraggingVolumeRef.current || isDraggingMediaScrubRef.current) return;
+          setActiveControlDropdown(null);
+          setShowMediaNotch(false);
+          setIsExpanded(false);
+          if (autoTuckEnabled) setIsTucked(true);
+        })
+      : () => {};
+
+    // 5. Focus/Sync reader (supports both Electron direct readers and Browser navigator.clipboard)
     const syncActiveClipboard = async () => {
       if (window.kiboAPI?.getClipboardHistory) {
         try {
@@ -3196,6 +3481,7 @@ export const KiboApp: React.FC = () => {
       window.removeEventListener('focus', syncActiveClipboard);
       unreg();
       unregSettings();
+      unregOutsideClick();
     };
   }, [mergeClipboardSafely]);
 
@@ -6829,14 +7115,14 @@ export const KiboApp: React.FC = () => {
                           borderRadius: '999px',
                           border:
                             askNotchPhase === 'speaking'
-                              ? '1px solid rgba(56, 189, 248, 0.55)'
-                              : '1px solid rgba(255, 255, 255, 0.14)',
+                              ? '1px solid rgba(255, 255, 255, 0.65)'
+                              : '1px solid rgba(255, 255, 255, 0.45)',
                           background:
                             askNotchPhase === 'speaking'
-                              ? 'rgba(56, 189, 248, 0.18)'
-                              : '#18191E',
-                          color: '#F4F4F5',
-                          fontWeight: 600,
+                              ? 'linear-gradient(180deg, #BAE6FD 0%, #38BDF8 100%)'
+                              : 'linear-gradient(180deg, #BAE6FD 0%, #7DD3FC 100%)',
+                          color: '#0A1120',
+                          fontWeight: 700,
                           fontSize: '13px',
                           display: 'flex',
                           alignItems: 'center',
@@ -6845,12 +7131,12 @@ export const KiboApp: React.FC = () => {
                           cursor: 'pointer',
                           boxShadow:
                             askNotchPhase === 'speaking'
-                              ? '0 0 16px rgba(56, 189, 248, 0.22)'
-                              : 'inset 0 1px 0 rgba(255, 255, 255, 0.05)',
+                              ? 'inset 0 1px 1px #FFFFFF, 0 0 18px rgba(56, 189, 248, 0.65)'
+                              : 'inset 0 1px 1.5px rgba(255, 255, 255, 0.85), 0 3px 12px rgba(56, 189, 248, 0.3)',
                           transition: 'all 0.16s ease',
                         }}
                       >
-                        <SvgIcon name="mic" size={14} color="#38BDF8" />
+                        <SvgIcon name="mic" size={14} color="#0A1120" />
                         <span>
                           {askNotchPhase === 'speaking'
                             ? 'Listening... Release to send'
@@ -6862,11 +7148,11 @@ export const KiboApp: React.FC = () => {
                         style={{
                           height: '42px',
                           borderRadius: '999px',
-                          background: '#1E1F23',
+                          background: '#1C1D22',
                           border: '1px solid rgba(255, 255, 255, 0.12)',
                           display: 'flex',
                           alignItems: 'center',
-                          padding: '0 14px',
+                          padding: '0 16px',
                           gap: '8px',
                         }}
                       >
@@ -6888,7 +7174,7 @@ export const KiboApp: React.FC = () => {
                             background: 'transparent',
                             border: 'none',
                             outline: 'none',
-                            color: '#F4F4F5',
+                            color: '#F8FAFC',
                             fontSize: '13px',
                             fontWeight: 500,
                             fontFamily: 'inherit',
@@ -7470,12 +7756,13 @@ export const KiboApp: React.FC = () => {
                                   onClick={() => {
                                     if (isTimerRunning) {
                                       setIsTimerRunning(false);
-                                      triggerKiboCelebrationDance(4500);
+                                      soundFX.playToggle(false);
                                     } else {
                                       setTimerAlarmRinging(false);
                                       setIsKiboDancing(false);
                                       setIsTimerSessionActive(true);
                                       setIsTimerRunning(true);
+                                      soundFX.playToggle(true);
                                     }
                                   }}
                                   className="timer-start-btn"
@@ -8942,12 +9229,12 @@ export const KiboApp: React.FC = () => {
                           </div>
 
                           <div className="kibo-settings-card">
-                            <div className="kibo-settings-row">
-                              <div style={{ flex: 1, minWidth: 0, paddingRight: 12 }}>
+                            <div className="kibo-settings-row" style={{ flexWrap: 'wrap', gap: '10px' }}>
+                              <div style={{ flex: '1 1 240px', minWidth: 0, paddingRight: 8 }}>
                                 <div className="kibo-settings-row-label">Google Gemini Neural Voice</div>
                                 <div className="kibo-settings-row-desc">Unlimited-quota Gemini Live & TTS neural voice used when Kibo speaks</div>
                               </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, flexWrap: 'nowrap' }}>
                                 <select
                                   value={equippedCards.Voice || 'voice_charon'}
                                   onChange={(e) => {
@@ -8957,12 +9244,13 @@ export const KiboApp: React.FC = () => {
                                   }}
                                   style={{
                                     height: '34px',
+                                    maxWidth: '190px',
                                     boxSizing: 'border-box',
                                     background: '#141519',
                                     color: '#F8FAFC',
                                     border: '1px solid rgba(255,255,255,0.12)',
                                     borderRadius: 8,
-                                    padding: '0 10px',
+                                    padding: '0 8px',
                                     fontSize: 12,
                                     outline: 'none',
                                   }}
@@ -9163,253 +9451,590 @@ export const KiboApp: React.FC = () => {
 
                       {settingsCategory === 'Integrations' && (
                         <>
-                          <div>
-                            <h2 className="kibo-settings-header-title">Integrations & Chrome Bridge</h2>
-                            <p className="kibo-settings-header-sub">Connect Kibo to Chrome, workspace apps, and custom APIs like Meta Ads or Linear.</p>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                            <div>
+                              <h2 className="kibo-settings-header-title">Integrations & 250+ App Ecosystem</h2>
+                              <p className="kibo-settings-header-sub">
+                                Connect Kibo to 250+ cloud apps, databases & developer platforms with Composio 1-Click OAuth.
+                              </p>
+                            </div>
+                            <div
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                padding: '4px 10px',
+                                borderRadius: 999,
+                                background: 'rgba(56, 189, 248, 0.1)',
+                                border: '1px solid rgba(56, 189, 248, 0.28)',
+                                fontSize: 11,
+                                fontWeight: 700,
+                                color: '#38BDF8',
+                              }}
+                            >
+                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#38BDF8' }} />
+                              <span>Composio Core Active</span>
+                            </div>
                           </div>
 
-                          {/* Native App Connections + Clean Chrome Companion Row */}
-                          <div className="kibo-settings-card">
-                            <div className="kibo-settings-row-label" style={{ marginBottom: 6 }}>Workspace App Connections</div>
-
-                            {/* Google Chrome Companion Row (Matching hierarchy of other integrations) */}
-                            <div className="kibo-settings-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: chromeExtStatus ? 8 : 0 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                  <div style={{ width: 28, height: 28, borderRadius: 7, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <SvgIcon name="chrome" size={14} color="#38BDF8" />
+                          {/* Composio Platform Engine Primary Card */}
+                          <div className="kibo-settings-card" style={{ border: '1px solid rgba(56, 189, 248, 0.22)', background: 'rgba(15, 23, 42, 0.45)' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14, marginBottom: 12 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <div style={{ width: 34, height: 34, borderRadius: 9, background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                                  <img src="./logos/composio.png" width="28" height="28" alt="Composio" style={{ objectFit: 'contain' }} />
+                                </div>
+                                <div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <span style={{ fontSize: 13.5, fontWeight: 800, color: '#FFFFFF' }}>Composio Platform Engine</span>
+                                    <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 999, background: 'rgba(52, 211, 153, 0.15)', color: '#34D399', border: '1px solid rgba(52, 211, 153, 0.35)' }}>
+                                      {composioStatus.connected ? '250+ Tools Ready' : 'Configuring'}
+                                    </span>
                                   </div>
-                                  <div>
-                                    <div className="kibo-settings-row-label">Google Chrome Extension</div>
-                                    <div className="kibo-settings-row-desc">Read active tab context and automate browser workflows</div>
+                                  <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>
+                                    Powers direct 1-click OAuth authentication and AI agent tool calling across Gmail, GitHub, Notion, Slack, Discord, Calendar, and 250+ apps.
                                   </div>
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    const res = await window.kiboAPI?.exportChromeExtension?.({ revealInExplorer: false });
-                                    await window.kiboAPI?.openChromeExtensionsPage?.();
-                                    if (res?.success && res.extDir) {
-                                      setChromeExtStatus(res.extDir);
+                              </div>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 10, borderTop: '1px solid rgba(255, 255, 255, 0.07)' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontSize: 11.5, fontWeight: 700, color: '#D4D4D8', marginBottom: 2 }}>Composio Project API Key</div>
+                                  <div style={{ fontSize: 10.5, color: '#71717A' }}>Project API key from dashboard.composio.dev (Platform → Getting Started)</div>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <input
+                                    type="password"
+                                    value={composioDraftKey}
+                                    onChange={(e) => setComposioDraftKey(e.target.value)}
+                                    placeholder="ak_..."
+                                    style={{
+                                      width: 220,
+                                      height: 32,
+                                      background: '#141519',
+                                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                                      borderRadius: 7,
+                                      padding: '0 10px',
+                                      fontSize: 11.5,
+                                      color: '#F8FAFC',
+                                      fontFamily: 'var(--kibo-font-mono)',
+                                      outline: 'none',
+                                    }}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      const cleanKey = composioDraftKey.trim();
+                                      if (!cleanKey) return;
+                                      setComposioApiKey(cleanKey);
+                                      localStorage.setItem('kibo_composio_key', cleanKey);
+                                      window.kiboAPI?.saveStoredSettings?.({ kibo_composio_key: cleanKey });
+                                      await refreshComposioStatus(cleanKey);
+                                      setComposioKeySavedAlert('✓ Composio key verified & saved');
                                       soundFX.playSuccessChime();
-                                    } else {
-                                      setChromeExtStatus('Kibo-Chrome-Extension');
-                                    }
-                                  }}
-                                  style={{
-                                    height: '32px',
-                                    background: '#1E293B',
-                                    color: '#F8FAFC',
-                                    border: '1px solid rgba(255,255,255,0.12)',
-                                    borderRadius: 8,
-                                    padding: '0 12px',
-                                    fontSize: 11.5,
-                                    fontWeight: 700,
-                                    whiteSpace: 'nowrap',
-                                    flexShrink: 0,
-                                    cursor: 'pointer',
-                                  }}
-                                >
-                                  {chromeExtStatus ? 'Open chrome://extensions/' : 'Install Extension'}
-                                </button>
+                                      setTimeout(() => setComposioKeySavedAlert(null), 3500);
+                                    }}
+                                    style={{
+                                      height: 32,
+                                      padding: '0 12px',
+                                      borderRadius: 7,
+                                      background: '#38BDF8',
+                                      color: '#0A0E17',
+                                      fontSize: 11.5,
+                                      fontWeight: 800,
+                                      border: 'none',
+                                      cursor: 'pointer',
+                                      whiteSpace: 'nowrap',
+                                    }}
+                                  >
+                                    Verify & Save
+                                  </button>
+                                </div>
                               </div>
 
-                              {chromeExtStatus && (
+                              {composioKeySavedAlert && (
+                                <div style={{ fontSize: 11, fontWeight: 700, color: '#34D399', textAlign: 'right' }}>
+                                  {composioKeySavedAlert}
+                                </div>
+                              )}
+
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 10.5, color: '#94A3B8', paddingTop: 4 }}>
+                                <span>
+                                  Active Key: <code style={{ color: '#E2E8F0', fontFamily: 'var(--kibo-font-mono)' }}>{composioStatus.maskedKey || 'ak_WRHA...wcRK'}</code>
+                                </span>
+                                <span style={{ color: composioStatus.connected ? '#34D399' : '#FBBF24', fontWeight: 600 }}>
+                                  {composioStatus.connected ? `● ${composioStatus.accountsCount} active connected account(s)` : '○ Connecting to Composio...'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* App Directory Filters & Search */}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, margin: '14px 0 8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                              {(['All', 'Productivity', 'Developer', 'Communication', 'Media'] as const).map((cat) => {
+                                const isActive = integrationsCategoryFilter === cat;
+                                return (
+                                  <button
+                                    key={cat}
+                                    type="button"
+                                    onClick={() => setIntegrationsCategoryFilter(cat)}
+                                    style={{
+                                      padding: '4px 11px',
+                                      borderRadius: 7,
+                                      fontSize: 11,
+                                      fontWeight: 700,
+                                      background: isActive ? '#38BDF8' : 'rgba(255, 255, 255, 0.05)',
+                                      color: isActive ? '#09111E' : '#94A3B8',
+                                      border: isActive ? '1px solid #38BDF8' : '1px solid rgba(255, 255, 255, 0.08)',
+                                      cursor: 'pointer',
+                                      transition: 'all 0.16s ease',
+                                    }}
+                                  >
+                                    {cat === 'All' ? `All (${INTEGRATION_APPS.length})` : cat}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            <div style={{ position: 'relative', width: 220 }}>
+                              <input
+                                type="text"
+                                value={integrationsSearch}
+                                onChange={(e) => setIntegrationsSearch(e.target.value)}
+                                placeholder="Search 250+ apps..."
+                                style={{
+                                  width: '100%',
+                                  height: 28,
+                                  background: '#141519',
+                                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                                  borderRadius: 7,
+                                  padding: '0 8px 0 26px',
+                                  fontSize: 11,
+                                  color: '#F8FAFC',
+                                  outline: 'none',
+                                }}
+                              />
+                              <span style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: '#64748B', fontSize: 11 }}>
+                                🔍
+                              </span>
+                              {integrationsSearch && (
+                                <button
+                                  type="button"
+                                  onClick={() => setIntegrationsSearch('')}
+                                  style={{
+                                    position: 'absolute',
+                                    right: 6,
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: '#94A3B8',
+                                    cursor: 'pointer',
+                                    fontSize: 11,
+                                  }}
+                                >
+                                  ×
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* 20+ App Directory with Official Logo PNGs & 1-Click Composio OAuth */}
+                          <div
+                            className="kibo-settings-card"
+                            style={{
+                              padding: '10px 14px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: 6,
+                              maxHeight: 280,
+                              overflowY: 'auto',
+                            }}
+                          >
+                            {INTEGRATION_APPS.filter((app) => {
+                              const matchesCat = integrationsCategoryFilter === 'All' || app.category === integrationsCategoryFilter;
+                              const matchesQuery =
+                                !integrationsSearch.trim() ||
+                                app.name.toLowerCase().includes(integrationsSearch.toLowerCase()) ||
+                                app.description.toLowerCase().includes(integrationsSearch.toLowerCase()) ||
+                                app.slug.toLowerCase().includes(integrationsSearch.toLowerCase());
+                              return matchesCat && matchesQuery;
+                            }).map((app) => {
+                              // Check if connected via Composio accounts or local multitask agent
+                              const composioAcc = composioStatus.accounts.find(
+                                (a) => a.slug?.toLowerCase() === app.slug.toLowerCase()
+                              );
+                              const isComposioConn = Boolean(composioAcc);
+                              const isLocalConn = multitaskAgent.isAppConnected(app.id as any);
+                              const isConnected = isComposioConn || isLocalConn;
+                              const isConnecting = composioConnectingSlug === app.slug;
+
+                              return (
                                 <div
+                                  key={app.id}
                                   style={{
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'space-between',
-                                    gap: 10,
-                                    padding: '8px 10px',
+                                    gap: 12,
+                                    padding: '7px 8px',
                                     borderRadius: 8,
-                                    background: '#141519',
-                                    border: '1px solid rgba(255,255,255,0.08)',
+                                    background: isConnected ? 'rgba(56, 189, 248, 0.04)' : 'rgba(255, 255, 255, 0.02)',
+                                    border: isConnected ? '1px solid rgba(56, 189, 248, 0.16)' : '1px solid rgba(255, 255, 255, 0.04)',
                                   }}
                                 >
-                                  <span style={{ fontSize: 11, color: '#94A3B8' }}>
-                                    Enable <strong>Developer mode</strong> in <code style={{ color: '#E2E8F0' }}>chrome://extensions/</code>, then drag this chip into Chrome:
-                                  </span>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        window.kiboAPI?.exportChromeExtension?.({ revealInExplorer: true });
-                                      }}
-                                      style={{
-                                        padding: '5px 9px',
-                                        borderRadius: 7,
-                                        background: 'rgba(255,255,255,0.06)',
-                                        border: '1px solid rgba(255,255,255,0.12)',
-                                        color: '#CBD5E1',
-                                        fontSize: 11,
-                                        fontWeight: 600,
-                                        cursor: 'pointer',
-                                        whiteSpace: 'nowrap',
-                                      }}
-                                    >
-                                      Show Folder
-                                    </button>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+                                    {/* Official Logo PNG */}
                                     <div
-                                      draggable
-                                      onDragStart={(e) => {
-                                        e.preventDefault();
-                                        window.kiboAPI?.startExtensionDrag?.();
-                                      }}
                                       style={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: 6,
-                                        padding: '5px 10px',
+                                        width: 28,
+                                        height: 28,
                                         borderRadius: 7,
-                                        background: '#1E293B',
-                                        border: '1px dashed rgba(56, 189, 248, 0.5)',
-                                        color: '#BAE6FD',
-                                        fontSize: 11,
-                                        fontWeight: 700,
-                                        cursor: 'grab',
-                                        whiteSpace: 'nowrap',
+                                        background: 'rgba(255, 255, 255, 0.05)',
+                                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        overflow: 'hidden',
                                         flexShrink: 0,
                                       }}
-                                      title="Drag this directly into chrome://extensions/"
                                     >
-                                      <SvgIcon name="folder" size={12} color="#38BDF8" />
-                                      <span>Drag Kibo Extension</span>
+                                      <img
+                                        src={app.logo}
+                                        width={24}
+                                        height={24}
+                                        alt={app.name}
+                                        style={{ objectFit: 'contain' }}
+                                        onError={(e) => {
+                                          (e.currentTarget as HTMLElement).style.display = 'none';
+                                        }}
+                                      />
+                                    </div>
+                                    <div style={{ minWidth: 0, flex: 1 }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        <span style={{ fontSize: 12, fontWeight: 800, color: '#FFFFFF' }}>{app.name}</span>
+                                        <span
+                                          style={{
+                                            fontSize: 9.5,
+                                            fontWeight: 600,
+                                            color: '#94A3B8',
+                                            padding: '1px 6px',
+                                            borderRadius: 4,
+                                            background: 'rgba(255, 255, 255, 0.05)',
+                                          }}
+                                        >
+                                          {app.category}
+                                        </span>
+                                        {app.viaComposio && (
+                                          <span style={{ fontSize: 9.5, color: '#38BDF8', fontWeight: 600 }}>Composio OAuth</span>
+                                        )}
+                                      </div>
+                                      <div
+                                        className="companion-truncate"
+                                        style={{ fontSize: 10.5, color: '#94A3B8', marginTop: 1 }}
+                                      >
+                                        {app.description}
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
-                              )}
-                            </div>
 
-                            {Object.values(APP_INTEGRATIONS).map((app) => {
-                              const isConn = multitaskAgent.isAppConnected(app.id);
-                              const iconMap: Record<string, string> = {
-                                notion: 'notion',
-                                github: 'github',
-                                vscode: 'vscode',
-                                figma: 'figma',
-                                gmail: 'gmail',
-                              };
-                              const appIconName = iconMap[app.id] || 'plug';
-                              return (
-                                <div key={app.id} className="kibo-settings-row">
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                    <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                      <SvgIcon name={appIconName} size={15} color={isConn ? '#FFFFFF' : '#E2E8F0'} />
-                                    </div>
-                                    <div>
-                                      <div className="kibo-settings-row-label">{app.name}</div>
-                                      <div className="kibo-settings-row-desc">{app.suggestions[0]}</div>
-                                    </div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                                    {app.id === 'chrome' ? (
+                                      <button
+                                        type="button"
+                                        onClick={async () => {
+                                          const res = await window.kiboAPI?.exportChromeExtension?.({ revealInExplorer: false });
+                                          await window.kiboAPI?.openChromeExtensionsPage?.();
+                                          if (res?.success && res.extDir) {
+                                            setChromeExtStatus(res.extDir);
+                                            soundFX.playSuccessChime();
+                                          } else {
+                                            setChromeExtStatus('Kibo-Chrome-Extension');
+                                          }
+                                        }}
+                                        style={{
+                                          height: 28,
+                                          padding: '0 10px',
+                                          borderRadius: 7,
+                                          background: chromeExtStatus ? 'rgba(56, 189, 248, 0.15)' : '#1E293B',
+                                          color: chromeExtStatus ? '#38BDF8' : '#F8FAFC',
+                                          border: chromeExtStatus ? '1px solid rgba(56, 189, 248, 0.35)' : '1px solid rgba(255, 255, 255, 0.12)',
+                                          fontSize: 11,
+                                          fontWeight: 700,
+                                          cursor: 'pointer',
+                                          whiteSpace: 'nowrap',
+                                        }}
+                                      >
+                                        {chromeExtStatus ? 'Extension Ready ↗' : 'Install Extension'}
+                                      </button>
+                                    ) : app.id === 'vscode' ? (
+                                      <span style={{ fontSize: 10.5, color: '#34D399', fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: 'rgba(52, 211, 153, 0.12)' }}>
+                                        Local Bridge Active
+                                      </span>
+                                    ) : isConnected ? (
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                        <span style={{ fontSize: 10.5, color: '#34D399', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                          <span>✓ Connected</span>
+                                        </span>
+                                        {composioAcc && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleDisconnectComposioAccount(composioAcc.id)}
+                                            style={{
+                                              padding: '3px 7px',
+                                              borderRadius: 6,
+                                              background: 'transparent',
+                                              border: '1px solid rgba(255, 255, 255, 0.1)',
+                                              color: '#71717A',
+                                              fontSize: 10,
+                                              cursor: 'pointer',
+                                            }}
+                                            title="Disconnect account"
+                                          >
+                                            Disconnect
+                                          </button>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        disabled={isConnecting}
+                                        onClick={() => {
+                                          if (app.viaComposio) {
+                                            handleConnectComposioApp(app.slug);
+                                          } else {
+                                            multitaskAgent.connectApp(app.id as any);
+                                            soundFX.playToggle(true);
+                                          }
+                                        }}
+                                        style={{
+                                          height: 28,
+                                          padding: '0 11px',
+                                          borderRadius: 7,
+                                          background: isConnecting ? 'rgba(56, 189, 248, 0.25)' : '#1E293B',
+                                          color: isConnecting ? '#38BDF8' : '#F8FAFC',
+                                          border: isConnecting ? '1px solid #38BDF8' : '1px solid rgba(255, 255, 255, 0.12)',
+                                          fontSize: 11,
+                                          fontWeight: 700,
+                                          cursor: isConnecting ? 'wait' : 'pointer',
+                                          whiteSpace: 'nowrap',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: 5,
+                                        }}
+                                      >
+                                        {isConnecting ? (
+                                          <span>Opening OAuth...</span>
+                                        ) : (
+                                          <>
+                                            <span>Connect</span>
+                                            <span style={{ fontSize: 9.5 }}>↗</span>
+                                          </>
+                                        )}
+                                      </button>
+                                    )}
                                   </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      if (isConn) {
-                                        multitaskAgent.unlinkApp(app.id);
-                                      } else {
-                                        multitaskAgent.connectApp(app.id);
-                                      }
-                                      soundFX.playToggle(!isConn);
-                                      setDetectedAppId((prev) => (prev === app.id ? null : prev));
-                                    }}
-                                    style={{
-                                      background: isConn ? 'rgba(16, 185, 129, 0.15)' : '#1E293B',
-                                      color: isConn ? '#34D399' : '#E2E8F0',
-                                      border: isConn ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid rgba(255,255,255,0.1)',
-                                      borderRadius: 8,
-                                      padding: '5px 12px',
-                                      fontSize: 11.5,
-                                      fontWeight: 700,
-                                      cursor: 'pointer',
-                                    }}
-                                  >
-                                    {isConn ? 'Connected' : 'Connect'}
-                                  </button>
                                 </div>
                               );
                             })}
                           </div>
 
-                          {/* Custom Connections (Meta Ads, Linear, Webhooks, MCP) */}
-                          <div className="kibo-settings-card">
+                          {/* Chrome Companion Extension Developer Mode Card */}
+                          <div className="kibo-settings-card" style={{ marginTop: 10 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <div style={{ width: 28, height: 28, borderRadius: 7, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                                  <img src="./logos/chrome.png" width="22" height="22" alt="Chrome" style={{ objectFit: 'contain' }} />
+                                </div>
+                                <div>
+                                  <div className="kibo-settings-row-label">Google Chrome Extension Bridge</div>
+                                  <div className="kibo-settings-row-desc">Read active tab URL and automate DOM actions without cloud proxies</div>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  const res = await window.kiboAPI?.exportChromeExtension?.({ revealInExplorer: false });
+                                  await window.kiboAPI?.openChromeExtensionsPage?.();
+                                  if (res?.success && res.extDir) {
+                                    setChromeExtStatus(res.extDir);
+                                    soundFX.playSuccessChime();
+                                  } else {
+                                    setChromeExtStatus('Kibo-Chrome-Extension');
+                                  }
+                                }}
+                                style={{
+                                  height: '30px',
+                                  background: '#1E293B',
+                                  color: '#F8FAFC',
+                                  border: '1px solid rgba(255,255,255,0.12)',
+                                  borderRadius: 7,
+                                  padding: '0 11px',
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  whiteSpace: 'nowrap',
+                                  flexShrink: 0,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                Open chrome://extensions/
+                              </button>
+                            </div>
+
+                            {chromeExtStatus && (
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  gap: 10,
+                                  padding: '8px 10px',
+                                  borderRadius: 8,
+                                  background: '#141519',
+                                  border: '1px solid rgba(255,255,255,0.08)',
+                                  marginTop: 8,
+                                }}
+                              >
+                                <span style={{ fontSize: 11, color: '#94A3B8' }}>
+                                  Enable <strong>Developer mode</strong> in <code style={{ color: '#E2E8F0' }}>chrome://extensions/</code>, then drag this chip into Chrome:
+                                </span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      window.kiboAPI?.exportChromeExtension?.({ revealInExplorer: true });
+                                    }}
+                                    style={{
+                                      padding: '4px 9px',
+                                      borderRadius: 7,
+                                      background: 'rgba(255,255,255,0.06)',
+                                      border: '1px solid rgba(255,255,255,0.12)',
+                                      color: '#CBD5E1',
+                                      fontSize: 11,
+                                      fontWeight: 600,
+                                      cursor: 'pointer',
+                                      whiteSpace: 'nowrap',
+                                    }}
+                                  >
+                                    Show Folder
+                                  </button>
+                                  <div
+                                    draggable
+                                    onDragStart={(e) => {
+                                      e.preventDefault();
+                                      window.kiboAPI?.startExtensionDrag?.();
+                                    }}
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: 6,
+                                      padding: '5px 10px',
+                                      borderRadius: 7,
+                                      background: '#1E293B',
+                                      border: '1px dashed rgba(56, 189, 248, 0.5)',
+                                      color: '#BAE6FD',
+                                      fontSize: 11,
+                                      fontWeight: 700,
+                                      cursor: 'grab',
+                                      whiteSpace: 'nowrap',
+                                      flexShrink: 0,
+                                    }}
+                                    title="Drag this directly into chrome://extensions/"
+                                  >
+                                    <SvgIcon name="folder" size={12} color="#38BDF8" />
+                                    <span>Drag Kibo Extension</span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Custom Connections (Meta Ads, Webhooks, APIs) */}
+                          <div className="kibo-settings-card" style={{ marginTop: 10 }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                               <div>
-                                <div className="kibo-settings-row-label">Custom Connections (Meta Ads, Webhooks, APIs)</div>
-                                <div className="kibo-settings-row-desc">Add custom external platforms or ad accounts for Kibo agents to query</div>
+                                <div className="kibo-settings-row-label">Custom Endpoints & Private Webhooks</div>
+                                <div className="kibo-settings-row-desc">Add private webhooks, custom endpoints, or proprietary ad telemetry</div>
                               </div>
                             </div>
 
                             {customIntegrations.map((conn) => {
                               const lowerConn = conn.name.toLowerCase();
-                              const customIcon = lowerConn.includes('meta')
-                                ? 'meta'
+                              const customLogo = lowerConn.includes('meta')
+                                ? './logos/meta.png'
                                 : lowerConn.includes('linear')
-                                ? 'linear'
+                                ? './logos/linear.png'
                                 : lowerConn.includes('github')
-                                ? 'github'
+                                ? './logos/github.png'
                                 : lowerConn.includes('gmail')
-                                ? 'gmail'
-                                : 'plug';
+                                ? './logos/gmail.png'
+                                : null;
+
                               return (
-                              <div key={conn.id} className="kibo-settings-row">
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                  <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                    <SvgIcon name={customIcon} size={15} color={conn.connected ? '#38BDF8' : '#94A3B8'} />
-                                  </div>
-                                  <div>
-                                    <div className="kibo-settings-row-label">{conn.name}</div>
-                                    <div className="kibo-settings-row-desc">
-                                      {conn.category} · <span style={{ fontFamily: 'var(--kibo-font-mono)', fontSize: 10.5 }}>{conn.endpointOrId}</span>
+                                <div key={conn.id} className="kibo-settings-row">
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <div style={{ width: 28, height: 28, borderRadius: 7, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                                      {customLogo ? (
+                                        <img src={customLogo} width="20" height="20" alt={conn.name} style={{ objectFit: 'contain' }} />
+                                      ) : (
+                                        <SvgIcon name="plug" size={14} color={conn.connected ? '#38BDF8' : '#94A3B8'} />
+                                      )}
+                                    </div>
+                                    <div>
+                                      <div className="kibo-settings-row-label">{conn.name}</div>
+                                      <div className="kibo-settings-row-desc">
+                                        {conn.category} · <span style={{ fontFamily: 'var(--kibo-font-mono)', fontSize: 10.5 }}>{conn.endpointOrId}</span>
+                                      </div>
                                     </div>
                                   </div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setCustomIntegrations((prev) => {
+                                          const next = prev.map((c) => (c.id === conn.id ? { ...c, connected: !c.connected } : c));
+                                          localStorage.setItem('kibo_custom_integrations', JSON.stringify(next));
+                                          return next;
+                                        });
+                                      }}
+                                      style={{
+                                        background: conn.connected ? 'rgba(56, 189, 248, 0.15)' : '#1E293B',
+                                        color: conn.connected ? '#38BDF8' : '#94A3B8',
+                                        border: conn.connected ? '1px solid rgba(56, 189, 248, 0.35)' : '1px solid rgba(255,255,255,0.08)',
+                                        borderRadius: 7,
+                                        padding: '4px 10px',
+                                        fontSize: 11,
+                                        fontWeight: 700,
+                                        cursor: 'pointer',
+                                      }}
+                                    >
+                                      {conn.connected ? 'Active' : 'Enable'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setCustomIntegrations((prev) => {
+                                          const next = prev.filter((c) => c.id !== conn.id);
+                                          localStorage.setItem('kibo_custom_integrations', JSON.stringify(next));
+                                          return next;
+                                        });
+                                      }}
+                                      style={{
+                                        background: 'transparent',
+                                        color: '#64748B',
+                                        border: '1px solid rgba(255,255,255,0.08)',
+                                        borderRadius: 7,
+                                        padding: '4px 8px',
+                                        fontSize: 11,
+                                        cursor: 'pointer',
+                                      }}
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setCustomIntegrations((prev) => {
-                                        const next = prev.map((c) => (c.id === conn.id ? { ...c, connected: !c.connected } : c));
-                                        localStorage.setItem('kibo_custom_integrations', JSON.stringify(next));
-                                        return next;
-                                      });
-                                    }}
-                                    style={{
-                                      background: conn.connected ? 'rgba(56, 189, 248, 0.15)' : '#1E293B',
-                                      color: conn.connected ? '#38BDF8' : '#94A3B8',
-                                      border: conn.connected ? '1px solid rgba(56, 189, 248, 0.35)' : '1px solid rgba(255,255,255,0.08)',
-                                      borderRadius: 7,
-                                      padding: '4px 10px',
-                                      fontSize: 11,
-                                      fontWeight: 700,
-                                      cursor: 'pointer',
-                                    }}
-                                  >
-                                    {conn.connected ? 'Active' : 'Enable'}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setCustomIntegrations((prev) => {
-                                        const next = prev.filter((c) => c.id !== conn.id);
-                                        localStorage.setItem('kibo_custom_integrations', JSON.stringify(next));
-                                        return next;
-                                      });
-                                    }}
-                                    style={{
-                                      background: 'transparent',
-                                      color: '#64748B',
-                                      border: '1px solid rgba(255,255,255,0.08)',
-                                      borderRadius: 7,
-                                      padding: '4px 8px',
-                                      fontSize: 11,
-                                      cursor: 'pointer',
-                                    }}
-                                  >
-                                    Remove
-                                  </button>
-                                </div>
-                              </div>
                               );
                             })}
 

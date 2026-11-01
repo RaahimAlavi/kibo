@@ -169,6 +169,11 @@ const kiboAPI = {
     ipcRenderer.on('clipboard-item-added', listener);
     return () => ipcRenderer.removeListener('clipboard-item-added', listener);
   },
+  onDesktopClickedOutside: (callback) => {
+    const listener = () => callback();
+    ipcRenderer.on('desktop-clicked-outside', listener);
+    return () => ipcRenderer.removeListener('desktop-clicked-outside', listener);
+  },
   onRoamingDismiss: (callback) => {
     const listener = () => callback();
     ipcRenderer.on('roaming-dismiss', listener);
@@ -212,6 +217,10 @@ const kiboAPI = {
   openChromeExtensionsPage: () => ipcRenderer.invoke('open-chrome-extensions-page'),
   startExtensionDrag: () => ipcRenderer.send('start-extension-drag'),
   pickSkillMdFile: () => ipcRenderer.invoke('pick-skill-md-file'),
+  composioGetStatus: (customKey) => ipcRenderer.invoke('composio-get-status', customKey),
+  composioConnectApp: (toolkitSlug, customKey) => ipcRenderer.invoke('composio-connect-app', toolkitSlug, customKey),
+  composioGetConnectedAccounts: (customKey) => ipcRenderer.invoke('composio-get-connected-accounts', customKey),
+  composioDisconnectAccount: (accountId, customKey) => ipcRenderer.invoke('composio-disconnect-account', accountId, customKey),
   getFilePath: (file) => {
     try {
       if (webUtils && typeof webUtils.getPathForFile === 'function') {

@@ -383,22 +383,22 @@
 .companion-nav-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  height: 28px;
+  justify-content: space-between;
+  height: 32px;
   margin-bottom: 14px;
-  padding-right: 38px; /* Reserves dedicated right-hand space so tabs never crowd the sound button */
+  padding: 0 4px 0 10px;
   position: relative;
   width: 100%;
+  box-sizing: border-box;
   z-index: 3;
 }
 
 .companion-header-actions {
-  position: absolute;
-  right: 2px;
-  top: 1px;
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
   z-index: 4;
 }
 
