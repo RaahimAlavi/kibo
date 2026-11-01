@@ -5,6 +5,15 @@ import Lenis from 'lenis';
 import { KiboApp } from './desktop/KiboApp';
 import { SoulCanvas } from './components/SoulCanvas';
 import { SOUL_SKINS } from './lib/soulMath';
+import { WebHeader, WindowsLogoIcon } from './components/WebHeader';
+import { WebFooter } from './components/WebFooter';
+import { BuyPage } from './pages/BuyPage';
+import { CustomerAccessPage } from './pages/CustomerAccessPage';
+import { RequirementsPage } from './pages/RequirementsPage';
+import { LicenseTermsPage } from './pages/LicenseTermsPage';
+import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
+import { RefundPolicyPage } from './pages/RefundPolicyPage';
+import { ContactGrievancesPage } from './pages/ContactGrievancesPage';
 
 interface StoryScene {
   id: string;
@@ -78,7 +87,7 @@ const NOTCH_FEATURES = [
     name: 'Convert',
     summary: 'Drag any file into the closed notch or ask Kibo by voice to convert between PDF, Word (.docx), Markdown, CSV, JSON, HTML, and images while keeping your original file untouched.',
     previewTitle: 'Universal File Converter',
-    previewMeta: 'PDF ↔ Word · Voice Filename Match · Original Safe',
+    previewMeta: 'PDF to Word · Voice Filename Match · Original Safe',
   },
   {
     name: 'Focus',
@@ -142,6 +151,20 @@ export function App() {
     );
   })();
 
+  const [currentRoute, setCurrentRoute] = useState<string>(() => {
+    if (typeof window === 'undefined') return 'home';
+    const p = window.location.pathname.toLowerCase();
+    const h = window.location.hash.toLowerCase();
+    if (p === '/buy' || p === '/buy/' || h === '#buy' || h === '#/buy') return 'buy';
+    if (p === '/access' || p === '/portal' || h === '#access' || h === '#portal') return 'access';
+    if (p === '/requirements' || h === '#requirements') return 'requirements';
+    if (p === '/terms' || p === '/license' || h === '#terms') return 'terms';
+    if (p === '/privacy' || h === '#privacy') return 'privacy';
+    if (p === '/refunds' || p === '/refund' || h === '#refunds') return 'refunds';
+    if (p === '/contact' || p === '/grievances' || h === '#contact') return 'contact';
+    return 'home';
+  });
+
   const [sceneIdx, setSceneIdx] = useState(0);
   const [featureIdx, setFeatureIdx] = useState(0);
   const [openFaqIdx, setOpenFaqIdx] = useState<number | null>(null);
@@ -149,6 +172,40 @@ export function App() {
   const sceneCardRef = useRef<HTMLDivElement>(null);
   const featureBodyRef = useRef<HTMLDivElement>(null);
   const lenisRef = useRef<Lenis | null>(null);
+
+  const handleNavigate = (route: string, anchor?: string) => {
+    let newUrl = '/';
+    if (route !== 'home') {
+      newUrl = `/${route}`;
+    } else if (anchor) {
+      newUrl = `/#${anchor}`;
+    }
+
+    if (window.location.pathname + window.location.hash !== newUrl) {
+      window.history.pushState({}, '', newUrl);
+    }
+
+    setCurrentRoute(route);
+
+    if (route === 'home' && anchor) {
+      setTimeout(() => {
+        const targetEl = document.getElementById(anchor);
+        if (targetEl) {
+          if (lenisRef.current) {
+            lenisRef.current.scrollTo(targetEl, { offset: -64, duration: 1.25 });
+          } else {
+            targetEl.scrollIntoView({ behavior: 'smooth' });
+          }
+        }
+      }, 60);
+    } else {
+      if (lenisRef.current) {
+        lenisRef.current.scrollTo(0, { duration: 0.8 });
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+  };
 
   const handleScrollToTop = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -176,6 +233,35 @@ export function App() {
       targetEl.scrollIntoView({ behavior: 'smooth' });
     }
   };
+
+  useEffect(() => {
+    if (isDesktopRuntime) return;
+
+    const handlePopState = () => {
+      const p = window.location.pathname.toLowerCase();
+      const h = window.location.hash.toLowerCase();
+      if (p === '/buy' || p === '/buy/' || h === '#buy' || h === '#/buy') {
+        setCurrentRoute('buy');
+      } else if (p === '/access' || p === '/portal' || h === '#access' || h === '#portal') {
+        setCurrentRoute('access');
+      } else if (p === '/requirements' || h === '#requirements') {
+        setCurrentRoute('requirements');
+      } else if (p === '/terms' || p === '/license' || h === '#terms') {
+        setCurrentRoute('terms');
+      } else if (p === '/privacy' || h === '#privacy') {
+        setCurrentRoute('privacy');
+      } else if (p === '/refunds' || p === '/refund' || h === '#refunds') {
+        setCurrentRoute('refunds');
+      } else if (p === '/contact' || p === '/grievances' || h === '#contact') {
+        setCurrentRoute('contact');
+      } else {
+        setCurrentRoute('home');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [isDesktopRuntime]);
 
   useEffect(() => {
     if (isDesktopRuntime) {
@@ -723,6 +809,29 @@ export function App() {
           line-height: 1;
           white-space: nowrap;
         }
+        .kibo-footer-grid {
+          display: grid;
+          grid-template-columns: 2fr 1fr 1fr 1fr;
+          gap: 36px;
+          position: relative;
+          z-index: 1;
+        }
+        .kibo-footer-top-btn {
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          color: #121316;
+          font-size: 13px;
+          font-weight: 600;
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 0;
+          font-family: inherit;
+        }
+        .kibo-footer-top-btn:hover {
+          text-decoration: underline;
+        }
         @media (max-width: 860px) {
           .kibo-grid-3, .kibo-notch-showcase, .kibo-stage-tabs, .kibo-footer-grid {
             grid-template-columns: 1fr;
@@ -730,76 +839,72 @@ export function App() {
         }
       `}</style>
 
-      {/* Top Navigation */}
-      <header className="kibo-web-nav">
-        <div className="kibo-web-nav-inner">
-          <a href="#top" onClick={handleScrollToTop} className="kibo-web-brand" title="Scroll to top">
-            <SoulCanvas
-              soul={SOUL_SKINS[0]}
-              width={32}
-              height={28}
-              scale={0.75}
-              mode="LISTENING"
-              interactive={false}
-            />
-            <span>Kibo</span>
-          </a>
+      {currentRoute === 'buy' && <BuyPage onNavigate={handleNavigate} />}
+      {currentRoute === 'access' && <CustomerAccessPage onNavigate={handleNavigate} />}
+      {currentRoute === 'requirements' && <RequirementsPage onNavigate={handleNavigate} />}
+      {currentRoute === 'terms' && <LicenseTermsPage onNavigate={handleNavigate} />}
+      {currentRoute === 'privacy' && <PrivacyPolicyPage onNavigate={handleNavigate} />}
+      {currentRoute === 'refunds' && <RefundPolicyPage onNavigate={handleNavigate} />}
+      {currentRoute === 'contact' && <ContactGrievancesPage onNavigate={handleNavigate} />}
 
-          <nav className="kibo-web-links">
-            <a href="#how-it-works" onClick={(e) => handleNavClick(e, '#how-it-works')} className="kibo-web-link">How it works</a>
-            <a href="#workspace" onClick={(e) => handleNavClick(e, '#workspace')} className="kibo-web-link">Notch Workspace</a>
-            <a href="#faq" onClick={(e) => handleNavClick(e, '#faq')} className="kibo-web-link">FAQ</a>
-            <a href="#download" onClick={(e) => handleNavClick(e, '#download')} className="kibo-web-link">Download</a>
-          </nav>
+      {currentRoute === 'home' && (
+        <div ref={pageRef}>
+          {/* Top Navigation */}
+          <WebHeader currentRoute="home" onNavigate={handleNavigate} />
 
-          <a
-            href="./download/Kibo-Setup.exe"
-            download="Kibo-Setup.exe"
-            className="kibo-web-pill-cta"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
-          >
-            <WindowsLogoIcon size={13} />
-            <span>Download for Windows</span>
-          </a>
-        </div>
-      </header>
+          <main id="top" className="kibo-web-container">
+            {/* Hero Section */}
+            <section className="kibo-hero">
+              <div className="kibo-hero-tag kibo-hero-fade">
+                <span className="kibo-hero-tag-dot" />
+                <span>The voice assistant that actually does things for you</span>
+              </div>
 
-      <main id="top" className="kibo-web-container">
-        {/* Hero Section */}
-        <section className="kibo-hero">
-          <div className="kibo-hero-tag kibo-hero-fade">
-            <span className="kibo-hero-tag-dot" />
-            <span>The voice assistant that actually does things for you</span>
-          </div>
+              <h1 className="kibo-hero-h1">
+                {headlineWords.map((word, idx) => (
+                  <span key={idx} className="kibo-word-mask">
+                    <span className="kibo-reveal-word">{word}</span>
+                  </span>
+                ))}
+              </h1>
 
-          <h1 className="kibo-hero-h1">
-            {headlineWords.map((word, idx) => (
-              <span key={idx} className="kibo-word-mask">
-                <span className="kibo-reveal-word">{word}</span>
-              </span>
-            ))}
-          </h1>
+              <p className="kibo-hero-sub kibo-hero-fade">
+                Kibo lives quietly in your top bezel. Hold a shortcut to control applications,
+                inspect on-screen code or errors, dictate clean thoughts, or run
+                background workers without leaving your active window.
+              </p>
 
-          <p className="kibo-hero-sub kibo-hero-fade">
-            Kibo lives quietly in your top bezel. Hold a shortcut to control applications,
-            inspect on-screen code or errors, dictate clean thoughts, or run
-            background workers without leaving your active window.
-          </p>
-
-          <div className="kibo-hero-cta-row kibo-hero-fade" style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '26px 0 42px' }}>
-            <a
-              href="./download/Kibo-Setup.exe"
-              download="Kibo-Setup.exe"
-              className="kibo-web-pill-cta"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 9, padding: '12px 26px', fontSize: 14.5 }}
-            >
-              <WindowsLogoIcon size={15} />
-              <span>Download for Windows</span>
-            </a>
-            <span style={{ fontSize: 13, color: '#68707C', fontWeight: 500 }}>
-              Windows 10 / 11 · Free & Local-First
-            </span>
-          </div>
+              <div className="kibo-hero-cta-row kibo-hero-fade" style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '26px 0 42px', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => handleNavigate('buy')}
+                  className="kibo-web-pill-cta"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 9, padding: '12px 26px', fontSize: 14.5, border: 'none', cursor: 'pointer' }}
+                >
+                  <span>Get Founders Edition · $8</span>
+                </button>
+                <a
+                  href="./download/Kibo-Setup.exe"
+                  download="Kibo-Setup.exe"
+                  className="kibo-web-pill-cta"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '12px 20px',
+                    fontSize: 14,
+                    background: 'transparent',
+                    color: '#121316',
+                    border: '1px solid rgba(18, 19, 22, 0.16)',
+                    textDecoration: 'none',
+                  }}
+                >
+                  <WindowsLogoIcon size={14} />
+                  <span>Download (.exe)</span>
+                </a>
+                <span style={{ fontSize: 13, color: '#68707C', fontWeight: 500 }}>
+                  Windows 10 & 11 · One-Time Payment
+                </span>
+              </div>
 
           {/* Auto-Playing Visual Story Stage */}
           <div className="kibo-stage-frame kibo-hero-fade">
@@ -1136,6 +1241,115 @@ export function App() {
             })}
           </div>
         </section>
+
+        {/* Founders Edition Highlight Section */}
+        <section id="founders" style={{ margin: '80px 0 32px' }}>
+          <div
+            className="kibo-card"
+            style={{
+              padding: '44px 40px',
+              background: '#FFFFFF',
+              border: '1px solid rgba(18, 19, 22, 0.12)',
+              borderRadius: 24,
+              boxShadow: '0 16px 40px rgba(18, 19, 22, 0.04)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
+              <div>
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '4px 12px',
+                    borderRadius: 999,
+                    background: 'rgba(18, 19, 22, 0.05)',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    color: '#121316',
+                    marginBottom: 10,
+                  }}
+                >
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#059669' }} />
+                  Limited Founders Enrollment
+                </span>
+                <h2 style={{ fontSize: 'clamp(26px, 3.5vw, 36px)', fontWeight: 800, color: '#121316', letterSpacing: '-0.02em', margin: 0 }}>
+                  Get Kibo Founders Edition
+                </h2>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <span style={{ fontSize: 36, fontWeight: 800, color: '#121316', letterSpacing: '-0.03em' }}>$8</span>
+                <span style={{ display: 'block', fontSize: 13, color: '#68707C' }}>One-time payment</span>
+              </div>
+            </div>
+
+            <p style={{ fontSize: 15, lineHeight: 1.6, color: '#4B5563', maxWidth: 680, margin: '0 0 28px' }}>
+              Equip your Windows workspace with the ambient cyber companion. Single investment, perpetual license, and zero recurring fees.
+            </p>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                gap: 16,
+                marginBottom: 32,
+              }}
+            >
+              <div style={{ padding: '16px 18px', borderRadius: 12, background: '#F9FAFB', border: '1px solid rgba(18, 19, 22, 0.06)' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#121316', marginBottom: 4 }}>Pay Once, No Subscription</div>
+                <div style={{ fontSize: 12, lineHeight: 1.5, color: '#68707C' }}>Single upfront payment. No recurring monthly or annual membership dues.</div>
+              </div>
+              <div style={{ padding: '16px 18px', borderRadius: 12, background: '#F9FAFB', border: '1px solid rgba(18, 19, 22, 0.06)' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#121316', marginBottom: 4 }}>Free Future Updates</div>
+                <div style={{ fontSize: 12, lineHeight: 1.5, color: '#68707C' }}>Receive all subsequent updates and feature improvements in the Founders series at no charge.</div>
+              </div>
+              <div style={{ padding: '16px 18px', borderRadius: 12, background: '#F9FAFB', border: '1px solid rgba(18, 19, 22, 0.06)' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#121316', marginBottom: 4 }}>Personal Gemini Key</div>
+                <div style={{ fontSize: 12, lineHeight: 1.5, color: '#68707C' }}>Connect your free Google AI Studio key with generous rate limits and zero markup.</div>
+              </div>
+              <div style={{ padding: '16px 18px', borderRadius: 12, background: '#F9FAFB', border: '1px solid rgba(18, 19, 22, 0.06)' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#121316', marginBottom: 4 }}>Keep It Forever</div>
+                <div style={{ fontSize: 12, lineHeight: 1.5, color: '#68707C' }}>Your perpetual license remains valid even after public enrollment concludes.</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+              <button
+                onClick={() => handleNavigate('buy')}
+                style={{
+                  padding: '13px 26px',
+                  borderRadius: 12,
+                  background: '#121316',
+                  color: '#FFFFFF',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  border: 'none',
+                  cursor: 'pointer',
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                Claim Founders Access · $8
+              </button>
+              <button
+                onClick={() => handleNavigate('access')}
+                style={{
+                  padding: '13px 22px',
+                  borderRadius: 12,
+                  background: 'transparent',
+                  color: '#121316',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  border: '1px solid rgba(18, 19, 22, 0.16)',
+                  cursor: 'pointer',
+                }}
+              >
+                Already have a license? Sign In
+              </button>
+            </div>
+          </div>
+        </section>
       </main>
 
       <footer
@@ -1154,111 +1368,58 @@ export function App() {
           <div className="kibo-footer-cta-card">
             <div>
               <h3 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 8px', letterSpacing: '-0.02em' }}>
-                Ready to give your desktop a soul?
+                Secure Founders Edition for $8
               </h3>
               <p style={{ fontSize: 14.5, color: '#A1A1AA', margin: 0 }}>
-                Download Kibo for Windows 10 & 11. Free, local-first, zero telemetry.
+                Single upfront payment. Lifetime license. Zero subscription fees.
               </p>
             </div>
-            <a
-              href="./download/Kibo-Setup.exe"
-              download="Kibo-Setup.exe"
-              className="kibo-web-pill-cta"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 9,
-                background: '#FFFFFF',
-                color: '#0C0D12',
-                padding: '12px 26px',
-                fontSize: 14.5,
-                fontWeight: 700,
-                textDecoration: 'none',
-              }}
-            >
-              <WindowsLogoIcon size={14} />
-              <span>Download for Windows</span>
-            </a>
-          </div>
-
-          {/* Minimal Navigation & Brand Row */}
-          <div className="kibo-footer-nav-row">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <SoulCanvas
-                soul={SOUL_SKINS[0]}
-                width={28}
-                height={26}
-                scale={0.75}
-                mode="LISTENING"
-                interactive={false}
-              />
-              <span style={{ fontSize: 16, fontWeight: 800, color: '#121316', letterSpacing: '-0.02em' }}>
-                Kibo
-              </span>
-              <span style={{ fontSize: 13, color: '#71717A', fontWeight: 500 }}>
-                · The voice assistant that actually does things for you
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
-              <a href="#how-it-works" onClick={(e) => handleNavClick(e, '#how-it-works')} className="kibo-footer-link">
-                How it works
-              </a>
-              <a href="#workspace" onClick={(e) => handleNavClick(e, '#workspace')} className="kibo-footer-link">
-                Workspace
-              </a>
-              <a href="#faq" onClick={(e) => handleNavClick(e, '#faq')} className="kibo-footer-link">
-                FAQ
-              </a>
-              <a href="https://github.com/RaahimAlavi/kibo" target="_blank" rel="noreferrer" className="kibo-footer-link">
-                GitHub
-              </a>
-            </div>
-          </div>
-
-          {/* Bottom Bar */}
-          <div
-            style={{
-              marginTop: 32,
-              paddingTop: 24,
-              borderTop: '1px solid rgba(18, 19, 22, 0.08)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: 16,
-              fontSize: 13,
-              color: '#68707C',
-            }}
-          >
-            <div>
-              Designed & built by <strong style={{ color: '#121316', fontWeight: 700 }}>Raahim Alavi</strong>. Open source under MIT.
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-              <span>Built for Windows 10 & 11</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
               <button
-                onClick={handleScrollToTop}
+                onClick={() => handleNavigate('buy')}
+                className="kibo-web-pill-cta"
                 style={{
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: '#121316',
-                  fontSize: 13,
-                  fontWeight: 600,
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 4,
-                  padding: 0,
-                  fontFamily: 'inherit',
+                  gap: 9,
+                  background: '#FFFFFF',
+                  color: '#0C0D12',
+                  padding: '12px 24px',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  border: 'none',
+                  cursor: 'pointer',
                 }}
-                title="Scroll to top"
               >
-                Back to top ↑
+                <span>Get Founders Edition · $8</span>
               </button>
+              <a
+                href="./download/Kibo-Setup.exe"
+                download="Kibo-Setup.exe"
+                className="kibo-web-pill-cta"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  color: '#FFFFFF',
+                  padding: '12px 20px',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                }}
+              >
+                <WindowsLogoIcon size={14} />
+                <span>Installer (.exe)</span>
+              </a>
             </div>
           </div>
+
+          <WebFooter onNavigate={handleNavigate} onScrollToTop={handleScrollToTop} />
         </div>
       </footer>
+        </div>
+      )}
     </div>
   );
 }

@@ -11,7 +11,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-0078D4?style=flat-square&logo=windows" alt="Platform" />
-  <img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License" />
+  <img src="https://img.shields.io/badge/License-Proprietary-darkgray?style=flat-square" alt="License" />
   <img src="https://img.shields.io/badge/Runtime-Electron%20%7C%20React%20%7C%20Vite-61DAFB?style=flat-square" alt="Stack" />
   <img src="https://img.shields.io/badge/AI-Gemini%202.5%20%7C%20Claude%20%7C%20Local%20LLM-8E75FF?style=flat-square" alt="AI Models" />
 </p>
@@ -20,33 +20,33 @@
 
 ## Overview
 
-**Kibo** lives quietly in your top display bezel. Whenever you need assistance, hold a shortcut to control applications, inspect on-screen code or errors, dictate structured notes, or run background workflows—all without switching windows or interrupting your flow.
+**Kibo** lives quietly in your top display bezel. Whenever you need assistance, hold a shortcut to control applications, inspect on-screen code or errors, dictate structured notes, or run background workflows without switching windows or interrupting your flow.
 
 ---
 
 ## Key Features
 
-### 🎙️ Voice Control & Computer Use (`Win + Alt`)
+### Voice Control & Computer Use (`Win + Alt`)
 - Hold your shortcut to speak natural instructions.
 - Controls Windows applications, toggles system settings (Wi-Fi, Bluetooth, Night Light, Dark Mode), manipulates windows, and types directly at your cursor.
 - Fast sub-second execution powered by Gemini 2.5 Flash and native Win32 UIAutomation.
 
-### ⭕ Circle-to-Ask / Screen Vision (`Ctrl + Shift`)
+### Circle-to-Ask / Screen Vision (`Ctrl + Shift`)
 - Trace a freeform circle or box around any area on your screen.
 - Instantly sends the cropped screenshot to multimodal Gemini to debug code, explain terminal errors, translate text, or analyze design components.
 
-### ✍️ Clean Dictation (`Ctrl + Win`)
+### Clean Dictation (`Ctrl + Win`)
 - Speak rough, spoken thoughts with mid-sentence self-corrections.
 - Kibo automatically strips filler words (`um`, `uh`, `like`), structures paragraphs, and inserts formatted text directly into your active input field.
 
-### 🏝️ Top Bezel Hardware Island
+### Top Bezel Hardware Island
 - **Controls**: Instant toggles for Wi-Fi, Bluetooth, Audio device switching, Night Light warmth, Dark Mode, and volume sliders.
 - **Media Player**: Real-time song scrub bar, album artwork, and audio EQ spectrum for Spotify, YouTube, and system media sessions.
 - **Today & Focus**: Pomodoro focus timer, task priorities checklist, and daily weather.
 - **Clipboard Manager**: Searchable multi-format clipboard history (text, code, links, images) with one-click double-tap paste.
 - **Curated 4K Wallpapers**: 12 curated vibrant wallpapers with instant top-bezel shockwave transitions and automatic UI color palette extraction.
 
-### 🤖 6 Modular Droid Chassis
+### 6 Modular Droid Chassis
 Choose from 6 factory-calibrated Kibo chassis skins with animated gyro rings and visor LEDs:
 - **MK-I Cobalt** (`#38BDF8`) · Titanium chassis with dual-axis gyroscope
 - **TE-02 Field** (`#F59E0B`) · High-contrast amber dot-matrix optics
@@ -88,23 +88,17 @@ Choose from 6 factory-calibrated Kibo chassis skins with animated gyro rings and
 
 ### Installation
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/RaahimAlavi/kibo.git
-   cd kibo
-   ```
-
-2. **Install dependencies**:
+1. **Install dependencies**:
    ```bash
    npm install
    ```
 
-3. **Launch the Desktop Companion**:
+2. **Launch the Desktop Companion**:
    ```bash
    npm run app
    ```
 
-4. **Launch the Web Showcase / Landing Page**:
+3. **Launch the Web Showcase / Landing Page**:
    ```bash
    npm run dev
    ```
@@ -113,7 +107,7 @@ Choose from 6 factory-calibrated Kibo chassis skins with animated gyro rings and
 
 ## Building Standalone Windows Installer (`.exe`)
 
-To package a production NSIS installer executable for distribution:
+To package a production NSIS installer executable:
 
 ```bash
 npm run dist
@@ -126,14 +120,7 @@ release/Kibo Setup 1.0.0.exe
 
 ---
 
-## Contributing
+## Copyright & Author
 
-Contributions, feature requests, and bug reports are welcome!
-Feel free to open an issue or submit a pull request on [GitHub Discussions](https://github.com/RaahimAlavi/kibo/discussions).
-
----
-
-## License & Author
-
-Designed and built by **[Raahim Alavi](https://github.com/RaahimAlavi)**.  
-Released under the [MIT License](LICENSE).
+Designed and built by **Raahim Alavi**.  
+All rights reserved. Proprietary software.
