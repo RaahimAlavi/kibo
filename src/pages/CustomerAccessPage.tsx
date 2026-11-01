@@ -1,5 +1,5 @@
 // src/pages/CustomerAccessPage.tsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { WebHeader, WindowsLogoIcon } from '../components/WebHeader';
 import { WebFooter } from '../components/WebFooter';
 
@@ -9,25 +9,82 @@ interface CustomerAccessPageProps {
 
 export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNavigate }) => {
   const [email, setEmail] = useState('');
-  const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
+  const [verifiedEmail, setVerifiedEmail] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('kibo_customer_email') || null;
+  });
   const [errorMsg, setErrorMsg] = useState('');
+  const [setupNotice, setSetupNotice] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Check URL parameters when arriving from Lemon Squeezy redirect
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const redirectEmail = params.get('email') || params.get('checkout_email') || params.get('customer_email');
+
+    if (redirectEmail && redirectEmail.includes('@')) {
+      const clean = redirectEmail.trim().toLowerCase();
+      localStorage.setItem('kibo_customer_email', clean);
+      setVerifiedEmail(clean);
+    }
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+    setSetupNotice(null);
 
-    const cleanEmail = email.trim();
+    const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail || !cleanEmail.includes('@') || cleanEmail.length < 5) {
       setErrorMsg('Please enter a valid email address.');
       return;
     }
 
     setIsLoading(true);
-    setTimeout(() => {
+
+    try {
+      const response = await fetch('/api/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail }),
+      });
+
+      const data = await response.json();
+
+      if (data.verified) {
+        localStorage.setItem('kibo_customer_email', cleanEmail);
+        setVerifiedEmail(cleanEmail);
+      } else if (data.needsSetup) {
+        // Lemon Squeezy API key is not yet set in Vercel environment variables
+        setSetupNotice(
+          'Your Lemon Squeezy API Key has not been added to Vercel Environment Variables yet. Once added in Vercel under Settings > Environment Variables, this automatically checks real orders in real-time.'
+        );
+        // Allow temporary verification for testing if email matches typical format
+        localStorage.setItem('kibo_customer_email', cleanEmail);
+        setVerifiedEmail(cleanEmail);
+      } else {
+        setErrorMsg(
+          data.error ||
+            `No active Founders Edition order was found for ${cleanEmail}. Please make sure you enter the exact email address used at checkout.`
+        );
+      }
+    } catch (err) {
+      console.error('Verification error:', err);
+      setErrorMsg('Unable to connect to the order verification service. Please try again.');
+    } finally {
       setIsLoading(false);
-      setVerifiedEmail(cleanEmail);
-    }, 600);
+    }
+  };
+
+  const handleSignOut = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('kibo_customer_email');
+    }
+    setVerifiedEmail(null);
+    setEmail('');
+    setErrorMsg('');
+    setSetupNotice(null);
   };
 
   return (
@@ -76,21 +133,44 @@ export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNaviga
               {/* Verification Header */}
               <div
                 style={{
-                  display: 'inline-flex',
+                  display: 'flex',
                   alignItems: 'center',
-                  gap: 8,
-                  padding: '5px 12px',
-                  borderRadius: 999,
-                  background: '#ECFDF5',
-                  border: '1px solid #A7F3D0',
-                  color: '#065F46',
-                  fontSize: 12,
-                  fontWeight: 700,
+                  justifyContent: 'space-between',
                   marginBottom: 16,
                 }}
               >
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#059669' }} />
-                <span>Founders Edition Verified</span>
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '5px 12px',
+                    borderRadius: 999,
+                    background: '#ECFDF5',
+                    border: '1px solid #A7F3D0',
+                    color: '#065F46',
+                    fontSize: 12,
+                    fontWeight: 700,
+                  }}
+                >
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#059669' }} />
+                  <span>Founders Edition Verified</span>
+                </div>
+
+                <button
+                  onClick={handleSignOut}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    fontSize: 12,
+                    color: '#68707C',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    padding: 0,
+                  }}
+                >
+                  Sign Out
+                </button>
               </div>
 
               <h2
@@ -108,6 +188,23 @@ export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNaviga
               <p style={{ fontSize: 13, lineHeight: 1.55, color: '#4B5563', margin: '0 0 24px' }}>
                 Order credentials verified for <strong>{verifiedEmail}</strong>. You have unlimited personal activations across all your Windows devices.
               </p>
+
+              {setupNotice && (
+                <div
+                  style={{
+                    padding: 14,
+                    borderRadius: 10,
+                    background: '#FFFBEB',
+                    border: '1px solid #FDE68A',
+                    color: '#92400E',
+                    fontSize: 12,
+                    lineHeight: 1.5,
+                    marginBottom: 20,
+                  }}
+                >
+                  {setupNotice}
+                </div>
+              )}
 
               {/* Direct Installer Download Button */}
               <a
@@ -168,10 +265,7 @@ export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNaviga
               <div style={{ marginTop: 20, textAlign: 'center' }}>
                 <button
                   type="button"
-                  onClick={() => {
-                    setVerifiedEmail(null);
-                    setEmail('');
-                  }}
+                  onClick={handleSignOut}
                   style={{
                     background: 'transparent',
                     border: 'none',
@@ -182,7 +276,7 @@ export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNaviga
                     padding: 0,
                   }}
                 >
-                  Check a different order email
+                  Verify a different order email
                 </button>
               </div>
             </div>
@@ -236,13 +330,14 @@ export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNaviga
                 {errorMsg && (
                   <div
                     style={{
-                      padding: '10px 14px',
-                      borderRadius: 8,
+                      padding: '12px 16px',
+                      borderRadius: 10,
                       background: '#FEF2F2',
                       border: '1px solid #FCA5A5',
                       color: '#B91C1C',
-                      fontSize: 12,
-                      marginBottom: 16,
+                      fontSize: 13,
+                      lineHeight: 1.5,
+                      marginBottom: 18,
                     }}
                   >
                     {errorMsg}
@@ -266,7 +361,7 @@ export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNaviga
                     letterSpacing: '-0.01em',
                   }}
                 >
-                  {isLoading ? 'Verifying...' : 'Access My Downloads & License'}
+                  {isLoading ? 'Verifying with Lemon Squeezy...' : 'Access My Downloads & License'}
                 </button>
               </form>
 

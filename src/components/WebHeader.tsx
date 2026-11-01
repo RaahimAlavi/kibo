@@ -73,28 +73,48 @@ export const WebHeader: React.FC<WebHeaderProps> = ({ currentRoute, onNavigate }
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {/* Profile Icon button linking to Customer Portal */}
-          <a
-            href="/access"
-            onClick={(e) => handleLink(e, 'access')}
-            title="Customer Portal & Downloads"
-            aria-label="Customer Portal"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 38,
-              height: 38,
-              borderRadius: '50%',
-              background: currentRoute === 'access' ? 'rgba(18, 19, 22, 0.08)' : 'rgba(18, 19, 22, 0.04)',
-              border: currentRoute === 'access' ? '1px solid rgba(18, 19, 22, 0.25)' : '1px solid rgba(18, 19, 22, 0.08)',
-              color: '#121316',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              textDecoration: 'none',
-            }}
-          >
-            <ProfileIcon size={17} />
-          </a>
+          {(() => {
+            const hasSavedEmail = typeof window !== 'undefined' && Boolean(localStorage.getItem('kibo_customer_email'));
+            return (
+              <a
+                href="/access"
+                onClick={(e) => handleLink(e, 'access')}
+                title={hasSavedEmail ? 'Verified Customer Portal' : 'Customer Portal & Downloads'}
+                aria-label="Customer Portal"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 38,
+                  height: 38,
+                  borderRadius: '50%',
+                  background: currentRoute === 'access' ? 'rgba(18, 19, 22, 0.08)' : 'rgba(18, 19, 22, 0.04)',
+                  border: currentRoute === 'access' ? '1px solid rgba(18, 19, 22, 0.25)' : '1px solid rgba(18, 19, 22, 0.08)',
+                  color: '#121316',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  textDecoration: 'none',
+                  position: 'relative',
+                }}
+              >
+                <ProfileIcon size={17} />
+                {hasSavedEmail && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: 6,
+                      right: 6,
+                      width: 7,
+                      height: 7,
+                      borderRadius: '50%',
+                      background: '#059669',
+                      border: '1.5px solid #F7F7F4',
+                    }}
+                  />
+                )}
+              </a>
+            );
+          })()}
 
           {currentRoute === 'buy' ? (
             <a
