@@ -15,6 +15,8 @@ interface ProactiveContextNotchProps {
   appId: DetectedAppConfig['id'];
   soul?: SoulConfig;
   isConnected: boolean;
+  isConnecting?: boolean;
+  profileName?: string | null;
   onConnect: () => void;
   onUnlink?: () => void;
   onDismiss: (mode: 'NO' | 'NOT_NOW') => void;
@@ -25,6 +27,8 @@ export const ProactiveContextNotch: React.FC<ProactiveContextNotchProps> = ({
   appId,
   soul,
   isConnected,
+  isConnecting = false,
+  profileName,
   onConnect,
   onUnlink,
   onDismiss,
@@ -191,7 +195,13 @@ export const ProactiveContextNotch: React.FC<ProactiveContextNotchProps> = ({
                   whiteSpace: 'nowrap',
                 }}
               >
-                {isConnected ? `${app.name} Linked` : `Connect ${app.name} to Kibo?`}
+                {isConnected
+                  ? profileName
+                    ? `${app.name} Linked (${profileName})`
+                    : `${app.name} Linked`
+                  : isConnecting
+                  ? `Authorizing ${app.name}...`
+                  : `Connect ${app.name} to Kibo?`}
               </span>
             </div>
             <div
@@ -203,7 +213,7 @@ export const ProactiveContextNotch: React.FC<ProactiveContextNotchProps> = ({
                 letterSpacing: '0.01em',
               }}
             >
-              Use Kibo in {app.name} to:
+              {isConnecting ? 'Please approve in browser...' : `Use Kibo in ${app.name} to:`}
             </div>
           </div>
         </div>
@@ -211,41 +221,46 @@ export const ProactiveContextNotch: React.FC<ProactiveContextNotchProps> = ({
         {/* Right: Kibo Glass Action Pills (Supports Connect + Connected Status + Unlink) */}
         {!isConnected ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-            <button
-              onClick={() => onDismiss('NO')}
-              className="kibo-context-btn muted"
-              style={{
-                padding: '5px 11px',
-                fontSize: '11px',
-                fontWeight: 600,
-                borderRadius: '999px',
-                background: 'rgba(255, 255, 255, 0.06)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                color: '#CBD5E1',
-                cursor: 'pointer',
-              }}
-            >
-              No
-            </button>
+            {!isConnecting && (
+              <>
+                <button
+                  onClick={() => onDismiss('NO')}
+                  className="kibo-context-btn muted"
+                  style={{
+                    padding: '5px 11px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    borderRadius: '999px',
+                    background: 'rgba(255, 255, 255, 0.06)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#CBD5E1',
+                    cursor: 'pointer',
+                  }}
+                >
+                  No
+                </button>
+
+                <button
+                  onClick={() => onDismiss('NOT_NOW')}
+                  className="kibo-context-btn muted"
+                  style={{
+                    padding: '5px 11px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    borderRadius: '999px',
+                    background: 'rgba(255, 255, 255, 0.06)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#CBD5E1',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Later
+                </button>
+              </>
+            )}
 
             <button
-              onClick={() => onDismiss('NOT_NOW')}
-              className="kibo-context-btn muted"
-              style={{
-                padding: '5px 11px',
-                fontSize: '11px',
-                fontWeight: 600,
-                borderRadius: '999px',
-                background: 'rgba(255, 255, 255, 0.06)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                color: '#CBD5E1',
-                cursor: 'pointer',
-              }}
-            >
-              Later
-            </button>
-
-            <button
+              disabled={isConnecting}
               onClick={onConnect}
               className="kibo-context-btn primary"
               style={{
@@ -253,14 +268,26 @@ export const ProactiveContextNotch: React.FC<ProactiveContextNotchProps> = ({
                 fontSize: '11px',
                 fontWeight: 700,
                 borderRadius: '999px',
-                background: `linear-gradient(135deg, ${app.accentColor}, #0284C7)`,
-                border: '1px solid rgba(56, 189, 248, 0.4)',
-                boxShadow: `0 4px 14px ${app.accentColor}44`,
+                background: isConnecting
+                  ? 'rgba(56, 189, 248, 0.25)'
+                  : `linear-gradient(135deg, ${app.accentColor}, #0284C7)`,
+                border: isConnecting ? '1px solid #38BDF8' : '1px solid rgba(56, 189, 248, 0.4)',
+                boxShadow: isConnecting ? '0 0 14px rgba(56, 189, 248, 0.4)' : `0 4px 14px ${app.accentColor}44`,
                 color: '#FFFFFF',
-                cursor: 'pointer',
+                cursor: isConnecting ? 'wait' : 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
               }}
             >
-              Connect
+              {isConnecting ? (
+                <>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#38BDF8' }} />
+                  <span>Connecting...</span>
+                </>
+              ) : (
+                <span>Connect</span>
+              )}
             </button>
           </div>
         ) : (

@@ -2616,7 +2616,11 @@ export const KiboApp: React.FC = () => {
       }
 
       // If already connected, show the "Connected" banner + suggestions for 9 seconds then gently tuck
-      if (multitaskAgent.isAppConnected(appId)) {
+      const isAlreadyConn = composioStatus.accounts.some(
+        (a) => a.slug?.toLowerCase() === appId.toLowerCase() && a.status === 'ACTIVE'
+      ) || (appId === 'vscode' && multitaskAgent.isAppConnected(appId));
+
+      if (isAlreadyConn) {
         appBannerTimerRef.current = setTimeout(() => {
           setDetectedAppId((curr) => (curr === appId ? null : curr));
         }, 9000);
@@ -6468,34 +6472,53 @@ export const KiboApp: React.FC = () => {
             </div>
           )}
 
-          {/* STATE 0: PROACTIVE CONTEXT APP NOTCH ("Connect GitHub to Kibo?") */}
-          {!isFileDraggingOverNotch && showProactiveBanner && detectedAppId && (
-            <ProactiveContextNotch
-              appId={detectedAppId}
-              soul={currentSoul}
-              isConnected={multitaskAgent.isAppConnected(detectedAppId)}
-              onConnect={() => {
-                multitaskAgent.connectApp(detectedAppId);
-                if (appBannerTimerRef.current) clearTimeout(appBannerTimerRef.current);
-                appBannerTimerRef.current = setTimeout(() => {
+          {/* STATE 0: PROACTIVE CONTEXT APP NOTCH ("Connect Notion/GitHub to Kibo?") */}
+          {!isFileDraggingOverNotch && showProactiveBanner && detectedAppId && (() => {
+            const composioAcc = composioStatus.accounts.find(
+              (a) => a.slug?.toLowerCase() === detectedAppId.toLowerCase() && a.status === 'ACTIVE'
+            );
+            const isConn = Boolean(composioAcc) || (detectedAppId === 'vscode' && multitaskAgent.isAppConnected(detectedAppId));
+            const isConnLoading = composioConnectingSlug === detectedAppId;
+
+            return (
+              <ProactiveContextNotch
+                appId={detectedAppId}
+                soul={currentSoul}
+                isConnected={isConn}
+                isConnecting={isConnLoading}
+                profileName={composioAcc?.profileName}
+                onConnect={() => {
+                  if (detectedAppId === 'vscode') {
+                    multitaskAgent.connectApp('vscode');
+                    soundFX.playSuccessChime();
+                    if (appBannerTimerRef.current) clearTimeout(appBannerTimerRef.current);
+                    appBannerTimerRef.current = setTimeout(() => {
+                      setDetectedAppId(null);
+                    }, 6000);
+                  } else {
+                    handleConnectComposioApp(detectedAppId);
+                  }
+                }}
+                onUnlink={() => {
+                  if (composioAcc) {
+                    handleDisconnectComposioAccount(composioAcc.id, detectedAppId);
+                  } else {
+                    multitaskAgent.unlinkApp(detectedAppId);
+                  }
+                }}
+                onDismiss={(mode) => {
+                  multitaskAgent.dismissApp(detectedAppId, mode);
                   setDetectedAppId(null);
-                }, 6000);
-              }}
-              onUnlink={() => {
-                multitaskAgent.unlinkApp(detectedAppId);
-              }}
-              onDismiss={(mode) => {
-                multitaskAgent.dismissApp(detectedAppId, mode);
-                setDetectedAppId(null);
-              }}
-              onRunSuggestion={(suggestionText) => {
-                multitaskAgent.spawnTask(suggestionText, detectedAppId);
-                setDetectedAppId(null);
-                setIsExpanded(true);
-                setActiveTab('Agents');
-              }}
-            />
-          )}
+                }}
+                onRunSuggestion={(suggestionText) => {
+                  multitaskAgent.spawnTask(suggestionText, detectedAppId);
+                  setDetectedAppId(null);
+                  setIsExpanded(true);
+                  setActiveTab('Agents');
+                }}
+              />
+            );
+          })()}
 
           {!isExpanded && !isFileDraggingOverNotch && !showProactiveBanner && !showMediaNotch && notchApiAlert && (
             <div
@@ -10836,7 +10859,11 @@ export const KiboApp: React.FC = () => {
                     </div>
                     <div className="config-card-group">
                       {(['notion', 'github', 'vscode', 'figma', 'gmail'] as const).map((appKey) => {
-                        const linked = multitaskAgent.isAppConnected(appKey);
+                        const composioAcc = composioStatus.accounts.find(
+                          (a) => a.slug?.toLowerCase() === appKey.toLowerCase() && a.status === 'ACTIVE'
+                        );
+                        const linked = Boolean(composioAcc) || (appKey === 'vscode' && multitaskAgent.isAppConnected(appKey));
+                        const isConnLoading = composioConnectingSlug === appKey;
                         const labelMap = {
                           notion: 'Notion Workspace',
                           github: 'GitHub Repositories',
@@ -10847,16 +10874,34 @@ export const KiboApp: React.FC = () => {
                         return (
                           <div key={appKey} className="config-card-row">
                             <div className="config-row-copy">
-                              <div className="config-row-title">{labelMap[appKey]}</div>
+                              <div className="config-row-title">
+                                {labelMap[appKey]}
+                                {composioAcc?.profileName && (
+                                  <span style={{ fontSize: 11, fontWeight: 600, color: '#38BDF8', marginLeft: 8 }}>
+                                    ({composioAcc.profileName})
+                                  </span>
+                                )}
+                              </div>
                               <div className={`config-row-desc ${linked ? 'connected-green' : ''}`}>
                                 {linked ? 'Connected · Proactive suggestions & agent actions enabled' : 'Not linked'}
                               </div>
                             </div>
                             <button
+                              disabled={isConnLoading}
                               onClick={() => {
-                                if (linked) multitaskAgent.unlinkApp(appKey);
-                                else multitaskAgent.connectApp(appKey);
-                                // Trigger re-render
+                                if (linked) {
+                                  if (composioAcc) {
+                                    handleDisconnectComposioAccount(composioAcc.id, appKey);
+                                  } else {
+                                    multitaskAgent.unlinkApp(appKey);
+                                  }
+                                } else {
+                                  if (appKey === 'vscode') {
+                                    multitaskAgent.connectApp('vscode');
+                                  } else {
+                                    handleConnectComposioApp(appKey);
+                                  }
+                                }
                                 setDetectedAppId((prev) => (prev === appKey ? null : prev));
                               }}
                               className="config-pill-btn"
@@ -10866,7 +10911,7 @@ export const KiboApp: React.FC = () => {
                                   : { borderColor: 'rgba(92, 184, 255, 0.35)', color: '#BAE6FD' }
                               }
                             >
-                              {linked ? 'Unlink' : 'Connect'}
+                              {isConnLoading ? 'Connecting...' : linked ? 'Unlink' : 'Connect'}
                             </button>
                           </div>
                         );
