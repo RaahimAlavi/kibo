@@ -154,9 +154,9 @@ export const RequirementsPage: React.FC<RequirementsPageProps> = ({ onNavigate }
           <div className="kibo-card" style={{ padding: 24 }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
               <div>
-                <h3 style={{ fontSize: 14, fontWeight: 700, color: '#121316', margin: '0 0 6px' }}>Personal Multi-Device Use</h3>
+                <h3 style={{ fontSize: 14, fontWeight: 700, color: '#121316', margin: '0 0 6px' }}>Unlimited Personal Activations</h3>
                 <p style={{ fontSize: 13, lineHeight: 1.55, color: '#68707C', margin: 0 }}>
-                  One license permits simultaneous installation on up to <strong>3 personal Windows computers</strong> owned by the primary purchaser (e.g. desktop, laptop, work machine).
+                  Bound directly to your purchase email address. Activate and run Kibo across all personal Windows computers you own with zero arbitrary device limits.
                 </p>
               </div>
 

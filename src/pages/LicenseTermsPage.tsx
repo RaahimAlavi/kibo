@@ -38,7 +38,7 @@ export const LicenseTermsPage: React.FC<LicenseTermsPageProps> = ({ onNavigate }
             1. Grant of Licence
           </h2>
           <p style={{ margin: '0 0 16px' }}>
-            Subject to your compliance with these terms and payment of the applicable one-time fee, Raahim Alavi (the "Licensor") grants you (the "Licensee") a non-exclusive, non-transferable, revocable, perpetual licence to install and execute the Kibo Founders Edition executable solely for your direct personal or internal commercial productivity on up to three (3) personal Windows computer workstations owned or leased by you.
+            Subject to your compliance with these terms and payment of the applicable one-time fee, Raahim Alavi (the "Licensor") grants you (the "Licensee") a non-exclusive, non-transferable, revocable, perpetual licence to install and execute the Kibo Founders Edition executable solely for your direct personal or internal commercial productivity across any personal Windows computer workstations owned or operated by you under your registered purchase email account.
           </p>
 
           <h2 style={{ fontSize: 18, fontWeight: 700, color: '#121316', margin: '24px 0 12px' }}>
