@@ -855,6 +855,20 @@ ipcMain.handle('open-app', async (_event, appNameOrPath) => {
   };
 
   if (FAST_SYSTEM_LAUNCH[query]) {
+    if (query === 'discord' || query === 'spotify') {
+      try {
+        const titleTarget = query === 'discord' ? 'Discord' : 'Spotify';
+        const activated = await new Promise((resolve) => {
+          exec(`powershell -NoProfile -Command "(New-Object -ComObject WScript.Shell).AppActivate('${titleTarget}')"`, (_err, stdout) => {
+            resolve((stdout || '').trim().toLowerCase() === 'true');
+          });
+        });
+        if (activated) {
+          return { success: true, app: query };
+        }
+      } catch (_) {}
+    }
+
     const target = FAST_SYSTEM_LAUNCH[query];
     if (target.includes(':')) {
       try {
