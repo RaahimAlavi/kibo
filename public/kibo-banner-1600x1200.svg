@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1200" width="1600" height="1200" fill="none">
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bgGlow" cx="50%" cy="45%" r="65%">
+      <stop offset="0%" stop-color="#142138" stop-opacity="0.8"/>
+      <stop offset="45%" stop-color="#0E131F" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#07080C"/>
+    </radialGradient>
+
+    <!-- Cyan Ambient Halo -->
+    <radialGradient id="coreHalo" cx="50%" cy="42%" r="45%">
+      <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.25"/>
+      <stop offset="40%" stop-color="#0284C7" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#0284C7" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Droid Chassis Gradient -->
+    <linearGradient id="droidChassis" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#56CCF2"/>
+      <stop offset="25%" stop-color="#38BDF8"/>
+      <stop offset="75%" stop-color="#0284C7"/>
+      <stop offset="100%" stop-color="#0369A1"/>
+    </linearGradient>
+
+    <!-- Visor Glass Gradient -->
+    <linearGradient id="visorGlass" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#141926"/>
+      <stop offset="60%" stop-color="#090D15"/>
+      <stop offset="100%" stop-color="#05070B"/>
+    </linearGradient>
+
+    <!-- LED Eye Glow Filter -->
+    <filter id="eyeGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="12" result="blur1"/>
+      <feGaussianBlur stdDeviation="6" result="blur2"/>
+      <feMerge>
+        <feMergeNode in="blur1"/>
+        <feMergeNode in="blur2"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Atmospheric Blur Filter -->
+    <filter id="ambientBlur" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="60"/>
+    </filter>
+
+    <!-- Drop Shadow for Droid -->
+    <filter id="droidShadow" x="-20%" y="-10%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="40" stdDeviation="50" flood-color="#000000" flood-opacity="0.7"/>
+    </filter>
+  </defs>
+
+  <!-- Deep Obsidian Background -->
+  <rect width="1600" height="1200" fill="url(#bgGlow)"/>
+
+  <!-- Subtle Cyber Geometric Grid -->
+  <g stroke="rgba(255, 255, 255, 0.025)" stroke-width="1">
+    <line x1="200" y1="0" x2="200" y2="1200"/>
+    <line x1="400" y1="0" x2="400" y2="1200"/>
+    <line x1="600" y1="0" x2="600" y2="1200"/>
+    <line x1="800" y1="0" x2="800" y2="1200"/>
+    <line x1="1000" y1="0" x2="1000" y2="1200"/>
+    <line x1="1200" y1="0" x2="1200" y2="1200"/>
+    <line x1="1400" y1="0" x2="1400" y2="1200"/>
+    <line x1="0" y1="200" x2="1600" y2="200"/>
+    <line x1="0" y1="400" x2="1600" y2="400"/>
+    <line x1="0" y1="600" x2="1600" y2="600"/>
+    <line x1="0" y1="800" x2="1600" y2="800"/>
+    <line x1="0" y1="1000" x2="1600" y2="1000"/>
+  </g>
+
+  <!-- Corner Tech HUD Elements -->
+  <g font-family="'JetBrains Mono', -apple-system, monospace" font-size="12" fill="rgba(255, 255, 255, 0.28)" letter-spacing="0.1em">
+    <text x="80" y="80">SYS.LOC // WIN-64</text>
+    <text x="80" y="100">AI.CORE // GEMINI-2.5</text>
+    <text x="1520" y="80" text-anchor="end">BUILD // 1.0.0-PROD</text>
+    <text x="1520" y="100" text-anchor="end">TOKEN // PERPETUAL</text>
+    <text x="80" y="1120">TOP BEZEL COMPANION</text>
+    <text x="1520" y="1120" text-anchor="end">DESIGNED BY RAAHIM ALAVI</text>
+  </g>
+
+  <!-- Central Cyan Atmospheric Lighting -->
+  <ellipse cx="800" cy="460" rx="460" ry="380" fill="url(#coreHalo)" filter="url(#ambientBlur)"/>
+
+  <!-- Orbiting Light Ring Behind Droid -->
+  <ellipse cx="800" cy="480" rx="340" ry="120" stroke="rgba(56, 189, 248, 0.2)" stroke-width="2" stroke-dasharray="12 8" fill="none" transform="rotate(-12 800 480)"/>
+  <ellipse cx="800" cy="480" rx="380" ry="140" stroke="rgba(56, 189, 248, 0.12)" stroke-width="1.5" fill="none" transform="rotate(-12 800 480)"/>
+
+  <!-- MAIN DROID CHARACTER -->
+  <g filter="url(#droidShadow)">
+    <!-- Antenna Stem -->
+    <rect x="786" y="190" width="28" height="80" rx="14" fill="#0284C7" stroke="#38BDF8" stroke-width="2"/>
+
+    <!-- Antenna Glowing Sphere -->
+    <circle cx="800" cy="180" r="30" fill="#38BDF8" filter="url(#eyeGlow)"/>
+    <circle cx="800" cy="180" r="14" fill="#FFFFFF"/>
+
+    <!-- Droid Head / Body Shell -->
+    <rect x="560" y="250" width="480" height="430" rx="215" fill="url(#droidChassis)" stroke="#7DD3FC" stroke-width="6"/>
+
+    <!-- Specular Highlight Top of Head -->
+    <ellipse cx="800" cy="296" rx="170" ry="32" fill="#FFFFFF" fill-opacity="0.32"/>
+
+    <!-- Outer Bezel Ring for Visor -->
+    <rect x="616" y="370" width="368" height="216" rx="108" fill="#04060A" stroke="rgba(56, 189, 248, 0.4)" stroke-width="3"/>
+
+    <!-- Glossy Inner Dark Visor -->
+    <rect x="622" y="376" width="356" height="204" rx="102" fill="url(#visorGlass)"/>
+
+    <!-- Curved Glass Reflection on Visor -->
+    <path d="M 640 430 Q 800 390 960 430 Q 940 410 800 395 Q 660 410 640 430 Z" fill="#FFFFFF" fill-opacity="0.12"/>
+
+    <!-- Left Cyan Pill Eye -->
+    <g filter="url(#eyeGlow)">
+      <rect x="690" y="426" width="56" height="98" rx="28" fill="#E0F2FE"/>
+      <rect x="698" y="434" width="20" height="42" rx="10" fill="#FFFFFF"/>
+    </g>
+
+    <!-- Right Cyan Pill Eye -->
+    <g filter="url(#eyeGlow)">
+      <rect x="854" y="426" width="56" height="98" rx="28" fill="#E0F2FE"/>
+      <rect x="862" y="434" width="20" height="42" rx="10" fill="#FFFFFF"/>
+    </g>
+
+    <!-- Friendly Smile LED Arc -->
+    <path d="M 776 528 Q 800 550 824 528" stroke="#38BDF8" stroke-width="6" stroke-linecap="round" fill="none" filter="url(#eyeGlow)"/>
+  </g>
+
+  <!-- Floor Contact Glow / Pedestal Shadow -->
+  <ellipse cx="800" cy="740" rx="240" ry="24" fill="#000000" fill-opacity="0.5" filter="url(#ambientBlur)"/>
+
+  <!-- TYPOGRAPHY & BRANDING SECTION -->
+  <g text-anchor="middle">
+    <!-- Main Title "K I B O" -->
+    <text x="800" y="850" font-family="'Plus Jakarta Sans', -apple-system, sans-serif" font-size="76" font-weight="900" fill="#FFFFFF" letter-spacing="0.12em">
+      KIBO
+    </text>
+
+    <!-- Subtitle -->
+    <text x="800" y="895" font-family="'Figtree', -apple-system, sans-serif" font-size="22" font-weight="500" fill="#94A3B8" letter-spacing="0.02em">
+      The voice assistant that actually does things for you
+    </text>
+
+    <!-- Founders Edition Badge Container -->
+    <g transform="translate(620, 930)">
+      <rect width="360" height="46" rx="23" fill="rgba(255, 255, 255, 0.06)" stroke="rgba(56, 189, 248, 0.3)" stroke-width="1.5"/>
+      <!-- Emerald Status Dot -->
+      <circle cx="28" cy="23" r="5" fill="#10B981"/>
+      <text x="190" y="29" font-family="'Plus Jakarta Sans', -apple-system, sans-serif" font-size="14" font-weight="800" fill="#E2E8F0" letter-spacing="0.1em" text-anchor="middle">
+        FOUNDERS EDITION · $8
+      </text>
+    </g>
+
+    <!-- Feature Pillars Row -->
+    <text x="800" y="1035" font-family="'Figtree', -apple-system, sans-serif" font-size="15" font-weight="600" fill="#64748B" letter-spacing="0.04em">
+      PERPETUAL LICENSE  ·  NO SUBSCRIPTIONS  ·  FREE LIFETIME UPDATES  ·  WINDOWS 10 &amp; 11
+    </text>
+  </g>
+</svg>
