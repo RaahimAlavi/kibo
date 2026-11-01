@@ -1735,98 +1735,6 @@ export const KiboApp: React.FC = () => {
     refreshComposioStatus();
   }, [refreshComposioStatus]);
 
-  const handleConnectComposioApp = useCallback(
-    async (slug: string) => {
-      const api = (window as any).kiboAPI;
-      if (!api?.composioConnectApp) return;
-      if (slug === 'spotify') {
-        api?.openApp?.('spotify');
-        soundFX.playSuccessChime();
-        setComposioConnectingSlug(null);
-        return;
-      }
-      if (composioPollTimerRef.current) {
-        clearInterval(composioPollTimerRef.current);
-        composioPollTimerRef.current = null;
-      }
-      setComposioConnectingSlug(slug);
-      try {
-        const res = await api.composioConnectApp(slug, composioApiKey);
-        if (res && res.success) {
-          soundFX.playSuccessChime();
-          let pollAttempts = 0;
-          composioPollTimerRef.current = setInterval(async () => {
-            pollAttempts++;
-            try {
-              const statusRes = await api.composioGetStatus(composioApiKey);
-              if (statusRes?.success) {
-                setComposioStatus({
-                  connected: true,
-                  maskedKey: statusRes.maskedKey,
-                  accountsCount: statusRes.accountsCount || (statusRes.accounts?.length || 0),
-                  accounts: statusRes.accounts || [],
-                });
-                const isNowConnected = (statusRes.accounts || []).some(
-                  (a: any) => a.slug?.toLowerCase() === slug.toLowerCase() && a.status === 'ACTIVE'
-                );
-                if (isNowConnected) {
-                  if (composioPollTimerRef.current) clearInterval(composioPollTimerRef.current);
-                  composioPollTimerRef.current = null;
-                  setComposioConnectingSlug(null);
-                  soundFX.playSuccessChime();
-                  const matchedApp = INTEGRATION_APPS.find((a) => a.slug.toLowerCase() === slug.toLowerCase());
-                  const appName = matchedApp?.name || (slug.charAt(0).toUpperCase() + slug.slice(1));
-                  setActiveNotchNotification({
-                    id: `conn_${Date.now()}`,
-                    appSlug: slug,
-                    appName,
-                    title: `${appName} Connected`,
-                    message: 'Account linked and ready for voice commands.',
-                    logo: matchedApp?.logo || `./logos/${slug}.png`,
-                  });
-                  return;
-                }
-              }
-            } catch (_) {}
-
-            if (pollAttempts >= 24) {
-              if (composioPollTimerRef.current) clearInterval(composioPollTimerRef.current);
-              composioPollTimerRef.current = null;
-              setComposioConnectingSlug(null);
-            }
-          }, 2500);
-        } else {
-          setComposioConnectingSlug(null);
-          if (res?.error) {
-            showReplyWithSpeech(res.error, 'Integration Notice');
-          }
-        }
-      } catch (err: any) {
-        setComposioConnectingSlug(null);
-        if (err?.message) {
-          showReplyWithSpeech(err.message, 'Integration Notice');
-        }
-      }
-    },
-    [composioApiKey, showReplyWithSpeech]
-  );
-
-  const handleDisconnectComposioAccount = useCallback(
-    async (accountId: string, slug?: string) => {
-      const api = (window as any).kiboAPI;
-      if (!api?.composioDisconnectAccount) return;
-      try {
-        await api.composioDisconnectAccount(accountId, composioApiKey);
-        if (slug) {
-          multitaskAgent.unlinkApp(slug);
-        }
-        soundFX.playToggle(false);
-        await refreshComposioStatus();
-      } catch (_) {}
-    },
-    [composioApiKey, refreshComposioStatus]
-  );
-
   // Extract dynamic color theme from active Windows desktop wallpaper (deferred past startup animation)
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -2632,6 +2540,98 @@ export const KiboApp: React.FC = () => {
     }, 3800);
     return () => clearTimeout(timer);
   }, [contextCard]);
+
+  const handleConnectComposioApp = useCallback(
+    async (slug: string) => {
+      const api = (window as any).kiboAPI;
+      if (!api?.composioConnectApp) return;
+      if (slug === 'spotify') {
+        api?.openApp?.('spotify');
+        soundFX.playSuccessChime();
+        setComposioConnectingSlug(null);
+        return;
+      }
+      if (composioPollTimerRef.current) {
+        clearInterval(composioPollTimerRef.current);
+        composioPollTimerRef.current = null;
+      }
+      setComposioConnectingSlug(slug);
+      try {
+        const res = await api.composioConnectApp(slug, composioApiKey);
+        if (res && res.success) {
+          soundFX.playSuccessChime();
+          let pollAttempts = 0;
+          composioPollTimerRef.current = setInterval(async () => {
+            pollAttempts++;
+            try {
+              const statusRes = await api.composioGetStatus(composioApiKey);
+              if (statusRes?.success) {
+                setComposioStatus({
+                  connected: true,
+                  maskedKey: statusRes.maskedKey,
+                  accountsCount: statusRes.accountsCount || (statusRes.accounts?.length || 0),
+                  accounts: statusRes.accounts || [],
+                });
+                const isNowConnected = (statusRes.accounts || []).some(
+                  (a: any) => a.slug?.toLowerCase() === slug.toLowerCase() && a.status === 'ACTIVE'
+                );
+                if (isNowConnected) {
+                  if (composioPollTimerRef.current) clearInterval(composioPollTimerRef.current);
+                  composioPollTimerRef.current = null;
+                  setComposioConnectingSlug(null);
+                  soundFX.playSuccessChime();
+                  const matchedApp = INTEGRATION_APPS.find((a) => a.slug.toLowerCase() === slug.toLowerCase());
+                  const appName = matchedApp?.name || (slug.charAt(0).toUpperCase() + slug.slice(1));
+                  setActiveNotchNotification({
+                    id: `conn_${Date.now()}`,
+                    appSlug: slug,
+                    appName,
+                    title: `${appName} Connected`,
+                    message: 'Account linked and ready for voice commands.',
+                    logo: matchedApp?.logo || `./logos/${slug}.png`,
+                  });
+                  return;
+                }
+              }
+            } catch (_) {}
+
+            if (pollAttempts >= 24) {
+              if (composioPollTimerRef.current) clearInterval(composioPollTimerRef.current);
+              composioPollTimerRef.current = null;
+              setComposioConnectingSlug(null);
+            }
+          }, 2500);
+        } else {
+          setComposioConnectingSlug(null);
+          if (res?.error) {
+            showReplyWithSpeech(res.error, 'Integration Notice');
+          }
+        }
+      } catch (err: any) {
+        setComposioConnectingSlug(null);
+        if (err?.message) {
+          showReplyWithSpeech(err.message, 'Integration Notice');
+        }
+      }
+    },
+    [composioApiKey, showReplyWithSpeech]
+  );
+
+  const handleDisconnectComposioAccount = useCallback(
+    async (accountId: string, slug?: string) => {
+      const api = (window as any).kiboAPI;
+      if (!api?.composioDisconnectAccount) return;
+      try {
+        await api.composioDisconnectAccount(accountId, composioApiKey);
+        if (slug) {
+          multitaskAgent.unlinkApp(slug);
+        }
+        soundFX.playToggle(false);
+        await refreshComposioStatus();
+      } catch (_) {}
+    },
+    [composioApiKey, refreshComposioStatus]
+  );
 
   const [dictationState, setDictationState] = useState<'idle' | 'recording' | 'done'>('idle');
   const [dictationText, setDictationText] = useState('');
