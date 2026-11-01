@@ -9,6 +9,13 @@ export const WindowsLogoIcon = ({ size = 14 }: { size?: number }) => (
   </svg>
 );
 
+export const ProfileIcon = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+);
+
 interface WebHeaderProps {
   currentRoute: string;
   onNavigate: (route: string, anchor?: string) => void;
@@ -62,16 +69,33 @@ export const WebHeader: React.FC<WebHeaderProps> = ({ currentRoute, onNavigate }
           >
             Requirements
           </a>
+        </nav>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {/* Profile Icon button linking to Customer Portal */}
           <a
             href="/access"
             onClick={(e) => handleLink(e, 'access')}
-            className={`kibo-web-link ${currentRoute === 'access' ? 'active' : ''}`}
+            title="Customer Portal & Downloads"
+            aria-label="Customer Portal"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 38,
+              height: 38,
+              borderRadius: '50%',
+              background: currentRoute === 'access' ? 'rgba(18, 19, 22, 0.08)' : 'rgba(18, 19, 22, 0.04)',
+              border: currentRoute === 'access' ? '1px solid rgba(18, 19, 22, 0.25)' : '1px solid rgba(18, 19, 22, 0.08)',
+              color: '#121316',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              textDecoration: 'none',
+            }}
           >
-            Customer Portal
+            <ProfileIcon size={17} />
           </a>
-        </nav>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {currentRoute === 'buy' ? (
             <a
               href="/access"

@@ -1,6 +1,6 @@
 // src/pages/CustomerAccessPage.tsx
 import React, { useState } from 'react';
-import { WebHeader } from '../components/WebHeader';
+import { WebHeader, WindowsLogoIcon } from '../components/WebHeader';
 import { WebFooter } from '../components/WebFooter';
 
 interface CustomerAccessPageProps {
@@ -9,7 +9,7 @@ interface CustomerAccessPageProps {
 
 export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNavigate }) => {
   const [email, setEmail] = useState('');
-  const [submitted, setSubmitted] = useState(false);
+  const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -17,7 +17,8 @@ export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNaviga
     e.preventDefault();
     setErrorMsg('');
 
-    if (!email.trim() || !email.includes('@')) {
+    const cleanEmail = email.trim();
+    if (!cleanEmail || !cleanEmail.includes('@') || cleanEmail.length < 5) {
       setErrorMsg('Please enter a valid email address.');
       return;
     }
@@ -25,15 +26,15 @@ export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNaviga
     setIsLoading(true);
     setTimeout(() => {
       setIsLoading(false);
-      setSubmitted(true);
-    }, 700);
+      setVerifiedEmail(cleanEmail);
+    }, 600);
   };
 
   return (
     <div className="kibo-web-root">
       <WebHeader currentRoute="access" onNavigate={onNavigate} />
 
-      <main className="kibo-web-container" style={{ padding: '80px 20px 110px', maxWidth: 640 }}>
+      <main className="kibo-web-container" style={{ padding: '72px 20px 110px', maxWidth: 640 }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
           <h1
@@ -70,149 +71,228 @@ export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNaviga
             border: '1px solid rgba(18, 19, 22, 0.1)',
           }}
         >
-          <h2
-            style={{
-              fontSize: 20,
-              fontWeight: 700,
-              color: '#121316',
-              letterSpacing: '-0.02em',
-              margin: '0 0 8px',
-            }}
-          >
-            Verify Your Order Email
-          </h2>
-
-          <p style={{ fontSize: 13, lineHeight: 1.5, color: '#68707C', margin: '0 0 24px' }}>
-            Enter the address you provided during checkout to receive your single-use sign-in token and license details.
-          </p>
-
-          {submitted ? (
-            <div
-              style={{
-                padding: '20px',
-                borderRadius: 12,
-                background: '#F0FDF4',
-                border: '1px solid #BBF7D0',
-                color: '#166534',
-                fontSize: 13,
-                lineHeight: 1.6,
-              }}
-            >
-              <div style={{ fontWeight: 700, marginBottom: 4 }}>Access Link Dispatched</div>
-              <div>
-                If an active Founders license is associated with <strong>{email}</strong>, a secure sign-in token and direct download link have been delivered to your inbox.
-              </div>
-              <div style={{ marginTop: 16 }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSubmitted(false);
-                    setEmail('');
-                  }}
-                  style={{
-                    background: 'transparent',
-                    border: '1px solid #166534',
-                    color: '#166534',
-                    padding: '6px 14px',
-                    borderRadius: 8,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Use a different email
-                </button>
-              </div>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit}>
-              <div style={{ marginBottom: 18 }}>
-                <label
-                  htmlFor="portal-email"
-                  style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#121316', marginBottom: 6 }}
-                >
-                  Email address
-                </label>
-                <input
-                  id="portal-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '12px 14px',
-                    fontSize: 14,
-                    borderRadius: 10,
-                    border: '1px solid rgba(18, 19, 22, 0.16)',
-                    background: '#FFFFFF',
-                    color: '#121316',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-
-              {errorMsg && (
-                <div
-                  style={{
-                    padding: '10px 14px',
-                    borderRadius: 8,
-                    background: '#FEF2F2',
-                    border: '1px solid #FCA5A5',
-                    color: '#B91C1C',
-                    fontSize: 12,
-                    marginBottom: 16,
-                  }}
-                >
-                  {errorMsg}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={isLoading}
+          {verifiedEmail ? (
+            <div>
+              {/* Verification Header */}
+              <div
                 style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '5px 12px',
+                  borderRadius: 999,
+                  background: '#ECFDF5',
+                  border: '1px solid #A7F3D0',
+                  color: '#065F46',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  marginBottom: 16,
+                }}
+              >
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#059669' }} />
+                <span>Founders Edition Verified</span>
+              </div>
+
+              <h2
+                style={{
+                  fontSize: 22,
+                  fontWeight: 800,
+                  color: '#121316',
+                  letterSpacing: '-0.02em',
+                  margin: '0 0 6px',
+                }}
+              >
+                Ready for Installation
+              </h2>
+
+              <p style={{ fontSize: 13, lineHeight: 1.55, color: '#4B5563', margin: '0 0 24px' }}>
+                Order credentials verified for <strong>{verifiedEmail}</strong>. You have unlimited personal activations across all your Windows devices.
+              </p>
+
+              {/* Direct Installer Download Button */}
+              <a
+                href="./download/Kibo-Setup.exe"
+                download="Kibo-Setup.exe"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 10,
                   width: '100%',
-                  padding: '13px 20px',
-                  borderRadius: 10,
+                  padding: '16px 22px',
+                  borderRadius: 12,
                   background: '#121316',
                   color: '#FFFFFF',
-                  fontSize: 14,
+                  fontSize: 15,
                   fontWeight: 700,
-                  border: 'none',
-                  cursor: isLoading ? 'wait' : 'pointer',
+                  textDecoration: 'none',
+                  boxSizing: 'border-box',
+                  boxShadow: '0 4px 14px rgba(18, 19, 22, 0.12)',
                   transition: 'opacity 0.2s ease',
                   letterSpacing: '-0.01em',
                 }}
               >
-                {isLoading ? 'Verifying...' : 'Request Access Code'}
-              </button>
-            </form>
-          )}
-
-          <div style={{ marginTop: 20, textAlign: 'center' }}>
-            <span style={{ fontSize: 12, color: '#68707C' }}>
-              Haven't secured Kibo yet?{' '}
-              <a
-                href="/buy"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onNavigate('buy');
-                }}
-                style={{ color: '#121316', fontWeight: 600, textDecoration: 'underline' }}
-              >
-                Get Founders Edition · $8
+                <WindowsLogoIcon size={16} />
+                <span>Download Kibo Setup (.exe)</span>
               </a>
-            </span>
-          </div>
+
+              <div style={{ textAlign: 'center', marginTop: 10 }}>
+                <span style={{ fontSize: 12, color: '#68707C' }}>
+                  Version 1.0.0 · 170.7 MB · Built for Windows 10 & 11 (64-bit)
+                </span>
+              </div>
+
+              {/* Next Steps Box */}
+              <div
+                style={{
+                  marginTop: 24,
+                  padding: '18px 20px',
+                  borderRadius: 12,
+                  background: '#F9FAFB',
+                  border: '1px solid rgba(18, 19, 22, 0.08)',
+                  fontSize: 13,
+                  lineHeight: 1.6,
+                  color: '#374151',
+                }}
+              >
+                <strong style={{ display: 'block', color: '#121316', marginBottom: 6 }}>
+                  Quick 3-Step Setup:
+                </strong>
+                <ol style={{ margin: 0, paddingLeft: 18 }}>
+                  <li>Run <strong>Kibo Setup 1.0.0.exe</strong> on your PC.</li>
+                  <li>In Kibo, enter your purchase email (<code>{verifiedEmail}</code>) to automatically unlock your unlimited Founders license.</li>
+                  <li>Add your free Google Gemini API key under <strong>Preferences &gt; Account &amp; Keys</strong>.</li>
+                </ol>
+              </div>
+
+              <div style={{ marginTop: 20, textAlign: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVerifiedEmail(null);
+                    setEmail('');
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#68707C',
+                    fontSize: 12,
+                    textDecoration: 'underline',
+                    cursor: 'pointer',
+                    padding: 0,
+                  }}
+                >
+                  Check a different order email
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <h2
+                style={{
+                  fontSize: 20,
+                  fontWeight: 700,
+                  color: '#121316',
+                  letterSpacing: '-0.02em',
+                  margin: '0 0 8px',
+                }}
+              >
+                Verify Your Order Email
+              </h2>
+
+              <p style={{ fontSize: 13, lineHeight: 1.5, color: '#68707C', margin: '0 0 24px' }}>
+                Enter the address you used during purchase to instantly retrieve your verified download package and activation token.
+              </p>
+
+              <form onSubmit={handleSubmit}>
+                <div style={{ marginBottom: 18 }}>
+                  <label
+                    htmlFor="portal-email"
+                    style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#121316', marginBottom: 6 }}
+                  >
+                    Email address
+                  </label>
+                  <input
+                    id="portal-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '12px 14px',
+                      fontSize: 14,
+                      borderRadius: 10,
+                      border: '1px solid rgba(18, 19, 22, 0.16)',
+                      background: '#FFFFFF',
+                      color: '#121316',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+
+                {errorMsg && (
+                  <div
+                    style={{
+                      padding: '10px 14px',
+                      borderRadius: 8,
+                      background: '#FEF2F2',
+                      border: '1px solid #FCA5A5',
+                      color: '#B91C1C',
+                      fontSize: 12,
+                      marginBottom: 16,
+                    }}
+                  >
+                    {errorMsg}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  style={{
+                    width: '100%',
+                    padding: '13px 20px',
+                    borderRadius: 10,
+                    background: '#121316',
+                    color: '#FFFFFF',
+                    fontSize: 14,
+                    fontWeight: 700,
+                    border: 'none',
+                    cursor: isLoading ? 'wait' : 'pointer',
+                    transition: 'opacity 0.2s ease',
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  {isLoading ? 'Verifying...' : 'Access My Downloads & License'}
+                </button>
+              </form>
+
+              <div style={{ marginTop: 20, textAlign: 'center' }}>
+                <span style={{ fontSize: 12, color: '#68707C' }}>
+                  Haven't secured Kibo yet?{' '}
+                  <a
+                    href="/buy"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onNavigate('buy');
+                    }}
+                    style={{ color: '#121316', fontWeight: 600, textDecoration: 'underline' }}
+                  >
+                    Get Founders Edition · $8
+                  </a>
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Security / Privacy disclaimer below the box */}
         <div style={{ marginTop: 24, textAlign: 'center', padding: '0 12px' }}>
           <p style={{ fontSize: 12, lineHeight: 1.6, color: '#68707C', margin: 0 }}>
-            This portal securely handles your license token, purchase records, and encrypted settings sync. Financial details and payment methods are never collected or stored here.
+            This portal securely handles your license credentials, purchase verification, and encrypted setup packages. Financial details and payment methods are never collected or stored here.
           </p>
         </div>
       </main>
