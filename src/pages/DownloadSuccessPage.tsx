@@ -5,7 +5,7 @@ import { WebFooter } from '../components/WebFooter';
 
 const INSTALLER_DOWNLOAD_URL =
   (import.meta as any).env?.VITE_INSTALLER_DOWNLOAD_URL ||
-  'https://drive.usercontent.google.com/download?id=1gGN14ZXwv8GCovkptjgFgPWAFDAVOKxD&export=download&confirm=t';
+  'https://www.dropbox.com/scl/fi/1crr4uqao66qypkzpz4lw/Kibo-Setup-1.0.0.exe?rlkey=4mzxrgyw4300ibuz6jxn3zkae&st=f7ue0nqs&dl=1';
 
 interface DownloadSuccessPageProps {
   onNavigate: (route: string, anchor?: string) => void;
@@ -17,7 +17,19 @@ export const DownloadSuccessPage: React.FC<DownloadSuccessPageProps> = ({ onNavi
 
   const triggerDownload = () => {
     setDownloadTriggered(true);
-    window.location.assign(INSTALLER_DOWNLOAD_URL);
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = INSTALLER_DOWNLOAD_URL;
+    document.body.appendChild(iframe);
+    setTimeout(() => {
+      try {
+        if (iframe.parentNode) {
+          document.body.removeChild(iframe);
+        }
+      } catch {
+        // ignore
+      }
+    }, 60000);
   };
 
   useEffect(() => {

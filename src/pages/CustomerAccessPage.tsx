@@ -5,7 +5,7 @@ import { WebFooter } from '../components/WebFooter';
 
 const INSTALLER_DOWNLOAD_URL =
   (import.meta as any).env?.VITE_INSTALLER_DOWNLOAD_URL ||
-  'https://drive.usercontent.google.com/download?id=1gGN14ZXwv8GCovkptjgFgPWAFDAVOKxD&export=download&confirm=t';
+  'https://www.dropbox.com/scl/fi/1crr4uqao66qypkzpz4lw/Kibo-Setup-1.0.0.exe?rlkey=4mzxrgyw4300ibuz6jxn3zkae&st=f7ue0nqs&dl=1';
 
 interface CustomerAccessPageProps {
   onNavigate: (route: string, anchor?: string) => void;
