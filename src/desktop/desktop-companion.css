@@ -21,7 +21,7 @@
   --soul-gold: #FFC24A;
   --notch-black: #0C0C0E;
   --card-dark: #17171A;
-  --ease-hitodama: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-kibo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -210,7 +210,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.28s var(--ease-hitodama), opacity 0.24s ease;
+  transition: transform 0.28s var(--ease-kibo), opacity 0.24s ease;
 }
 
 @keyframes kiboPokeBounce {
@@ -441,7 +441,7 @@
   height: 28px;
   border-radius: 999px;
   background: var(--adaptive-pill-bg);
-  transition: transform 0.24s var(--ease-hitodama), width 0.24s var(--ease-hitodama), background 0.3s ease;
+  transition: transform 0.24s var(--ease-kibo), width 0.24s var(--ease-kibo), background 0.3s ease;
   pointer-events: none;
   z-index: 1;
 }
@@ -1373,8 +1373,8 @@
   cursor: pointer;
   position: relative;
   transition:
-    width 0.34s var(--ease-hitodama),
-    height 0.34s var(--ease-hitodama),
+    width 0.34s var(--ease-kibo),
+    height 0.34s var(--ease-kibo),
     opacity 0.24s ease,
     box-shadow 0.24s ease;
   opacity: 0.72;
@@ -1471,7 +1471,7 @@
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75), 0 0 30px rgba(0, 229, 255, 0.12);
   z-index: 50;
   position: relative;
-  animation: contextDropIn 0.32s var(--ease-hitodama);
+  animation: contextDropIn 0.32s var(--ease-kibo);
 }
 
 .onboarding-ember-pop {
@@ -1878,7 +1878,7 @@
   overflow: hidden;
   z-index: 40;
   box-shadow: 0 32px 80px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.08);
-  animation: appModalScaleIn 0.24s var(--ease-hitodama);
+  animation: appModalScaleIn 0.24s var(--ease-kibo);
   background: #0D111A;
 }
 
@@ -2118,7 +2118,7 @@
   justify-content: space-between;
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 22px 48px rgba(0, 0, 0, 0.55);
-  transition: transform 0.36s var(--ease-hitodama), opacity 0.32s ease, border-color 0.25s ease;
+  transition: transform 0.36s var(--ease-kibo), opacity 0.32s ease, border-color 0.25s ease;
   cursor: pointer;
 }
 
@@ -2680,7 +2680,7 @@
   gap: 6px;
   cursor: pointer;
   z-index: 15;
-  animation: contextDropIn 0.24s var(--ease-hitodama);
+  animation: contextDropIn 0.24s var(--ease-kibo);
 }
 
 @keyframes contextDropIn {
@@ -2744,7 +2744,7 @@
   align-items: center;
   gap: 12px;
   font-size: 13.5px;
-  animation: pillRiseIn 0.24s var(--ease-hitodama);
+  animation: pillRiseIn 0.24s var(--ease-kibo);
 }
 
 @keyframes pillRiseIn {
@@ -3649,7 +3649,7 @@ button:focus-visible,
   height: 7px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.2);
-  transition: all 0.28s var(--ease-hitodama);
+  transition: all 0.28s var(--ease-kibo);
 }
 
 .spatial-act-dot.active {

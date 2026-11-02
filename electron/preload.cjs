@@ -259,4 +259,3 @@ const kiboAPI = {
 };
 
 contextBridge.exposeInMainWorld('kiboAPI', kiboAPI);
-contextBridge.exposeInMainWorld('hitodamaAPI', kiboAPI);

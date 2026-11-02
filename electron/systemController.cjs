@@ -1835,7 +1835,7 @@ function checkSpotifyDesktopInstalled() {
 
 async function playSpotifyMedia(rawQuery = '', targetType = 'track_or_artist') {
   const cleanQuery = String(rawQuery || '')
-    .replace(/^(can\s+you\s+|could\s+you\s+|please\s+|kibo\s+|hey\s+kibo\s+|hitodama\s+|hey\s+hitodama\s+)+/i, '')
+    .replace(/^(can\s+you\s+|could\s+you\s+|please\s+|kibo\s+|hey\s+kibo\s+)+/i, '')
     .replace(/^(play|put\s+on|listen\s+to|start|search\s+for|search|open)\s+/i, '')
     .replace(/\s+(on|in)\s+spotify.*$/i, '')
     .replace(/\s+for\s+me$/i, '')

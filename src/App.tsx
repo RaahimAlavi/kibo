@@ -147,7 +147,6 @@ export function App() {
     }
     return (
       Boolean((window as any).kiboAPI) ||
-      Boolean((window as any).hitodamaAPI) ||
       navigator.userAgent.toLowerCase().includes('electron')
     );
   })();

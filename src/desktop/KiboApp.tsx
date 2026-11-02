@@ -1357,44 +1357,6 @@ const ORBIT_SLOTS: ReadonlyArray<{
 ];
 
 
-// Automated backward-compatible migration of legacy hitodama_* localStorage keys to kibo_*
-if (typeof localStorage !== 'undefined') {
-  const legacyKeyPairs: [string, string][] = [
-    ['hitodama_gemini_key', 'kibo_gemini_key'],
-    ['hitodama_tavily_key', 'kibo_tavily_key'],
-    ['hitodama_notion_key', 'kibo_notion_key'],
-    ['hitodama_notion_db', 'kibo_notion_db'],
-    ['hitodama_embers', 'kibo_watts'],
-    ['hitodama_daily_ember_date', 'kibo_daily_watt_date'],
-    ['hitodama_ember_date', 'kibo_watt_date'],
-    ['hitodama_last_ember_earned_day', 'kibo_last_watt_earned_day'],
-    ['hitodama_rewarded_tasks', 'kibo_rewarded_tasks'],
-    ['hitodama_unlocked_cards', 'kibo_unlocked_cards'],
-    ['hitodama_equipped_cards', 'kibo_equipped_cards'],
-    ['hitodama_ability_trigger', 'kibo_ability_trigger'],
-    ['hitodama_skin', 'kibo_chassis'],
-    ['hitodama_todos', 'kibo_todos'],
-    ['hitodama_routines', 'kibo_routines'],
-    ['hitodama_clip_history', 'kibo_clip_history'],
-    ['hitodama_custom_shortcuts', 'kibo_custom_shortcuts'],
-    ['hitodama_starred_apps', 'kibo_starred_apps'],
-    ['hitodama_connected_apps', 'kibo_connected_apps'],
-    ['hitodama_agent_tasks', 'kibo_agent_tasks'],
-    ['hitodama_inspirations', 'kibo_inspirations'],
-    ['hitodama_onboarded_v2', 'kibo_onboarded_v1'],
-    ['hitodama_onboarded_v3', 'kibo_onboarded_v1'],
-    ['hitodama_autotuck', 'kibo_autotuck'],
-    ['hitodama_voice_tts', 'kibo_voice_tts'],
-    ['hitodama_startup', 'kibo_startup'],
-    ['hitodama_sfx_enabled', 'kibo_sfx_enabled'],
-  ];
-  for (const [oldKey, newKey] of legacyKeyPairs) {
-    const val = localStorage.getItem(oldKey);
-    if (val !== null && localStorage.getItem(newKey) === null) {
-      localStorage.setItem(newKey, val);
-    }
-  }
-}
 
 interface IntegrationAppItem {
   id: string;
@@ -1724,7 +1686,7 @@ export const KiboApp: React.FC = () => {
 
   // Synchronize keys, user name, and memory with persistent disk storage in userData
   useEffect(() => {
-    const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
+    const api = (window as any).kiboAPI;
     if (!api?.getStoredSettings) return;
     api.getStoredSettings().then((stored: Record<string, any>) => {
       if (!stored || typeof stored !== 'object') return;
@@ -1787,7 +1749,7 @@ export const KiboApp: React.FC = () => {
   // Extract dynamic color theme from active Windows desktop wallpaper (deferred past startup animation)
   useEffect(() => {
     const timer = setTimeout(() => {
-      const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
+      const api = (window as any).kiboAPI;
       if (api?.getCurrentWallpaperTheme) {
         api.getCurrentWallpaperTheme().then((theme: any) => {
           if (theme && theme.accent) {
@@ -1826,7 +1788,7 @@ export const KiboApp: React.FC = () => {
   }, [checkForAppUpdates]);
 
   const completeOnboarding = useCallback(() => {
-    const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
+    const api = (window as any).kiboAPI;
     if (geminiDraftKey.trim()) {
       const val = geminiDraftKey.trim();
       setApiKey(val);
@@ -4406,7 +4368,7 @@ export const KiboApp: React.FC = () => {
 
       // Strip assistant wake words and punctuation so patterns like "Kibo, open notes.docx" resolve cleanly
       const cleanCommand = text
-        .replace(/^(?:kibo|hey\s+kibo|hi\s+kibo|yo\s+kibo|hitodama|hey\s+hitodama|ok\s+kibo|okay\s+kibo)[,\s:]+/i, '')
+        .replace(/^(?:kibo|hey\s+kibo|hi\s+kibo|yo\s+kibo|ok\s+kibo|okay\s+kibo)[,\s:]+/i, '')
         .trim();
       const lower = (cleanCommand || text).toLowerCase().trim();
 
@@ -4706,7 +4668,7 @@ export const KiboApp: React.FC = () => {
           text;
 
         const cleanSpotifyQuery = String(rawTarget)
-          .replace(/^(can\s+you\s+|could\s+you\s+|please\s+|hitodama\s+|hey\s+hitodama\s+|yo\s+)+/i, '')
+          .replace(/^(can\s+you\s+|could\s+you\s+|please\s+|kibo\s+|hey\s+kibo\s+|yo\s+)+/i, '')
           .replace(/^(play|put\s+on|listen\s+to|start|search\s+for|search|open)\s+/i, '')
           .replace(/\s+(on|in)\s+spotify.*$/i, '')
           .replace(/\s+for\s+me$/i, '')
@@ -4779,7 +4741,7 @@ export const KiboApp: React.FC = () => {
         let queryTarget = fc?.args?.target || (fc?.name === 'computer_action' ? fc?.args?.task : '') || '';
         if (!queryTarget) {
           queryTarget = text
-            .replace(/^(can\s+you\s+|could\s+you\s+|please\s+|hitodama\s+|hey\s+hitodama\s+|help\s+me\s+)+/i, '')
+            .replace(/^(can\s+you\s+|could\s+you\s+|please\s+|kibo\s+|hey\s+kibo\s+|help\s+me\s+)+/i, '')
             .replace(/^(find|where\s+is|where's|point\s+to|point\s+at|point\s+out|point|locate|show\s+me\s+where|show\s+me\s+the|show\s+me|spot|look\s+for|search\s+for)\s+/i, '')
             .replace(/^(the|a|an)\s+/i, '')
             .replace(/[?.!]+$/g, '')
@@ -4838,7 +4800,7 @@ export const KiboApp: React.FC = () => {
             } else {
               actionType = 'click';
               targetDesc = text
-                .replace(/^(can\s+you\s+|please\s+|hitodama\s+)+/i, '')
+                .replace(/^(can\s+you\s+|please\s+|kibo\s+)+/i, '')
                 .replace(/^(click|press|tap|select|choose|hit|play|watch|open)\s+(on\s+)?/i, '')
                 .trim();
             }
@@ -5688,7 +5650,7 @@ export const KiboApp: React.FC = () => {
   const handleSaveGeminiKey = () => {
     const trimmed = geminiDraftKey.trim();
     setApiKey(trimmed);
-    const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
+    const api = (window as any).kiboAPI;
     if (trimmed) {
       localStorage.setItem('kibo_gemini_key', trimmed);
       api?.saveStoredSettings?.({ kibo_gemini_key: trimmed });
@@ -5705,7 +5667,7 @@ export const KiboApp: React.FC = () => {
     setApiKey('');
     setGeminiDraftKey('');
     localStorage.removeItem('kibo_gemini_key');
-    const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
+    const api = (window as any).kiboAPI;
     api?.saveStoredSettings?.({ kibo_gemini_key: '' });
   };
 
@@ -10091,7 +10053,7 @@ export const KiboApp: React.FC = () => {
                                   type="button"
                                   onClick={() => {
                                     const url = 'https://aistudio.google.com/app/apikey';
-                                    const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
+                                    const api = (window as any).kiboAPI;
                                     if (api?.openUrl) {
                                       api.openUrl(url);
                                     } else {
@@ -10169,7 +10131,7 @@ export const KiboApp: React.FC = () => {
                                   onClick={() => {
                                     const trimmed = tavilyDraftKey.trim();
                                     setTavilyKey(trimmed);
-                                    const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
+                                    const api = (window as any).kiboAPI;
                                     if (trimmed) {
                                       localStorage.setItem('kibo_tavily_key', trimmed);
                                       api?.saveStoredSettings?.({ kibo_tavily_key: trimmed });
@@ -10223,7 +10185,7 @@ export const KiboApp: React.FC = () => {
                                     type="button"
                                     onClick={() => {
                                       const url = availableUpdate.downloadUrl;
-                                      const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
+                                      const api = (window as any).kiboAPI;
                                       if (api?.openUrl) {
                                         api.openUrl(url);
                                       } else {
@@ -11272,7 +11234,7 @@ export const KiboApp: React.FC = () => {
                           />
                           <button
                             onClick={() => {
-                              const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
+                              const api = (window as any).kiboAPI;
                               if (tavilyDraftKey.trim()) {
                                 const val = tavilyDraftKey.trim();
                                 setTavilyKey(val);

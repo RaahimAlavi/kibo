@@ -43,7 +43,7 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
 
   const openGoogleAiStudio = () => {
     const url = 'https://aistudio.google.com/app/apikey';
-    const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
+    const api = (window as any).kiboAPI;
     if (api?.setAlwaysOnTop) {
       api.setAlwaysOnTop(false);
     }
@@ -55,7 +55,7 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
   };
 
   const handleMinimize = () => {
-    const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
+    const api = (window as any).kiboAPI;
     if (api?.minimize) {
       api.minimize();
     }
@@ -117,7 +117,7 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
     if (!trimmed) return;
     onChangeGeminiKey(trimmed);
     localStorage.setItem('kibo_gemini_key', trimmed);
-    const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
+    const api = (window as any).kiboAPI;
     if (api?.saveStoredSettings) {
       api.saveStoredSettings({ kibo_gemini_key: trimmed });
     }
@@ -129,7 +129,7 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
     if (localGeminiKey.trim() && !keySaved) {
       handleSaveGeminiKey();
     }
-    const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
+    const api = (window as any).kiboAPI;
     if (api?.setAlwaysOnTop) {
       api.setAlwaysOnTop(true);
     }
@@ -470,7 +470,7 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
                   <button
                     type="button"
                     onClick={() => {
-                      const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
+                      const api = (window as any).kiboAPI;
                       if (api?.openUrl) {
                         api.openUrl('https://kiboai.vercel.app/buy');
                       } else {

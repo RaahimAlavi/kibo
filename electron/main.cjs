@@ -2545,7 +2545,7 @@ function startActiveAppWatcher() {
       const title = rawTitle.toLowerCase();
       const proc = (info.proc || '').toLowerCase();
 
-      if (!title || proc.includes('electron') || title.includes('hitodama') || title.includes('kibo')) return;
+      if (!title || proc.includes('electron') || title.includes('kibo')) return;
 
       // 1. NEVER trigger on Google Search, Bing Search, DuckDuckGo, or YouTube search results/videos!
       const isSearchEngineOrVideo =
