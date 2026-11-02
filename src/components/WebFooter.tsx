@@ -110,11 +110,25 @@ export const WebFooter: React.FC<WebFooterProps> = ({ onNavigate, onScrollToTop 
           </div>
         </div>
 
+        {/* Trademark & Brand Notice */}
+        <div
+          style={{
+            marginTop: 36,
+            paddingTop: 20,
+            borderTop: '1px solid rgba(18, 19, 22, 0.06)',
+            fontSize: 11.5,
+            lineHeight: 1.6,
+            color: '#8A92A0',
+          }}
+        >
+          <strong>Notice of Trademarks and Non-Affiliation:</strong> Windows, Google, Gemini, Chrome, Gmail, YouTube, Spotify, Amazon, and Netflix are registered trademarks and property of their respective copyright holders. Kibo is an independent ambient software companion developed by Kibo Labs and operates without direct affiliation, partnership, sponsorship, or commercial endorsement from these organizations.
+        </div>
+
         {/* Bottom Bar */}
         <div
           style={{
-            marginTop: 40,
-            paddingTop: 24,
+            marginTop: 20,
+            paddingTop: 20,
             borderTop: '1px solid rgba(18, 19, 22, 0.08)',
             display: 'flex',
             alignItems: 'center',

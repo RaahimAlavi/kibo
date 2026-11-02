@@ -1636,8 +1636,41 @@ export const KiboApp: React.FC = () => {
   const [integrationsSearch, setIntegrationsSearch] = useState<string>('');
   const [showConnectModal, setShowConnectModal] = useState<boolean>(false);
   const [notchApiAlert, setNotchApiAlert] = useState<{ type: 'missing_key' | 'rate_limit'; text: string } | null>(null);
+  const CURRENT_APP_VERSION = '1.0.0';
+  const [availableUpdate, setAvailableUpdate] = useState<{
+    version: string;
+    downloadUrl: string;
+    title?: string;
+    notes?: string;
+  } | null>(null);
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [settingsCategory, setSettingsCategory] = useState<'Account' | 'General' | 'Core' | 'Voice' | 'Integrations' | 'Agents' | 'Shortcuts' | 'System'>('Account');
   const [updateCheckStatus, setUpdateCheckStatus] = useState<string | null>(null);
+
+  const checkForAppUpdates = useCallback(async (manual = false) => {
+    setIsCheckingUpdate(true);
+    if (manual) setUpdateCheckStatus('Checking for updates...');
+    try {
+      const res = await fetch(`https://kiboai.vercel.app/version.json?_t=${Date.now()}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.version && data.version !== CURRENT_APP_VERSION) {
+          setAvailableUpdate(data);
+          setUpdateCheckStatus(`New version v${data.version} available!`);
+          if (manual) soundFX.playSuccessChime();
+          return;
+        }
+      }
+      setAvailableUpdate(null);
+      setUpdateCheckStatus(`You're on the latest version · v${CURRENT_APP_VERSION}`);
+    } catch {
+      if (manual) {
+        setUpdateCheckStatus(`You're on version ${CURRENT_APP_VERSION}.`);
+      }
+    } finally {
+      setIsCheckingUpdate(false);
+    }
+  }, []);
   const [isBooting, setIsBooting] = useState<boolean>(true);
   const [bootPhase, setBootPhase] = useState<'sleeping' | 'awakening' | 'tucking' | 'ready'>('sleeping');
   const [bootExpression, setBootExpression] = useState<'NORMAL' | 'HAPPY' | 'EXCITED'>('HAPPY');
@@ -1762,8 +1795,19 @@ export const KiboApp: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  const [onboardingStep, setOnboardingStep] = useState<number | null>(null);
+  const [onboardingStep, setOnboardingStep] = useState<number | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const completed = localStorage.getItem('kibo_onboarded_v1');
+    return completed === 'true' ? null : 0;
+  });
   const [lastHotkeyAction, setLastHotkeyAction] = useState<string | null>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      checkForAppUpdates(false);
+    }, 2800);
+    return () => clearTimeout(timer);
+  }, [checkForAppUpdates]);
 
   const completeOnboarding = useCallback(() => {
     const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
@@ -7866,6 +7910,35 @@ export const KiboApp: React.FC = () => {
                     </button>
                   )}
 
+                  {availableUpdate && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSettingsCategory('General');
+                        setActiveTab('Settings');
+                      }}
+                      className="companion-header-circle"
+                      title={`Update v${availableUpdate.version} available! Click to open General settings.`}
+                      style={{
+                        width: 'auto',
+                        padding: '0 8px',
+                        borderRadius: 999,
+                        background: 'rgba(56, 189, 248, 0.18)',
+                        border: '1px solid rgba(56, 189, 248, 0.45)',
+                        color: '#38BDF8',
+                        fontSize: 10.5,
+                        fontWeight: 700,
+                        gap: 5,
+                        display: 'flex',
+                        alignItems: 'center',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#38BDF8', boxShadow: '0 0 6px #38BDF8' }} />
+                      <span>v{availableUpdate.version}</span>
+                    </button>
+                  )}
+
                   <button
                     onClick={() => {
                       if (activeTab === 'Settings') {
@@ -9983,7 +10056,37 @@ export const KiboApp: React.FC = () => {
 
                           <div className="kibo-settings-card">
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                              <label className="kibo-settings-row-label">Google Gemini API Key</label>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <label className="kibo-settings-row-label">Google Gemini API Key</label>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const url = 'https://aistudio.google.com/app/apikey';
+                                    const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
+                                    if (api?.openUrl) {
+                                      api.openUrl(url);
+                                    } else {
+                                      window.open(url, '_blank');
+                                    }
+                                  }}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    padding: 0,
+                                    color: '#38BDF8',
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                    textDecoration: 'underline',
+                                  }}
+                                >
+                                  <span>Get key on Google AI Studio</span>
+                                  <span style={{ fontSize: 13 }}>&#x2197;</span>
+                                </button>
+                              </div>
                               <div style={{ display: 'flex', gap: 8 }}>
                                 <input
                                   type="password"
@@ -10077,34 +10180,65 @@ export const KiboApp: React.FC = () => {
                               <div className="kibo-settings-row" style={{ padding: '14px 18px' }}>
                                 <div>
                                   <div className="kibo-settings-row-label">App updates</div>
-                                  <div className="kibo-settings-row-desc">
-                                    {updateCheckStatus || "You're on version 1.0.0."}
+                                  <div
+                                    className="kibo-settings-row-desc"
+                                    style={availableUpdate ? { color: '#38BDF8', fontWeight: 600 } : undefined}
+                                  >
+                                    {availableUpdate
+                                      ? `Update available: v${availableUpdate.version}${availableUpdate.title ? ` (${availableUpdate.title})` : ''}`
+                                      : (updateCheckStatus || `You're on version ${CURRENT_APP_VERSION}.`)}
                                   </div>
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setUpdateCheckStatus('Checking for updates...');
-                                    setTimeout(() => {
-                                      setUpdateCheckStatus("You're on version 1.0.0. Kibo is up to date.");
-                                    }, 800);
-                                  }}
-                                  style={{
-                                    background: '#F1F5F9',
-                                    color: '#0F172A',
-                                    border: 'none',
-                                    borderRadius: 999,
-                                    padding: '7px 18px',
-                                    fontSize: 13,
-                                    fontWeight: 600,
-                                    cursor: 'pointer',
-                                    boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
-                                    transition: 'opacity 0.2s',
-                                    flexShrink: 0,
-                                  }}
-                                >
-                                  Check for updates
-                                </button>
+                                {availableUpdate ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const url = availableUpdate.downloadUrl;
+                                      const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
+                                      if (api?.openUrl) {
+                                        api.openUrl(url);
+                                      } else {
+                                        window.open(url, '_blank');
+                                      }
+                                    }}
+                                    style={{
+                                      background: '#38BDF8',
+                                      color: '#0A0E17',
+                                      border: 'none',
+                                      borderRadius: 999,
+                                      padding: '8px 20px',
+                                      fontSize: 13,
+                                      fontWeight: 800,
+                                      cursor: 'pointer',
+                                      boxShadow: '0 2px 10px rgba(56, 189, 248, 0.35)',
+                                      transition: 'opacity 0.2s',
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    Download Update (v{availableUpdate.version})
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => checkForAppUpdates(true)}
+                                    disabled={isCheckingUpdate}
+                                    style={{
+                                      background: '#F1F5F9',
+                                      color: '#0F172A',
+                                      border: 'none',
+                                      borderRadius: 999,
+                                      padding: '7px 18px',
+                                      fontSize: 13,
+                                      fontWeight: 600,
+                                      cursor: 'pointer',
+                                      boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
+                                      transition: 'opacity 0.2s',
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    {isCheckingUpdate ? 'Checking...' : 'Check for updates'}
+                                  </button>
+                                )}
                               </div>
 
                               {/* Divider */}

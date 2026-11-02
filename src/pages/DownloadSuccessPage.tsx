@@ -504,9 +504,28 @@ export const DownloadSuccessPage: React.FC<DownloadSuccessPageProps> = ({ onNavi
                 >
                   Add Your Gemini API Key
                 </h3>
-                <p style={{ fontSize: 14, lineHeight: 1.6, color: '#68707C', margin: 0 }}>
+                <p style={{ fontSize: 14, lineHeight: 1.6, color: '#68707C', margin: '0 0 12px' }}>
                   Open Preferences &gt; Account &amp; Keys and add your free Google Gemini API key. Kibo immediately appears in your top bezel screen ready to assist.
                 </p>
+                <div>
+                  <a
+                    href="https://aistudio.google.com/app/apikey"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      color: '#0284C7',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    <span>Get Key on Google AI Studio</span>
+                    <span>&#x2197;</span>
+                  </a>
+                </div>
               </div>
             </div>
           </div>

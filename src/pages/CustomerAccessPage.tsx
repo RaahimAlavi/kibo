@@ -263,7 +263,7 @@ export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNaviga
                 <ol style={{ margin: 0, paddingLeft: 18 }}>
                   <li>Run <strong>Kibo Setup 1.0.0.exe</strong> on your PC.</li>
                   <li>In Kibo, enter your purchase email (<code>{verifiedEmail}</code>) to automatically unlock your unlimited Founders license.</li>
-                  <li>Add your free Google Gemini API key under <strong>Preferences &gt; Account &amp; Keys</strong>.</li>
+                  <li>Add your free Google Gemini API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style={{ color: '#0284C7', textDecoration: 'underline', fontWeight: 600 }}>Google AI Studio &#x2197;</a> under <strong>Preferences &gt; Account &amp; Keys</strong>.</li>
                 </ol>
               </div>
 

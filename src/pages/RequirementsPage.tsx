@@ -109,7 +109,7 @@ export const RequirementsPage: React.FC<RequirementsPageProps> = ({ onNavigate }
 
           <div className="kibo-card" style={{ padding: 24 }}>
             <p style={{ fontSize: 14, lineHeight: 1.6, color: '#4B5563', margin: '0 0 16px' }}>
-              Kibo operates on a direct <strong>Bring Your Own Key (BYOK)</strong> model. You connect your personal Google Gemini API key from Google AI Studio. This delivers three distinct advantages:
+              Kibo operates on a direct <strong>Bring Your Own Key (BYOK)</strong> model. You connect your personal Google Gemini API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style={{ color: '#0284C7', textDecoration: 'underline', fontWeight: 600 }}>Google AI Studio &#x2197;</a>. This delivers three distinct advantages:
             </p>
 
             <ul style={{ margin: '0 0 20px', paddingLeft: 20, fontSize: 14, lineHeight: 1.65, color: '#4B5563' }}>

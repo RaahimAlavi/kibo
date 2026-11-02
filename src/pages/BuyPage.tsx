@@ -120,7 +120,7 @@ export const BuyPage: React.FC<BuyPageProps> = ({ onNavigate }) => {
               Direct Gemini API Engine
             </div>
             <p style={{ fontSize: 13, lineHeight: 1.55, color: '#68707C', margin: 0 }}>
-              Operates using your personal Google Gemini API key. Leverage generous free-tier limits without platform middleman fees.
+              Operates using your personal Google Gemini API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style={{ color: '#0284C7', textDecoration: 'underline', fontWeight: 600 }}>Google AI Studio &#x2197;</a>. Leverage generous free-tier limits without platform middleman fees.
             </p>
           </div>
 

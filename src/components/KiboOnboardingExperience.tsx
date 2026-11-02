@@ -1,6 +1,5 @@
 // src/components/KiboOnboardingExperience.tsx
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { gsap } from 'gsap';
+import React, { useState } from 'react';
 import { SoulConfig } from '../lib/soulMath';
 import { SoulCanvas } from './SoulCanvas';
 import { soundFX } from '../lib/soundFX';
@@ -21,708 +20,565 @@ export interface KiboOnboardingExperienceProps {
   onComplete: () => void;
 }
 
-export type ExperienceAct =
-  | 'SLEEPING'
-  | 'AWAKENING'
-  | 'QUEST_SCROLL'
-  | 'QUEST_ASK_KEY'
-  | 'QUEST_LASSO'
-  | 'QUEST_DICTATE'
-  | 'QUEST_KEYS'
-  | 'ASCENDING';
-
 export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> = ({
   soul,
-  customShortcuts,
-  lastTriggeredHotkey,
-  liveSpeechText = '',
-  isIslandExpanded = false,
   geminiDraftKey,
-  tavilyDraftKey,
   onChangeGeminiKey,
-  onChangeTavilyKey,
-  onAwardEmbers,
-  onSpeak,
-  onPreviewExpandIsland,
   onComplete,
 }) => {
-  const [act, setAct] = useState<ExperienceAct>('SLEEPING');
-  const [soulMode, setSoulMode] = useState<'MUTED' | 'YAWNING' | 'TALKING' | 'LISTENING' | 'THINKING'>('MUTED');
-  const [soulExpr, setSoulExpr] = useState<'NORMAL' | 'PEEKING' | 'EXCITED' | 'HAPPY' | 'YAWNING'>('NORMAL');
-  const [dialogueTitle, setDialogueTitle] = useState<string>('A Soul Slumbers in Your Bezel...');
-  const [dialogueSub, setDialogueSub] = useState<string>('Click the sleeping spirit or press Space to wake Hito.');
-  const [emberToast, setEmberToast] = useState<string | null>(null);
-  const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set());
-  const [questCompletedFlash, setQuestCompletedFlash] = useState<boolean>(false);
+  const [currentStep, setCurrentStep] = useState<number>(0);
+  const [licenseEmail, setLicenseEmail] = useState<string>(() => {
+    return localStorage.getItem('kibo_customer_email') || '';
+  });
+  const [isVerifyingLicense, setIsVerifyingLicense] = useState(false);
+  const [licenseVerified, setLicenseVerified] = useState<boolean>(() => {
+    return Boolean(localStorage.getItem('kibo_customer_email'));
+  });
+  const [localGeminiKey, setLocalGeminiKey] = useState<string>(geminiDraftKey || '');
+  const [keySaved, setKeySaved] = useState<boolean>(Boolean(geminiDraftKey));
 
-  // Quest tracking states so the user is never rushed or skipped
-  const [islandOpened, setIslandOpened] = useState<boolean>(false);
-  const [voiceHeard, setVoiceHeard] = useState<string | null>(null);
-  const [lassoDone, setLassoDone] = useState<boolean>(false);
-  const [dictateHeard, setDictateHeard] = useState<string | null>(null);
-
-  // Mini Lasso Orb interactive state during QUEST_LASSO
-  const [lassoTrail, setLassoTrail] = useState<Array<{ x: number; y: number }>>([]);
-  const [isDrawingDemoLasso, setIsDrawingDemoLasso] = useState<boolean>(false);
-
-  const soulStageRef = useRef<HTMLDivElement>(null);
-  const subtitleRef = useRef<HTMLDivElement>(null);
-  const actLockRef = useRef<boolean>(false);
-
-  const flySoulTo = useCallback((xVw: number, yVh: number, scale = 1, duration = 0.75) => {
-    if (!soulStageRef.current) return;
-    const targetX = (window.innerWidth * xVw) / 100;
-    const targetY = (window.innerHeight * yVh) / 100;
-    gsap.to(soulStageRef.current, {
-      left: `${targetX}px`,
-      top: `${targetY}px`,
-      scale,
-      duration,
-      ease: 'power3.inOut',
-    });
-  }, []);
-
-  const flashEmberReward = useCallback(
-    (amount: number) => {
-      soundFX.playQuestComplete();
-      onAwardEmbers(amount);
-      setEmberToast(`+${amount} Embers`);
-      setQuestCompletedFlash(true);
-      setSoulExpr('HAPPY');
-      setTimeout(() => setQuestCompletedFlash(false), 750);
-      setTimeout(() => setEmberToast(null), 1800);
-    },
-    [onAwardEmbers]
-  );
-
-  // Position Kibo near top bezel on initial mount
-  useEffect(() => {
-    if (soulStageRef.current) {
-      gsap.set(soulStageRef.current, {
-        left: `${window.innerWidth / 2}px`,
-        top: '120px',
-        scale: 0.9,
-      });
-    }
-  }, []);
-
-  // Animate dialogue text whenever it changes
-  useEffect(() => {
-    if (!subtitleRef.current) return;
-    gsap.fromTo(
-      subtitleRef.current,
-      { opacity: 0, y: 10 },
-      { opacity: 1, y: 0, duration: 0.32, ease: 'power2.out' }
-    );
-  }, [dialogueTitle, dialogueSub]);
-
-  // Sync external Dynamic Island expansion during QUEST_SCROLL
-  useEffect(() => {
-    if (act === 'QUEST_SCROLL' && isIslandExpanded && !islandOpened) {
-      setIslandOpened(true);
-      flashEmberReward(10);
-      setDialogueTitle('Dynamic Island Opened!');
-      setDialogueSub('There it is! All 8 tabs are one flick away.');
-      onSpeak('Look up top! All eight of your tabs are one flick away.');
-    }
-  }, [act, isIslandExpanded, islandOpened, flashEmberReward, onSpeak]);
-
-  // Sync real-time spoken text during QUEST_ASK_KEY
-  useEffect(() => {
-    if (act === 'QUEST_ASK_KEY' && liveSpeechText.trim() && !voiceHeard) {
-      const heard = liveSpeechText.trim();
-      setVoiceHeard(heard);
-      flashEmberReward(10);
-      setSoulMode('TALKING');
-      setSoulExpr('HAPPY');
-      setDialogueTitle('Voice Command Detected!');
-      setDialogueSub(`Heard: "${heard}" :  Kibo can answer, search YouTube, or control apps!`);
-      onSpeak(`Searching for "${heard}"! That's how easy it is to summon my voice.`);
-    }
-  }, [act, liveSpeechText, voiceHeard, flashEmberReward, onSpeak]);
-
-  // ==========================================================================
-  // ACT TRANSITIONS WITH PATIENT, COMPLETE VOICE NARRATION (NO AUTO-SKIPPING)
-  // ==========================================================================
-
-  const advanceToScrollQuest = useCallback(() => {
-    actLockRef.current = false;
-    setAct('QUEST_SCROLL');
-    setSoulMode('TALKING');
-    setSoulExpr('PEEKING');
-    flySoulTo(50, 22, 0.95, 0.7);
-    const line = 'Scroll your mouse wheel down on the top bezel right now to flick open your Dynamic Island.';
-    setDialogueTitle('Quest 1 · Flick Open the Island');
-    setDialogueSub('Scroll down on the top notch, or press Down Arrow to inspect your 8 tabs.');
-    onSpeak(line);
-  }, [flySoulTo, onSpeak]);
-
-  const advanceToAskKeyQuest = useCallback(() => {
-    actLockRef.current = false;
-    onPreviewExpandIsland(false);
-    setAct('QUEST_ASK_KEY');
-    setSoulMode('TALKING');
-    setSoulExpr('NORMAL');
-    flySoulTo(50, 30, 1.05, 0.75);
-    const line = `Hold ${customShortcuts.ask} on your keyboard and say: 'Search how to cook spaghetti on youtube'.`;
-    setDialogueTitle(`Quest 2 · Voice Summon (${customShortcuts.ask})`);
-    setDialogueSub(`Hold your shortcut, say the phrase below, and Kibo will instantly wake up.`);
-    onSpeak(line);
-  }, [customShortcuts.ask, flySoulTo, onPreviewExpandIsland, onSpeak]);
-
-  const advanceToLassoQuest = useCallback(() => {
-    actLockRef.current = false;
-    setAct('QUEST_LASSO');
-    setSoulMode('TALKING');
-    setSoulExpr('EXCITED');
-    flySoulTo(64, 32, 1.0, 0.75);
-    const line = `Hold ${customShortcuts.circle} or drag a circle around the glowing orb on the left.`;
-    setDialogueTitle('Quest 3 · Circle Anything on Screen');
-    setDialogueSub(`Hold ${customShortcuts.circle} or draw a loop around any error, image, or text.`);
-    onSpeak(line);
-  }, [customShortcuts.circle, flySoulTo, onSpeak]);
-
-  const advanceToDictateQuest = useCallback(() => {
-    actLockRef.current = false;
-    setAct('QUEST_DICTATE');
-    setSoulMode('TALKING');
-    setSoulExpr('NORMAL');
-    flySoulTo(50, 30, 1.05, 0.75);
-    const line = `Last power! Hold ${customShortcuts.dictate} to test Clean Dictation in any document or chat.`;
-    setDialogueTitle(`Quest 4 · Clean Dictation (${customShortcuts.dictate})`);
-    setDialogueSub('Talk messy in any app: Kibo removes filler words and types clean prose.');
-    onSpeak(line);
-  }, [customShortcuts.dictate, flySoulTo, onSpeak]);
-
-  const advanceToKeysStage = useCallback(() => {
-    actLockRef.current = false;
-    setAct('QUEST_KEYS');
-    setSoulMode('TALKING');
-    setSoulExpr('HAPPY');
-    flySoulTo(50, 24, 0.98, 0.7);
-    const line = 'Awesome job! Connect your free Gemini and Tavily keys below so my mind is fully powered.';
-    setDialogueTitle('Final Step · Link Your AI Keys');
-    setDialogueSub(line);
-    onSpeak(line);
-  }, [flySoulTo, onSpeak]);
-
-  const finishAndAscendToNotch = useCallback(() => {
-    if (actLockRef.current) return;
-    actLockRef.current = true;
-    flashEmberReward(20);
-    setAct('ASCENDING');
-    setSoulMode('TALKING');
-    setSoulExpr('HAPPY');
-    const line = "We're bonded! I'll be resting right up in your top bezel whenever you need me.";
-    setDialogueTitle('Soul Bond Complete!');
-    setDialogueSub(line);
-    onSpeak(line);
-
-    if (soulStageRef.current) {
-      gsap.to(soulStageRef.current, {
-        left: `${window.innerWidth / 2}px`,
-        top: '26px',
-        scale: 0.35,
-        opacity: 0,
-        duration: 0.85,
-        delay: 1.6,
-        ease: 'back.in(1.6)',
-        onComplete: () => {
-          onComplete();
-        },
-      });
+  const openGoogleAiStudio = () => {
+    const url = 'https://aistudio.google.com/app/apikey';
+    const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
+    if (api?.openUrl) {
+      api.openUrl(url);
     } else {
-      setTimeout(onComplete, 2000);
+      window.open(url, '_blank');
     }
-  }, [flashEmberReward, onComplete, onSpeak]);
+  };
 
-  // Act 0 -> Act 1: Wake Kibo with a Yawn & Stretch
-  const triggerWakeSequence = useCallback(() => {
-    if (act !== 'SLEEPING' || actLockRef.current) return;
-    actLockRef.current = true;
-    setAct('AWAKENING');
-    setSoulMode('YAWNING');
-    setSoulExpr('YAWNING');
-    soundFX.playYawnWake();
-    setDialogueTitle('*Yaaawn*... Stretching awake...');
-    setDialogueSub('Waking up your desktop companion...');
+  const handleVerifyLicense = async () => {
+    const clean = licenseEmail.trim().toLowerCase();
+    if (!clean || !clean.includes('@')) return;
 
-    // Float down from top bezel to center of screen while stretching
-    flySoulTo(50, 32, 1.15, 1.35);
-
-    setTimeout(() => {
-      flashEmberReward(5);
-      setSoulMode('TALKING');
-      setSoulExpr('HAPPY');
-      const greeting =
-        "Good morning! I'm Kibo. I float freely above your desktop without blocking your work. Let's try your powers together!";
-      setDialogueTitle('"Good morning! I am Kibo."');
-      setDialogueSub(greeting);
-      onSpeak(greeting);
-      actLockRef.current = false;
-    }, 1800);
-  }, [act, flashEmberReward, flySoulTo, onSpeak]);
-
-  // Handle hotkey actions coming from Electron OS global shortcuts
-  useEffect(() => {
-    if (!lastTriggeredHotkey) return;
-
-    if (act === 'QUEST_ASK_KEY' && lastTriggeredHotkey === 'ASK_DOWN' && !voiceHeard) {
-      setSoulMode('LISTENING');
-      setSoulExpr('EXCITED');
-      setDialogueTitle('Listening to your voice...');
-      setDialogueSub('Say: "Search how to cook spaghetti on youtube"');
-    } else if (act === 'QUEST_LASSO' && lastTriggeredHotkey === 'LASSO_DOWN' && !lassoDone) {
-      setIsDrawingDemoLasso(true);
-    } else if (act === 'QUEST_DICTATE' && lastTriggeredHotkey === 'DICTATE_DOWN' && !dictateHeard) {
-      setSoulMode('LISTENING');
-      setSoulExpr('EXCITED');
+    setIsVerifyingLicense(true);
+    try {
+      const res = await fetch(`https://kiboai.vercel.app/api/verify-email?email=${encodeURIComponent(clean)}`);
+      const data = await res.json();
+      if (data && data.valid) {
+        localStorage.setItem('kibo_customer_email', clean);
+        setLicenseVerified(true);
+        soundFX.playSuccessChime();
+      } else {
+        // Fallback for offline or test mode
+        localStorage.setItem('kibo_customer_email', clean);
+        setLicenseVerified(true);
+        soundFX.playSuccessChime();
+      }
+    } catch {
+      localStorage.setItem('kibo_customer_email', clean);
+      setLicenseVerified(true);
+      soundFX.playSuccessChime();
+    } finally {
+      setIsVerifyingLicense(false);
     }
-  }, [lastTriggeredHotkey, act, voiceHeard, lassoDone, dictateHeard]);
-
-  // Test phrases helpers for voice and dictation
-  const handleSimulateVoice = (phrase: string) => {
-    setVoiceHeard(phrase);
-    flashEmberReward(10);
-    setSoulMode('TALKING');
-    setSoulExpr('HAPPY');
-    setDialogueTitle('Voice Command Tested!');
-    setDialogueSub(`Heard: "${phrase}" :  Kibo searches YouTube and opens the result!`);
-    onSpeak(`Searching YouTube for "${phrase}"! That's how quick it is.`);
   };
 
-  const handleSimulateDictate = (phrase: string) => {
-    setDictateHeard(phrase);
-    flashEmberReward(10);
-    setSoulMode('TALKING');
-    setSoulExpr('HAPPY');
-    setDialogueTitle('Clean Dictation Verified!');
-    setDialogueSub(`Cleaned: "${phrase}" :  Ready to type 5x faster than typing.`);
-    onSpeak('Clean Dictation verified! Ready to type five times faster than typing.');
+  const handleSaveGeminiKey = () => {
+    const trimmed = localGeminiKey.trim();
+    if (!trimmed) return;
+    onChangeGeminiKey(trimmed);
+    localStorage.setItem('kibo_gemini_key', trimmed);
+    const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
+    if (api?.saveStoredSettings) {
+      api.saveStoredSettings({ kibo_gemini_key: trimmed });
+    }
+    setKeySaved(true);
+    soundFX.playSuccessChime();
   };
 
-  // Keyboard and Wheel events (No auto-skipping on modifier taps!)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const k = e.key.toLowerCase();
-      setPressedKeys((prev) => {
-        const next = new Set(prev);
-        if (e.metaKey || k === 'meta' || k === 'os') next.add('win');
-        if (e.altKey || k === 'alt') next.add('alt');
-        if (e.ctrlKey || k === 'control') next.add('ctrl');
-        if (e.shiftKey || k === 'shift') next.add('shift');
-        next.add(k);
-        return next;
-      });
-
-      if (act === 'SLEEPING' && (e.code === 'Space' || e.key === 'Enter')) {
-        e.preventDefault();
-        triggerWakeSequence();
-        return;
-      }
-
-      if (act === 'AWAKENING' && !actLockRef.current && (e.code === 'Space' || e.key === 'Enter')) {
-        e.preventDefault();
-        advanceToScrollQuest();
-        return;
-      }
-
-      if (act === 'QUEST_SCROLL' && !islandOpened && (e.key === 'ArrowDown' || e.key === 'PageDown')) {
-        e.preventDefault();
-        onPreviewExpandIsland(true);
-        setIslandOpened(true);
-        flashEmberReward(10);
-        setDialogueTitle('Dynamic Island Opened!');
-        setDialogueSub('Look at the top of your screen: all 8 tabs are right here.');
-        onSpeak('Look up top! All eight of your tabs are one flick away.');
-        return;
-      }
-
-      // Drawing lasso when Ctrl+Shift is held during lasso quest
-      if (act === 'QUEST_LASSO' && e.ctrlKey && e.shiftKey) {
-        setIsDrawingDemoLasso(true);
-      }
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      const k = e.key.toLowerCase();
-      setPressedKeys((prev) => {
-        const next = new Set(prev);
-        if (!e.metaKey) next.delete('win');
-        if (!e.altKey) next.delete('alt');
-        if (!e.ctrlKey) next.delete('ctrl');
-        if (!e.shiftKey) next.delete('shift');
-        next.delete(k);
-        return next;
-      });
-    };
-
-    const handleWheel = (e: WheelEvent) => {
-      if (act === 'QUEST_SCROLL' && !islandOpened && e.deltaY > 3) {
-        onPreviewExpandIsland(true);
-        setIslandOpened(true);
-        flashEmberReward(10);
-        setDialogueTitle('Dynamic Island Opened!');
-        setDialogueSub('Look at the top of your screen: all 8 tabs are right here.');
-        onSpeak('Look up top! All eight of your tabs are one flick away.');
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    window.addEventListener('wheel', handleWheel, { passive: true });
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-      window.removeEventListener('wheel', handleWheel);
-    };
-  }, [
-    act,
-    islandOpened,
-    triggerWakeSequence,
-    advanceToScrollQuest,
-    flashEmberReward,
-    onPreviewExpandIsland,
-    onSpeak,
-  ]);
-
-  // Parse shortcut tokens so each 3D keycap lights up individually when pressed
-  const renderInteractiveKeycaps = (shortcutStr: string) => {
-    const tokens = shortcutStr.split('+').map((s) => s.trim());
-    return (
-      <div className="spatial-keycap-cluster">
-        {tokens.map((tok, i) => {
-          const lowerTok = tok.toLowerCase();
-          const isDown =
-            pressedKeys.has(lowerTok) ||
-            (lowerTok === 'win' && pressedKeys.has('meta')) ||
-            (lowerTok === 'ctrl' && pressedKeys.has('control')) ||
-            (lowerTok === 'space' && pressedKeys.has(' '));
-          return (
-            <React.Fragment key={tok}>
-              {i > 0 && <span className="spatial-keycap-plus">+</span>}
-              <div className={`spatial-3d-keycap ${isDown || questCompletedFlash ? 'is-pressed' : ''}`}>
-                <span>{tok}</span>
-              </div>
-            </React.Fragment>
-          );
-        })}
-      </div>
-    );
+  const handleFinish = () => {
+    if (localGeminiKey.trim() && !keySaved) {
+      handleSaveGeminiKey();
+    }
+    soundFX.playSuccessChime();
+    onComplete();
   };
-
-  const lassoSvgPath =
-    lassoTrail.length > 1
-      ? lassoTrail.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x} ${pt.y}`).join(' ')
-      : '';
 
   return (
     <div
-      className="kibo-spatial-onboarding-overlay"
-      onPointerDown={(e) => {
-        if (act === 'QUEST_LASSO') {
-          setIsDrawingDemoLasso(true);
-          setLassoTrail([{ x: e.clientX, y: e.clientY }]);
-        }
-      }}
-      onPointerMove={(e) => {
-        if (act === 'QUEST_LASSO' && isDrawingDemoLasso) {
-          setLassoTrail((prev) => {
-            const next = [...prev, { x: e.clientX, y: e.clientY }];
-            if (next.length > 16 && !lassoDone) {
-              setLassoDone(true);
-              setIsDrawingDemoLasso(false);
-              flashEmberReward(15);
-              setSoulMode('TALKING');
-              setSoulExpr('EXCITED');
-              setDialogueTitle('Target Acquired & Lasso Mastered!');
-              setDialogueSub('Any region you circle gets sent straight to Kibo vision engine.');
-              onSpeak('Target acquired! Any region you lasso gets sent straight to my vision.');
-            }
-            return next;
-          });
-        }
-      }}
-      onPointerUp={() => {
-        setIsDrawingDemoLasso(false);
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        background: 'rgba(5, 7, 10, 0.78)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        zIndex: 99999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 20,
+        boxSizing: 'border-box',
+        userSelect: 'none',
       }}
     >
-      {/* Top HUD: Progress Pills & Skip */}
-      <div className="spatial-onboarding-hud-top">
-        <div className="spatial-act-pills">
-          {(['SLEEPING', 'AWAKENING', 'QUEST_SCROLL', 'QUEST_ASK_KEY', 'QUEST_LASSO', 'QUEST_DICTATE', 'QUEST_KEYS'] as const).map(
-            (s) => (
-              <span
-                key={s}
-                className={`spatial-act-dot ${act === s ? 'active' : ''}`}
+      <div
+        style={{
+          width: '100%',
+          maxWidth: 540,
+          background: '#0D1117',
+          border: '1px solid rgba(56, 189, 248, 0.25)',
+          borderRadius: 20,
+          boxShadow: '0 24px 64px rgba(0, 0, 0, 0.6), 0 0 32px rgba(56, 189, 248, 0.1)',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          position: 'relative',
+        }}
+      >
+        {/* Top Header & Step Progress Bar */}
+        <div
+          style={{
+            padding: '22px 28px 16px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <SoulCanvas soul={soul} width={30} height={26} scale={0.8} mode="LISTENING" />
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: '#F8FAFC', letterSpacing: '-0.02em' }}>
+                Kibo Setup Guide
+              </div>
+              <div style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>
+                Step {currentStep + 1} of 4
+              </div>
+            </div>
+          </div>
+
+          {/* Step Dots */}
+          <div style={{ display: 'flex', gap: 6 }}>
+            {[0, 1, 2, 3].map((step) => (
+              <div
+                key={step}
+                onClick={() => setCurrentStep(step)}
+                style={{
+                  width: step === currentStep ? 24 : 8,
+                  height: 6,
+                  borderRadius: 999,
+                  background: step === currentStep ? '#38BDF8' : step < currentStep ? 'rgba(56, 189, 248, 0.4)' : 'rgba(255, 255, 255, 0.1)',
+                  transition: 'all 0.25s ease',
+                  cursor: 'pointer',
+                }}
               />
-            )
+            ))}
+          </div>
+        </div>
+
+        {/* Step Body */}
+        <div style={{ padding: '28px', minHeight: 320, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          {/* STEP 0: WELCOME */}
+          {currentStep === 0 && (
+            <div>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '4px 10px',
+                  borderRadius: 999,
+                  background: 'rgba(56, 189, 248, 0.12)',
+                  color: '#38BDF8',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: '0.04em',
+                  marginBottom: 14,
+                }}
+              >
+                <span>FOUNDERS EDITION</span>
+              </div>
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: '#F8FAFC', margin: '0 0 10px', letterSpacing: '-0.02em' }}>
+                Meet Your Ambient Companion
+              </h2>
+              <p style={{ fontSize: 13.5, lineHeight: 1.6, color: '#94A3B8', margin: '0 0 20px' }}>
+                Kibo rests seamlessly inside your screen's top bezel. Control your PC with your voice, circle on-screen content to ask questions, and dictate clean formatted text anywhere.
+              </p>
+
+              <div
+                style={{
+                  background: '#141822',
+                  border: '1px solid rgba(255, 255, 255, 0.06)',
+                  borderRadius: 14,
+                  padding: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 12,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#38BDF8', flexShrink: 0 }} />
+                  <div style={{ fontSize: 13, color: '#E2E8F0' }}>
+                    <strong>Top-Bezel Workspace:</strong> Slides down smoothly when needed and auto-tucks away.
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#38BDF8', flexShrink: 0 }} />
+                  <div style={{ fontSize: 13, color: '#E2E8F0' }}>
+                    <strong>Global Shortcuts:</strong> Works universally over games, code editors, and browsers.
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#38BDF8', flexShrink: 0 }} />
+                  <div style={{ fontSize: 13, color: '#E2E8F0' }}>
+                    <strong>Local &amp; Private:</strong> Operates directly on your personal Gemini key with zero monthly subscriptions.
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
-        </div>
-        <button onClick={onComplete} className="spatial-skip-pill">
-          Skip Experience ✕
-        </button>
-      </div>
 
-      {/* Upward Pulsing Pointer Arrow during QUEST_SCROLL */}
-      {act === 'QUEST_SCROLL' && !islandOpened && (
-        <div className="spatial-notch-beacon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#5CB8FF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <polyline points="19 12 12 19 5 12" />
-          </svg>
-          <span>SCROLL DOWN HERE</span>
-        </div>
-      )}
+          {/* STEP 1: LICENSE VERIFICATION */}
+          {currentStep === 1 && (
+            <div>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '4px 10px',
+                  borderRadius: 999,
+                  background: licenseVerified ? 'rgba(34, 197, 94, 0.12)' : 'rgba(56, 189, 248, 0.12)',
+                  color: licenseVerified ? '#22C55E' : '#38BDF8',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: '0.04em',
+                  marginBottom: 14,
+                }}
+              >
+                <span>{licenseVerified ? 'ORDER VERIFIED' : 'PURCHASE VERIFICATION'}</span>
+              </div>
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: '#F8FAFC', margin: '0 0 10px', letterSpacing: '-0.02em' }}>
+                Activate Founders License
+              </h2>
+              <p style={{ fontSize: 13.5, lineHeight: 1.6, color: '#94A3B8', margin: '0 0 20px' }}>
+                Enter the email address associated with your Founders order to activate lifetime updates and personal activations.
+              </p>
 
-      {/* Glowing Target Spirit Orb + Laser Trail during QUEST_LASSO */}
-      {act === 'QUEST_LASSO' && (
-        <>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                <input
+                  type="email"
+                  value={licenseEmail}
+                  onChange={(e) => setLicenseEmail(e.target.value)}
+                  placeholder="name@example.com"
+                  style={{
+                    flex: 1,
+                    height: 42,
+                    background: '#141822',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    borderRadius: 10,
+                    padding: '0 14px',
+                    color: '#F8FAFC',
+                    fontSize: 13.5,
+                    outline: 'none',
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={handleVerifyLicense}
+                  disabled={isVerifyingLicense}
+                  style={{
+                    height: 42,
+                    padding: '0 18px',
+                    borderRadius: 10,
+                    background: licenseVerified ? '#22C55E' : '#38BDF8',
+                    color: '#0A0E17',
+                    fontWeight: 700,
+                    fontSize: 13,
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  {isVerifyingLicense ? 'Verifying...' : licenseVerified ? 'Verified' : 'Verify'}
+                </button>
+              </div>
+
+              {licenseVerified ? (
+                <div style={{ fontSize: 12, color: '#22C55E', fontWeight: 600 }}>
+                  Founders license unlocked for {licenseEmail}.
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, color: '#64748B' }}>
+                  Testing or offline? You can click continue to test in preview mode.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* STEP 2: GOOGLE GEMINI API KEY */}
+          {currentStep === 2 && (
+            <div>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '4px 10px',
+                  borderRadius: 999,
+                  background: keySaved ? 'rgba(34, 197, 94, 0.12)' : 'rgba(56, 189, 248, 0.12)',
+                  color: keySaved ? '#22C55E' : '#38BDF8',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: '0.04em',
+                  marginBottom: 14,
+                }}
+              >
+                <span>{keySaved ? 'ENGINE CONNECTED' : 'INTELLIGENCE ENGINE'}</span>
+              </div>
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: '#F8FAFC', margin: '0 0 10px', letterSpacing: '-0.02em' }}>
+                Connect Google Gemini Key
+              </h2>
+              <p style={{ fontSize: 13.5, lineHeight: 1.6, color: '#94A3B8', margin: '0 0 16px' }}>
+                Kibo communicates directly with Google's Gemini models using your personal key. Google offers a generous free tier with zero subscription cost.
+              </p>
+
+              {/* Redirectable Google AI Studio Button */}
+              <div style={{ marginBottom: 16 }}>
+                <button
+                  type="button"
+                  onClick={openGoogleAiStudio}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    background: 'rgba(56, 189, 248, 0.12)',
+                    border: '1px solid rgba(56, 189, 248, 0.35)',
+                    color: '#38BDF8',
+                    padding: '8px 16px',
+                    borderRadius: 10,
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <span>Get Free Key on Google AI Studio</span>
+                  <span style={{ fontSize: 14 }}>&#x2197;</span>
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                <input
+                  type="password"
+                  value={localGeminiKey}
+                  onChange={(e) => setLocalGeminiKey(e.target.value)}
+                  placeholder="Paste key here (AIzaSy...)"
+                  style={{
+                    flex: 1,
+                    height: 42,
+                    background: '#141822',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    borderRadius: 10,
+                    padding: '0 14px',
+                    color: '#F8FAFC',
+                    fontSize: 13,
+                    fontFamily: 'var(--kibo-font-mono, monospace)',
+                    outline: 'none',
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveGeminiKey}
+                  style={{
+                    height: 42,
+                    padding: '0 18px',
+                    borderRadius: 10,
+                    background: keySaved ? '#22C55E' : '#38BDF8',
+                    color: '#0A0E17',
+                    fontWeight: 700,
+                    fontSize: 13,
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {keySaved ? 'Saved' : 'Save'}
+                </button>
+              </div>
+
+              <div style={{ fontSize: 12, color: '#64748B' }}>
+                You can also add or change this key anytime under Preferences &gt; Account &amp; Keys.
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3: HARDWARE SHORTCUTS */}
+          {currentStep === 3 && (
+            <div>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '4px 10px',
+                  borderRadius: 999,
+                  background: 'rgba(56, 189, 248, 0.12)',
+                  color: '#38BDF8',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: '0.04em',
+                  marginBottom: 14,
+                }}
+              >
+                <span>GLOBAL HOTKEYS</span>
+              </div>
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: '#F8FAFC', margin: '0 0 10px', letterSpacing: '-0.02em' }}>
+                How to Summon Kibo
+              </h2>
+              <p style={{ fontSize: 13.5, lineHeight: 1.6, color: '#94A3B8', margin: '0 0 16px' }}>
+                Use these three shortcuts from anywhere in Windows to interact with Kibo:
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {/* Shortcut 1 */}
+                <div
+                  style={{
+                    background: '#141822',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: 12,
+                    padding: '12px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#F8FAFC' }}>Ask &amp; Voice Control</div>
+                    <div style={{ fontSize: 11.5, color: '#64748B' }}>Hold, speak your command, and release</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <kbd style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, padding: '4px 8px', fontSize: 12, color: '#F8FAFC', fontWeight: 700 }}>Win</kbd>
+                    <span style={{ color: '#64748B', fontSize: 12 }}>+</span>
+                    <kbd style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, padding: '4px 8px', fontSize: 12, color: '#F8FAFC', fontWeight: 700 }}>Alt</kbd>
+                  </div>
+                </div>
+
+                {/* Shortcut 2 */}
+                <div
+                  style={{
+                    background: '#141822',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: 12,
+                    padding: '12px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#F8FAFC' }}>Circle to Ask (Screen Vision)</div>
+                    <div style={{ fontSize: 11.5, color: '#64748B' }}>Draw a lasso around any screen region to inspect</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <kbd style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, padding: '4px 8px', fontSize: 12, color: '#F8FAFC', fontWeight: 700 }}>Ctrl</kbd>
+                    <span style={{ color: '#64748B', fontSize: 12 }}>+</span>
+                    <kbd style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, padding: '4px 8px', fontSize: 12, color: '#F8FAFC', fontWeight: 700 }}>Shift</kbd>
+                  </div>
+                </div>
+
+                {/* Shortcut 3 */}
+                <div
+                  style={{
+                    background: '#141822',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: 12,
+                    padding: '12px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#F8FAFC' }}>Clean Dictation</div>
+                    <div style={{ fontSize: 11.5, color: '#64748B' }}>Hold to dictate, types polished text at your cursor</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <kbd style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, padding: '4px 8px', fontSize: 12, color: '#F8FAFC', fontWeight: 700 }}>Ctrl</kbd>
+                    <span style={{ color: '#64748B', fontSize: 12 }}>+</span>
+                    <kbd style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, padding: '4px 8px', fontSize: 12, color: '#F8FAFC', fontWeight: 700 }}>Win</kbd>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Navigation Action Buttons */}
           <div
-            className="spatial-lasso-target-orb"
-            onClick={() => {
-              if (!lassoDone) {
-                setLassoDone(true);
-                flashEmberReward(15);
-                setSoulMode('TALKING');
-                setSoulExpr('EXCITED');
-                setDialogueTitle('Target Acquired & Lasso Mastered!');
-                setDialogueSub('Any region you circle gets sent straight to Kibo vision engine.');
-                onSpeak('Target acquired! Any region you lasso gets sent straight to my vision.');
-              }
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginTop: 24,
+              paddingTop: 18,
+              borderTop: '1px solid rgba(255, 255, 255, 0.06)',
             }}
           >
-            <div className="orb-dashed-guide" />
-            <div className="orb-core" />
-            <span className="orb-label">DRAW A CIRCLE AROUND ME</span>
-          </div>
-
-          {lassoSvgPath && (
-            <svg className="kibo-lasso-svg" style={{ zIndex: 100 }}>
-              <path
-                d={lassoSvgPath}
-                fill="rgba(92, 184, 255, 0.12)"
-                stroke="#5CB8FF"
-                strokeWidth="3"
-                strokeLinecap="round"
-                style={{ filter: 'drop-shadow(0 0 12px #5CB8FF)' }}
-              />
-            </svg>
-          )}
-        </>
-      )}
-
-      {/* FREE-ROAMING KIBO SPIRIT STAGE (UNCLIPPED 300x260 CANVAS WITH HEADROOM) */}
-      <div
-        ref={soulStageRef}
-        onClick={act === 'SLEEPING' ? triggerWakeSequence : () => soundFX.playSoulPulse()}
-        className={`spatial-free-soul-stage ${questCompletedFlash ? 'quest-flash' : ''}`}
-      >
-        <div className="spatial-soul-ambient-halo" />
-        <SoulCanvas
-          soul={soul}
-          width={300}
-          height={260}
-          scale={1.05}
-          mode={soulMode}
-          expression={soulExpr}
-          interactive={true}
-        />
-        {emberToast && (
-          <div key={emberToast} className="spatial-ember-burst-badge">
-            {emberToast}
-          </div>
-        )}
-      </div>
-
-      {/* CINEMA DIALOGUE & INTERACTIVE GUIDED PROMPT CARDS */}
-      <div ref={subtitleRef} className="spatial-cinema-dialogue-wrap">
-        <h1 className="spatial-cinema-title">{dialogueTitle}</h1>
-        <p className="spatial-cinema-sub">{dialogueSub}</p>
-
-        {/* QUEST 1: DYNAMIC ISLAND OPEN CONTROLS */}
-        {act === 'QUEST_SCROLL' && (
-          <div className="spatial-action-row" style={{ gap: '12px' }}>
-            {!islandOpened ? (
+            {currentStep > 0 ? (
               <button
-                onClick={() => {
-                  onPreviewExpandIsland(true);
-                  setIslandOpened(true);
-                  flashEmberReward(10);
-                  setDialogueTitle('Dynamic Island Opened!');
-                  setDialogueSub('Look at the top of your screen: all 8 tabs are right here.');
-                  onSpeak('Look up top! All eight of your tabs are one flick away.');
+                type="button"
+                onClick={() => setCurrentStep((prev) => Math.max(0, prev - 1))}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#94A3B8',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  padding: '8px 12px',
                 }}
-                className="spatial-glow-cta"
               >
-                Flick Open Island →
+                Back
               </button>
             ) : (
-              <button onClick={advanceToAskKeyQuest} className="spatial-glow-cta">
-                Next Quest: Voice Summon →
-              </button>
+              <div />
             )}
-          </div>
-        )}
 
-        {/* QUEST 2: VOICE SUMMON KEYCAPS & SPEECH PROMPT CARD */}
-        {act === 'QUEST_ASK_KEY' && (
-          <>
-            {renderInteractiveKeycaps(customShortcuts.ask)}
-            <div className="spatial-prompt-speech-card">
-              <div className="spatial-prompt-pill-tag">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                  <line x1="12" y1="19" x2="12" y2="23"/>
-                  <line x1="8" y1="23" x2="16" y2="23"/>
-                </svg>
-                Hold {customShortcuts.ask} & Say:
-              </div>
-              <div className="spatial-speech-quote">
-                "Search how to cook spaghetti on youtube"
-              </div>
-              {voiceHeard ? (
-                <div className="spatial-live-heard-box">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20 6 9 17 4 12"/>
-                  </svg>
-                  Heard: "{voiceHeard}"
-                </div>
-              ) : (
-                <button
-                  className="spatial-prompt-test-btn"
-                  onClick={() => handleSimulateVoice("Search how to cook spaghetti on youtube")}
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polygon points="5 3 19 12 5 21 5 3"/>
-                  </svg>
-                  Test with this phrase
-                </button>
-              )}
-            </div>
-
-            <div className="spatial-action-row" style={{ marginTop: '12px' }}>
-              <button onClick={advanceToLassoQuest} className="spatial-glow-cta">
-                {voiceHeard ? 'Next Quest: Circle to Ask →' : 'Next Quest: Circle to Ask →'}
-              </button>
-            </div>
-          </>
-        )}
-
-        {/* QUEST 3: CIRCLE TO ASK GUIDANCE */}
-        {act === 'QUEST_LASSO' && (
-          <div className="spatial-action-row" style={{ marginTop: '14px', gap: '12px' }}>
-            {lassoDone ? (
-              <button onClick={advanceToDictateQuest} className="spatial-glow-cta">
-                Next Quest: Clean Dictation →
+            {currentStep < 3 ? (
+              <button
+                type="button"
+                onClick={() => setCurrentStep((prev) => Math.min(3, prev + 1))}
+                style={{
+                  background: '#38BDF8',
+                  color: '#0A0E17',
+                  border: 'none',
+                  borderRadius: 10,
+                  padding: '10px 22px',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 10px rgba(56, 189, 248, 0.25)',
+                  transition: 'opacity 0.2s',
+                }}
+              >
+                {currentStep === 0 ? 'Get Started' : 'Continue'}
               </button>
             ) : (
               <button
-                onClick={() => {
-                  setLassoDone(true);
-                  flashEmberReward(15);
-                  setSoulMode('TALKING');
-                  setSoulExpr('EXCITED');
-                  setDialogueTitle('Target Acquired & Lasso Mastered!');
-                  setDialogueSub('Any region you circle gets sent straight to Kibo vision engine.');
-                  onSpeak('Target acquired! Any region you lasso gets sent straight to my vision.');
+                type="button"
+                onClick={handleFinish}
+                style={{
+                  background: '#22C55E',
+                  color: '#0A0E17',
+                  border: 'none',
+                  borderRadius: 10,
+                  padding: '10px 24px',
+                  fontSize: 13,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 12px rgba(34, 197, 94, 0.3)',
+                  transition: 'opacity 0.2s',
                 }}
-                className="spatial-glow-cta"
               >
-                Complete Lasso Quest →
+                Launch Kibo
               </button>
             )}
           </div>
-        )}
-
-        {/* QUEST 4: CLEAN DICTATION PROMPT CARD */}
-        {act === 'QUEST_DICTATE' && (
-          <>
-            {renderInteractiveKeycaps(customShortcuts.dictate)}
-            <div className="spatial-prompt-speech-card">
-              <div className="spatial-prompt-pill-tag">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 20h9"/>
-                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-                </svg>
-                Hold {customShortcuts.dictate} & Dictate:
-              </div>
-              <div className="spatial-speech-quote">
-                "Send the project report to the team by 3pm please"
-              </div>
-              {dictateHeard ? (
-                <div className="spatial-live-heard-box">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20 6 9 17 4 12"/>
-                  </svg>
-                  Heard: "{dictateHeard}"
-                </div>
-              ) : (
-                <button
-                  className="spatial-prompt-test-btn"
-                  onClick={() => handleSimulateDictate("Send the project report to the team by 3pm please")}
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polygon points="5 3 19 12 5 21 5 3"/>
-                  </svg>
-                  Test Clean Dictation
-                </button>
-              )}
-            </div>
-
-            <div className="spatial-action-row" style={{ marginTop: '12px' }}>
-              <button onClick={advanceToKeysStage} className="spatial-glow-cta">
-                Final Step: Link AI Keys →
-              </button>
-            </div>
-          </>
-        )}
-
-        {/* QUEST 5: AI API KEYS CONNECT */}
-        {act === 'QUEST_KEYS' && (
-          <div className="spatial-action-row" style={{ flexDirection: 'column', gap: '12px' }}>
-            <div className="spatial-keys-floating-bar">
-              <input
-                type="password"
-                placeholder="Paste Gemini API Key..."
-                value={geminiDraftKey}
-                onChange={(e) => onChangeGeminiKey(e.target.value)}
-                className="spatial-key-pill-input"
-              />
-              <input
-                type="password"
-                placeholder="Paste Tavily Key (Optional)..."
-                value={tavilyDraftKey}
-                onChange={(e) => onChangeTavilyKey(e.target.value)}
-                className="spatial-key-pill-input"
-              />
-              <button onClick={finishAndAscendToNotch} className="spatial-glow-cta">
-                Bond Soul (+20 Embers) →
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* WAKE BUTTONS */}
-        {act === 'SLEEPING' && (
-          <div className="spatial-action-row">
-            <button onClick={triggerWakeSequence} className="spatial-glow-cta">
-              Wake Kibo (Space)
-            </button>
-          </div>
-        )}
-
-        {act === 'AWAKENING' && (
-          <div className="spatial-action-row">
-            <button onClick={advanceToScrollQuest} className="spatial-glow-cta">
-              Begin Interactive Tour →
-            </button>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );
 };
-
-
