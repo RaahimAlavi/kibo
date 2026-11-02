@@ -92,6 +92,10 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
         setLicenseVerified(true);
         setLicenseError('');
         soundFX.playSuccessChime();
+        // Auto-advance to Step 2 smoothly
+        setTimeout(() => {
+          setCurrentStep(2);
+        }, 750);
       } else {
         setLicenseVerified(false);
         setLicenseError(
@@ -364,7 +368,11 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
                 <input
                   type="email"
                   value={licenseEmail}
-                  onChange={(e) => setLicenseEmail(e.target.value)}
+                  onChange={(e) => {
+                    setLicenseEmail(e.target.value);
+                    setLicenseVerified(false);
+                    setLicenseError('');
+                  }}
                   placeholder="Purchase email (e.g. name@example.com)"
                   style={{
                     height: 42,
@@ -382,7 +390,11 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
                   <input
                     type="text"
                     value={licenseCode}
-                    onChange={(e) => setLicenseCode(e.target.value)}
+                    onChange={(e) => {
+                      setLicenseCode(e.target.value);
+                      setLicenseVerified(false);
+                      setLicenseError('');
+                    }}
                     placeholder="Order # (e.g. 104829) or License Key"
                     style={{
                       flex: 1,
@@ -826,23 +838,26 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
               <button
                 type="button"
                 onClick={() => {
-                  if (canContinue) {
-                    setCurrentStep((prev) => Math.min(3, prev + 1));
+                  if (currentStep === 1 && !licenseVerified) {
+                    setLicenseError('Please enter your purchase details and click Verify first.');
+                    soundFX.playErrorChime();
+                    return;
                   }
+                  setCurrentStep((prev) => Math.min(3, prev + 1));
                 }}
-                disabled={!canContinue}
+                disabled={currentStep === 1 && !licenseVerified}
                 style={{
-                  background: canContinue ? '#38BDF8' : 'rgba(56, 189, 248, 0.15)',
-                  color: canContinue ? '#0A0E17' : '#64748B',
+                  background: (currentStep === 1 && !licenseVerified) ? 'rgba(56, 189, 248, 0.15)' : '#38BDF8',
+                  color: (currentStep === 1 && !licenseVerified) ? '#64748B' : '#0A0E17',
                   border: 'none',
                   borderRadius: 10,
                   padding: '10px 22px',
                   fontSize: 13,
                   fontWeight: 700,
-                  cursor: canContinue ? 'pointer' : 'not-allowed',
-                  boxShadow: canContinue ? '0 2px 10px rgba(56, 189, 248, 0.25)' : 'none',
+                  cursor: (currentStep === 1 && !licenseVerified) ? 'not-allowed' : 'pointer',
+                  boxShadow: (currentStep === 1 && !licenseVerified) ? 'none' : '0 2px 10px rgba(56, 189, 248, 0.25)',
                   transition: 'all 0.2s',
-                  opacity: canContinue ? 1 : 0.6,
+                  opacity: (currentStep === 1 && !licenseVerified) ? 0.6 : 1,
                 }}
               >
                 {currentStep === 0

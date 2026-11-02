@@ -53,8 +53,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // 1. Check for owner accounts or authorized founders test codes
-    if (FOUNDER_TEST_CODES.has(cleanCode) || (OWNER_EMAILS.has(cleanEmail) && cleanCode.length >= 4)) {
+    // 1. Check for authorized founders test codes
+    if (FOUNDER_TEST_CODES.has(cleanCode)) {
       return res.status(200).json({
         verified: true,
         email: cleanEmail,
@@ -71,7 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({
         verified: false,
         needsSetup: true,
-        error: 'Lemon Squeezy order verification is pending store review. For testing, use your Founders activation code.',
+        error: 'Invalid license key or order code. If you are beta testing, please use the Founders activation code (FOUNDER-2026).',
       });
     }
 
