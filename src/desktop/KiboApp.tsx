@@ -1636,7 +1636,7 @@ export const KiboApp: React.FC = () => {
   const [integrationsSearch, setIntegrationsSearch] = useState<string>('');
   const [showConnectModal, setShowConnectModal] = useState<boolean>(false);
   const [notchApiAlert, setNotchApiAlert] = useState<{ type: 'missing_key' | 'rate_limit'; text: string } | null>(null);
-  const CURRENT_APP_VERSION = '1.0.0';
+  const CURRENT_APP_VERSION = '1.0.1';
   const [availableUpdate, setAvailableUpdate] = useState<{
     version: string;
     downloadUrl: string;
@@ -9974,7 +9974,7 @@ export const KiboApp: React.FC = () => {
                       </div>
 
                       <div className="kibo-settings-sidebar-bottom">
-                        <div className="kibo-settings-version">Kibo v1.0.0 (Win32)</div>
+                        <div className="kibo-settings-version">Kibo v1.0.1 (Win32)</div>
                         <button
                           onClick={() => {
                             if (window.kiboAPI?.quitApp) {

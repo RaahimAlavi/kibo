@@ -1,8 +1,8 @@
 {
-  "version": "1.0.0",
+  "version": "1.0.1",
   "minVersion": "1.0.0",
-  "downloadUrl": "https://www.dropbox.com/scl/fi/1crr4uqao66qypkzpz4lw/Kibo-Setup-1.0.0.exe?rlkey=4mzxrgyw4300ibuz6jxn3zkae&st=f7ue0nqs&dl=1",
+  "downloadUrl": "https://www.dropbox.com/scl/fi/1crr4uqao66qypkzpz4lw/Kibo-Setup-1.0.1.exe?rlkey=4mzxrgyw4300ibuz6jxn3zkae&st=f7ue0nqs&dl=1",
   "releaseDate": "2026-11-02",
-  "title": "Founders Launch Edition",
-  "notes": "Ambient top-bezel cyber companion with voice control, screen vision, and clean dictation."
+  "title": "Onboarding & Notch Update Release",
+  "notes": "Lightweight menu onboarding wizard, clickable Google AI Studio links, and live notch update alerts."
 }
