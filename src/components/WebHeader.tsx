@@ -131,7 +131,8 @@ export const WebHeader: React.FC<WebHeaderProps> = ({ currentRoute, onNavigate }
               onClick={(e) => handleLink(e, 'buy')}
               className="kibo-web-pill-cta"
             >
-              Get Founders Edition · $8
+              <span className="kibo-cta-desktop">Get Founders Edition · $8</span>
+              <span className="kibo-cta-mobile">Get Kibo · $8</span>
             </a>
           )}
         </div>

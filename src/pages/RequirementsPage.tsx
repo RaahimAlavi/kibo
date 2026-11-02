@@ -57,8 +57,8 @@ export const RequirementsPage: React.FC<RequirementsPageProps> = ({ onNavigate }
             1. Operating System & Hardware Specs
           </h2>
 
-          <div className="kibo-card" style={{ padding: 24 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+          <div className="kibo-card" style={{ padding: 24, overflowX: 'auto' }}>
+            <table className="kibo-specs-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
               <tbody>
                 <tr style={{ borderBottom: '1px solid rgba(18, 19, 22, 0.08)' }}>
                   <td style={{ padding: '12px 0', fontWeight: 600, color: '#121316', width: 180 }}>Supported OS</td>

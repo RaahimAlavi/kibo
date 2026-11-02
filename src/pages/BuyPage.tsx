@@ -145,7 +145,7 @@ export const BuyPage: React.FC<BuyPageProps> = ({ onNavigate }) => {
             border: '1px solid rgba(18, 19, 22, 0.1)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
             <div>
               <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#68707C' }}>
                 One-Time Payment

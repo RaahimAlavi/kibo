@@ -836,8 +836,212 @@ export function App() {
         .kibo-footer-top-btn:hover {
           text-decoration: underline;
         }
+        .kibo-cta-mobile {
+          display: none;
+        }
+
+        /* 1024px and below (Laptops & Small Desktops) */
+        @media (max-width: 1024px) {
+          .kibo-web-container {
+            padding: 0 24px;
+          }
+          .kibo-grid-3 {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+          }
+          .kibo-notch-showcase {
+            gap: 24px;
+          }
+        }
+
+        /* 860px and below (Tablets & Landscape Viewports) */
         @media (max-width: 860px) {
-          .kibo-grid-3, .kibo-notch-showcase, .kibo-stage-tabs, .kibo-footer-grid {
+          .kibo-web-links {
+            gap: 18px;
+          }
+          .kibo-grid-3 {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+          }
+          .kibo-notch-showcase {
+            grid-template-columns: 1fr;
+            gap: 24px;
+          }
+          .kibo-stage-tabs {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+          }
+          .kibo-footer-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 28px;
+          }
+          .kibo-stage-viewport {
+            padding: 24px 28px 32px;
+          }
+        }
+
+        /* 640px and below (Phones & Phablets) */
+        @media (max-width: 640px) {
+          main.kibo-web-container {
+            padding: 36px 16px 64px !important;
+          }
+          .kibo-web-links {
+            display: none !important;
+          }
+          .kibo-web-nav-inner {
+            padding: 12px 16px;
+          }
+          .kibo-cta-desktop {
+            display: none;
+          }
+          .kibo-cta-mobile {
+            display: inline;
+          }
+          .kibo-web-pill-cta {
+            padding: 8px 14px;
+            font-size: 12.5px;
+          }
+          .kibo-web-container {
+            padding: 0 16px;
+          }
+          .kibo-hero {
+            padding: 42px 0 36px;
+          }
+          .kibo-hero-h1 {
+            font-size: clamp(1.95rem, 7.5vw, 2.75rem);
+            line-height: 1.12;
+            letter-spacing: -0.025em;
+            margin-bottom: 14px;
+          }
+          .kibo-hero-sub {
+            font-size: 15px;
+            line-height: 1.55;
+            margin-bottom: 24px;
+          }
+          .kibo-hero-tag {
+            font-size: 11.5px;
+            padding: 5px 12px;
+            margin-bottom: 18px;
+          }
+          .kibo-hero-cta-row {
+            margin: 18px 0 32px !important;
+            gap: 10px !important;
+            justify-content: center;
+          }
+          .kibo-stage-frame {
+            border-radius: 18px;
+          }
+          .kibo-stage-bezel {
+            height: 52px;
+          }
+          .kibo-stage-notch {
+            width: 160px;
+            height: 48px;
+            border-bottom-left-radius: 14px;
+            border-bottom-right-radius: 14px;
+          }
+          .kibo-stage-viewport {
+            padding: 16px 14px 20px;
+            min-height: auto;
+          }
+          .kibo-prompt-bubble,
+          .kibo-reply-bubble {
+            padding: 12px 14px;
+            border-radius: 14px;
+          }
+          .kibo-prompt-bubble div,
+          .kibo-reply-bubble div {
+            font-size: 13.5px !important;
+          }
+          .kibo-stage-tabs {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+            margin-top: 20px;
+            padding-top: 14px;
+          }
+          .kibo-stage-tab {
+            padding: 8px 10px;
+            font-size: 12px;
+          }
+          .kibo-section {
+            padding: 60px 0;
+          }
+          .kibo-section-header {
+            margin-bottom: 32px;
+          }
+          .kibo-h2 {
+            font-size: clamp(1.6rem, 5.5vw, 2.1rem);
+            line-height: 1.18;
+          }
+          .kibo-lead {
+            font-size: 15px;
+          }
+          .kibo-grid-3 {
+            grid-template-columns: 1fr;
+            gap: 14px;
+          }
+          .kibo-card {
+            padding: 20px 16px !important;
+            border-radius: 16px;
+          }
+          .kibo-card h3 {
+            font-size: 17px !important;
+          }
+          .kibo-card p {
+            font-size: 13.5px !important;
+          }
+          .kibo-faq-header {
+            padding: 16px 18px;
+            font-size: 15px;
+          }
+          .kibo-faq-content {
+            padding: 0 18px 18px;
+            font-size: 13.5px;
+          }
+          .kibo-footer-cta-card {
+            padding: 28px 20px;
+            border-radius: 18px;
+            gap: 18px;
+            margin-bottom: 36px;
+          }
+          .kibo-footer-grid {
+            grid-template-columns: 1fr;
+            gap: 24px;
+          }
+          .kibo-footer-watermark {
+            font-size: clamp(48px, 16vw, 120px);
+          }
+          .kibo-footer-nav-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 14px;
+          }
+          table {
+            display: block;
+            width: 100%;
+            overflow-x: auto;
+          }
+          .kibo-specs-table tr {
+            display: flex;
+            flex-direction: column;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(18, 19, 22, 0.08);
+          }
+          .kibo-specs-table td {
+            width: 100% !important;
+            padding: 3px 0 !important;
+          }
+        }
+
+        /* 380px and below (Compact Phones) */
+        @media (max-width: 380px) {
+          .kibo-web-brand span {
+            font-size: 15px;
+          }
+          .kibo-hero-h1 {
+            font-size: 1.8rem;
+          }
+          .kibo-stage-tabs {
             grid-template-columns: 1fr;
           }
         }
