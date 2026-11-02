@@ -17,19 +17,7 @@ export const DownloadSuccessPage: React.FC<DownloadSuccessPageProps> = ({ onNavi
 
   const triggerDownload = () => {
     setDownloadTriggered(true);
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    iframe.src = INSTALLER_DOWNLOAD_URL;
-    document.body.appendChild(iframe);
-    setTimeout(() => {
-      try {
-        if (iframe.parentNode) {
-          document.body.removeChild(iframe);
-        }
-      } catch {
-        // ignore
-      }
-    }, 60000);
+    window.location.assign(INSTALLER_DOWNLOAD_URL);
   };
 
   useEffect(() => {
@@ -151,9 +139,10 @@ export const DownloadSuccessPage: React.FC<DownloadSuccessPageProps> = ({ onNavi
               </div>
               <div style={{ fontSize: 13, color: '#68707C' }}>
                 Didn't start?{' '}
-                <button
-                  type="button"
-                  onClick={triggerDownload}
+                <a
+                  href={INSTALLER_DOWNLOAD_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   style={{
                     background: 'none',
                     border: 'none',
@@ -166,13 +155,15 @@ export const DownloadSuccessPage: React.FC<DownloadSuccessPageProps> = ({ onNavi
                   }}
                 >
                   download kibo manually
-                </button>
+                </a>
               </div>
             </div>
           </div>
 
           <a
             href={INSTALLER_DOWNLOAD_URL}
+            target="_blank"
+            rel="noopener noreferrer"
             download="Kibo-Setup-1.0.0.exe"
             onClick={() => setDownloadTriggered(true)}
             style={{

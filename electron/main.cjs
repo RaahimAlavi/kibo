@@ -1059,10 +1059,19 @@ ipcMain.handle('get-startup-setting', () => {
 });
 
 ipcMain.handle('set-startup-setting', (_event, enabled) => {
-  app.setLoginItemSettings({
-    openAtLogin: Boolean(enabled),
-    path: process.execPath,
-  });
+  if (app.isPackaged) {
+    app.setLoginItemSettings({
+      openAtLogin: Boolean(enabled),
+      path: process.execPath,
+      args: ['--hidden'],
+    });
+  } else {
+    app.setLoginItemSettings({
+      openAtLogin: Boolean(enabled),
+      path: process.execPath,
+      args: [path.resolve(__dirname, 'main.cjs')],
+    });
+  }
   updateTrayMenu();
   return app.getLoginItemSettings().openAtLogin;
 });
@@ -2953,13 +2962,17 @@ ipcMain.handle('sync-to-notion', async (event, { apiKey, databaseId, pageData })
 // COMPOSIO PLATFORM 250+ APP INTEGRATION BRIDGE & OAUTH ENGINE
 // ============================================================================
 let composioInstance = null;
-const DEFAULT_COMPOSIO_API_KEY = 'ak_WRHAv3a87hZMLRtQwcRK';
+const DEFAULT_COMPOSIO_API_KEY = process.env.COMPOSIO_API_KEY || '';
 
 function getComposioClient(customKey) {
   const settings = readKiboSettings();
   const key = (customKey && typeof customKey === 'string' && customKey.trim())
     ? customKey.trim()
     : (settings.kibo_composio_key || process.env.COMPOSIO_API_KEY || DEFAULT_COMPOSIO_API_KEY);
+
+  if (!key) {
+    return null;
+  }
 
   if (!composioInstance || composioInstance._kiboApiKey !== key) {
     try {

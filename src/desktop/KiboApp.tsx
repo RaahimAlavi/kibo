@@ -6392,8 +6392,13 @@ export const KiboApp: React.FC = () => {
       <div className="kibo-settings-card">
         <div className="kibo-settings-row">
           <div>
-            <div className="kibo-settings-row-label">Composio Project API Key</div>
-            <div className="kibo-settings-row-desc">Required to authenticate and sync external app accounts</div>
+            <div className="kibo-settings-row-label">
+              Composio Project API Key{' '}
+              <span style={{ fontSize: 11, fontWeight: 500, color: '#94A3B8' }}>(Optional)</span>
+            </div>
+            <div className="kibo-settings-row-desc">
+              Only needed for external tools (Gmail, Notion, GitHub, Calendar). Core Kibo only requires your free Gemini API key.
+            </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
             <input
@@ -9842,26 +9847,57 @@ export const KiboApp: React.FC = () => {
                         </div>
 
                         {[
-                          { id: 'Account', label: 'Account & Keys' },
-                          { id: 'Voice', label: 'Voice & Audio' },
-                          { id: 'Integrations', label: 'Integrations' },
-                          { id: 'Agents', label: 'Agents & Access' },
-                          { id: 'Core', label: 'Core & Skins' },
-                          { id: 'General', label: 'General' },
-                          { id: 'Shortcuts', label: 'Shortcuts' },
-                          { id: 'System', label: 'System' },
-                        ].map((item) => {
-                          const isActive = settingsCategory === item.id;
-                          return (
-                            <button
-                              key={item.id}
-                              onClick={() => setSettingsCategory(item.id as any)}
-                              className={`kibo-settings-nav-item ${isActive ? 'active' : ''}`}
-                            >
-                              <span>{item.label}</span>
-                            </button>
-                          );
-                        })}
+                          {
+                            items: [
+                              { id: 'Account', label: 'Account & Keys' },
+                              { id: 'General', label: 'General' },
+                            ],
+                          },
+                          {
+                            title: 'Kibo',
+                            items: [
+                              { id: 'Core', label: 'Core & Skins' },
+                              { id: 'Voice', label: 'Voice & Audio' },
+                              { id: 'Shortcuts', label: 'Shortcuts' },
+                            ],
+                          },
+                          {
+                            title: 'Work',
+                            items: [
+                              { id: 'Integrations', label: 'Integrations' },
+                              { id: 'Agents', label: 'Agents & Access' },
+                            ],
+                          },
+                        ].map((group, gIdx) => (
+                          <div key={gIdx} style={{ marginBottom: gIdx < 2 ? 8 : 0 }}>
+                            {group.title && (
+                              <div
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '0.08em',
+                                  color: '#64748B',
+                                  padding: '8px 8px 4px',
+                                }}
+                              >
+                                {group.title}
+                              </div>
+                            )}
+                            {group.items.map((item) => {
+                              const isActive = settingsCategory === item.id;
+                              return (
+                                <button
+                                  key={item.id}
+                                  onClick={() => setSettingsCategory(item.id as any)}
+                                  className={`kibo-settings-nav-item ${isActive ? 'active' : ''}`}
+                                >
+                                  <span>{item.label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ))}
                       </div>
 
                       <div className="kibo-settings-sidebar-bottom">
@@ -10028,7 +10064,74 @@ export const KiboApp: React.FC = () => {
                         <>
                           <div>
                             <h2 className="kibo-settings-header-title">General Preferences</h2>
-                            <p className="kibo-settings-header-sub">Control startup behavior, notch tucking, and feedback.</p>
+                            <p className="kibo-settings-header-sub">Software updates, startup behavior, and system settings.</p>
+                          </div>
+
+                          {/* App Updates Section (Matching Clicky/HeyClicky Style) */}
+                          <div style={{ marginBottom: 18 }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: '#94A3B8', textTransform: 'uppercase', marginBottom: 8 }}>
+                              UPDATES
+                            </div>
+                            <div className="kibo-settings-card" style={{ padding: '4px 0' }}>
+                              {/* App updates row */}
+                              <div className="kibo-settings-row" style={{ padding: '14px 18px' }}>
+                                <div>
+                                  <div className="kibo-settings-row-label">App updates</div>
+                                  <div className="kibo-settings-row-desc">
+                                    {updateCheckStatus || "You're on version 1.0.0."}
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setUpdateCheckStatus('Checking for updates...');
+                                    setTimeout(() => {
+                                      setUpdateCheckStatus("You're on version 1.0.0. Kibo is up to date.");
+                                    }, 800);
+                                  }}
+                                  style={{
+                                    background: '#F1F5F9',
+                                    color: '#0F172A',
+                                    border: 'none',
+                                    borderRadius: 999,
+                                    padding: '7px 18px',
+                                    fontSize: 13,
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
+                                    transition: 'opacity 0.2s',
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  Check for updates
+                                </button>
+                              </div>
+
+                              {/* Divider */}
+                              <div style={{ height: 1, background: 'rgba(255, 255, 255, 0.06)', margin: '0 18px' }} />
+
+                              {/* What's new row */}
+                              <div
+                                onClick={() => {
+                                  if (window.kiboAPI?.openUrl) {
+                                    window.kiboAPI.openUrl('https://kiboai.vercel.app');
+                                  }
+                                }}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  padding: '14px 18px',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                <div>
+                                  <div className="kibo-settings-row-label">What's new</div>
+                                  <div className="kibo-settings-row-desc">The changelog of everything shipping in Kibo.</div>
+                                </div>
+                                <span style={{ color: '#94A3B8', fontSize: 16 }}>&#x2197;</span>
+                              </div>
+                            </div>
                           </div>
 
                           <div className="kibo-settings-card">
@@ -10086,6 +10189,24 @@ export const KiboApp: React.FC = () => {
                                 }}
                               >
                                 <span className="kibo-switch-knob" />
+                              </button>
+                            </div>
+
+                            <div className="kibo-settings-row">
+                              <div>
+                                <div className="kibo-settings-row-label">Feedback &amp; Bug Reporting</div>
+                                <div className="kibo-settings-row-desc">Submit issues or request new companion features</div>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  if (window.kiboAPI?.openUrl) {
+                                    window.kiboAPI.openUrl('https://github.com/RaahimAlavi/kibo/issues');
+                                  }
+                                }}
+                                className="config-pill-btn"
+                                style={{ background: '#1E293B', color: '#F8FAFC', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 12.5 }}
+                              >
+                                Report a bug...
                               </button>
                             </div>
                           </div>
@@ -10545,52 +10666,6 @@ export const KiboApp: React.FC = () => {
                                 <span style={{ color: '#64748B' }}>+</span>
                                 <kbd className="kibo-kbd" style={{ background: '#141519', color: '#F8FAFC', border: '1px solid rgba(255,255,255,0.15)', padding: '4px 8px', borderRadius: 6, fontSize: 12 }}>Win</kbd>
                               </div>
-                            </div>
-                          </div>
-                        </>
-                      )}
-
-                      {settingsCategory === 'System' && (
-                        <>
-                          <div>
-                            <h2 className="kibo-settings-header-title">System & Updates</h2>
-                            <p className="kibo-settings-header-sub">Software maintenance and feedback reporting.</p>
-                          </div>
-
-                          <div className="kibo-settings-card">
-                            <div className="kibo-settings-row">
-                              <div>
-                                <div className="kibo-settings-row-label">Check for Updates</div>
-                                <div className="kibo-settings-row-desc">Verify local installation against release builds</div>
-                              </div>
-                              <button
-                                onClick={() => {
-                                  setUpdateCheckStatus('Checking...');
-                                  setTimeout(() => setUpdateCheckStatus('You are on the latest version · v1.0.0'), 600);
-                                }}
-                                className="config-pill-btn"
-                                style={{ background: '#1E293B', color: '#F8FAFC', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 12.5 }}
-                              >
-                                {updateCheckStatus || 'Check for updates'}
-                              </button>
-                            </div>
-
-                            <div className="kibo-settings-row">
-                              <div>
-                                <div className="kibo-settings-row-label">Feedback & Bug Reporting</div>
-                                <div className="kibo-settings-row-desc">Submit issues or request new companion features</div>
-                              </div>
-                              <button
-                                onClick={() => {
-                                  if (window.kiboAPI?.openUrl) {
-                                    window.kiboAPI.openUrl('https://github.com/RaahimAlavi/kibo/issues');
-                                  }
-                                }}
-                                className="config-pill-btn"
-                                style={{ background: '#1E293B', color: '#F8FAFC', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 12.5 }}
-                              >
-                                Report a bug...
-                              </button>
                             </div>
                           </div>
                         </>
