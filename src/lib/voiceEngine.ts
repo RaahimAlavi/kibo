@@ -19,14 +19,11 @@ const LIVE_AUDIO_MODELS = [
   'models/gemini-2.5-flash-native-audio-preview-12-2025',
 ];
 
-// Ordered by available RPD quota in user's Google AI Studio project
+// Verified Active Google Gemini REST TTS Models from Google AI Studio
 const REST_TTS_MODELS = [
-  'gemini-3.1-flash-preview-tts',
-  'gemini-3.1-flash-tts',
-  'gemini-3.8-flash-lite-preview-tts',
   'gemini-3.8-flash-lite-tts',
-  'gemini-3.8-flash-preview-tts',
   'gemini-3.8-flash-tts',
+  'gemini-3.1-flash-tts-preview',
   'gemini-2.5-flash-preview-tts',
 ];
 
@@ -415,6 +412,7 @@ class KiboVoiceEngine {
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            signal: AbortSignal.timeout(6000),
             body: JSON.stringify({
               contents: [{ parts: [{ text: cleanText }] }],
               generationConfig: {
@@ -571,16 +569,12 @@ class KiboVoiceEngine {
       (typeof window !== 'undefined' ? localStorage.getItem('kibo_gemini_key') || '' : '');
 
     if (apiKey) {
-      // 1. Primary: Unlimited-quota Gemini Live API (models/gemini-3.8-live, gemini-3-flash-live, gemini-2.5-flash-native-audio-dialog)
-      const okLive = await this.speakViaLiveAPI(text, 'SAY_EXACT', { ...options, apiKey });
-      if (okLive) return;
-
-      // 2. Secondary: Dedicated Gemini REST TTS Models (gemini-3.1-flash-preview-tts, gemini-3.8-flash-lite-preview-tts, gemini-2.5-flash-preview-tts)
+      // 1. Primary: Sub-second Google Gemini REST TTS Models (~600ms latency)
       const okRest = await this.speakViaRestTTS(text, { ...options, apiKey });
       if (okRest) return;
     }
 
-    // 3. Offline fallback only if no API key or network down
+    // 2. Offline native OS fallback
     this.speakViaNativeOS(text, options);
   }
 

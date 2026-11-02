@@ -4404,28 +4404,41 @@ export const KiboApp: React.FC = () => {
       let fc: any = null;
       let speech = 'Done.';
 
+      // Strip assistant wake words and punctuation so patterns like "Kibo, open notes.docx" resolve cleanly
+      const cleanCommand = text
+        .replace(/^(?:kibo|hey\s+kibo|hi\s+kibo|yo\s+kibo|hitodama|hey\s+hitodama|ok\s+kibo|okay\s+kibo)[,\s:]+/i, '')
+        .trim();
+      const lower = (cleanCommand || text).toLowerCase().trim();
+
       if (apiKey && apiKey.trim()) {
         try {
-          const res = await queryGemini(text, apiKey, optionalImage);
+          const res = await queryGemini(cleanCommand || text, apiKey, optionalImage);
           fc = res.functionCall;
           speech = res.speech || 'Done.';
         } catch (err: any) {
           const msg = String(err?.message || '');
+          const isRateLimit = msg.includes('429');
           setNotchApiAlert({
             type: 'rate_limit',
-            text: msg.includes('429')
+            text: isRateLimit
               ? 'Gemini API rate limit reached · Click to check key'
               : 'Gemini API error · Click to check Settings',
           });
+          if (!speech || speech === 'Done.') {
+            speech = isRateLimit
+              ? 'Rate limit reached. Please wait a moment.'
+              : 'Could not connect to Gemini. Check your API key in Settings.';
+          }
         }
       } else {
         setNotchApiAlert({
           type: 'missing_key',
           text: 'Connect Gemini API key · Click to setup',
         });
+        if (!speech || speech === 'Done.') {
+          speech = 'Please connect your free Gemini API key in Settings.';
+        }
       }
-
-      const lower = text.toLowerCase().trim();
 
       // 00. Persistent User Name & Memory ("I'm Raahim", "My name is Raahim", or Gemini's remember_user_fact tool)
       const nameQuickMatch = text.match(/\b(?:i\s+am|i'm|im|my\s+name\s+is|call\s+me)\s+([A-Z][a-zA-Z0-9_-]{1,22})\b/i);
@@ -4914,7 +4927,7 @@ export const KiboApp: React.FC = () => {
           fc = { name: 'system_action', args: { action: 'volume', value: vol } };
           speech = `Volume set to ${vol}%.`;
         } else if (lower.startsWith('open ') || lower.startsWith('launch ')) {
-          const app = lower.replace(/^(open|launch)\s+/i, '').trim();
+          const app = (cleanCommand || text).replace(/^(open|launch)\s+/i, '').trim();
           fc = { name: 'open_application', args: { appName: app } };
           speech = `Opening ${app}.`;
         } else if (lower.includes('youtube') || lower.includes('spotify') || lower.includes('amazon') || lower.includes('github') || lower.includes('reddit') || lower.includes('wikipedia') || lower.includes('search')) {
@@ -4975,10 +4988,11 @@ export const KiboApp: React.FC = () => {
             github: 'github.com',
           };
           const matchedDomain = domainMap[appName.toLowerCase()];
+          const isFile = /\.(docx?|pdf|txt|xlsx?|pptx?|csv|png|jpe?g|webp|md|json|html)$/i.test(appName);
           setContextCard({
-            header: matchedDomain ? `Opened · ${matchedDomain}` : 'Launched Application',
+            header: isFile ? 'Opened Document' : matchedDomain ? `Opened · ${matchedDomain}` : 'Launched Application',
             title: appName,
-            subtitle: matchedDomain ? `https://${matchedDomain}` : 'Running on Windows',
+            subtitle: isFile ? 'Opened on Windows' : matchedDomain ? `https://${matchedDomain}` : 'Running on Windows',
             domain: matchedDomain,
             badgeType: 'app',
           });
@@ -5074,15 +5088,13 @@ export const KiboApp: React.FC = () => {
         }
       }
 
-      if (speech && speech.trim() && speech !== 'Done.') {
+      setAskNotchPhase('idle');
+      setAskWords([]);
+
+      if (speech && speech.trim()) {
         showReplyWithSpeech(speech);
       } else {
-        setTimeout(() => {
-          setSoulMode('LISTENING');
-          setUserBubbleText(null);
-          setKiboReply(null);
-          setContextCard(null);
-        }, 3200);
+        showReplyWithSpeech('Done.');
       }
     },
     [apiKey, nightLightStrength, applyUserVolumeChange, routines, speakAsKibo]

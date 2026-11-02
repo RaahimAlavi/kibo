@@ -791,7 +791,19 @@ ipcMain.handle('open-app', async (_event, appNameOrPath) => {
   const raw = String(appNameOrPath || '').trim();
   if (!raw) return { success: false };
 
-  // 1. Direct file or shortcut path (.lnk, .url, .exe)
+  // 1. Direct file or user file across Desktop, Downloads, Documents, Pictures
+  if (fs.existsSync(raw) && fs.statSync(raw).isFile()) {
+    const errStr = await shell.openPath(raw);
+    return { success: !errStr, app: path.basename(raw), path: raw, error: errStr || null };
+  }
+
+  const userFileHit = findUserFileByName(raw);
+  if (userFileHit && fs.existsSync(userFileHit)) {
+    const errStr = await shell.openPath(userFileHit);
+    return { success: !errStr, app: path.basename(userFileHit), path: userFileHit, error: errStr || null };
+  }
+
+  // 1B. Direct shortcut path (.lnk, .url, .exe)
   if (
     (raw.toLowerCase().endsWith('.lnk') ||
       raw.toLowerCase().endsWith('.url') ||

@@ -30,29 +30,27 @@ export interface GeminiActionResponse {
 
 // Ordered by highest available Free-Tier Quota & lowest latency from user's Google AI Studio project
 export const VISION_AND_QUERY_MODELS = [
-  'gemini-3.1-flash-lite',    // 15 RPM | 250K TPM | 500 RPD (491/500 available!)
-  'gemini-3.5-flash-lite',    // 15 RPM | 250K TPM | 500 RPD (396/500 available!)
-  'gemini-2.5-flash-lite',    // 10 RPM | 250K TPM | 20 RPD  (20/20 available!)
-  'gemini-2.5-flash',         // 5 RPM  | 250K TPM | 20 RPD  (20/20 available!)
+  'gemini-3.5-flash-lite',    // 15 RPM | 250K TPM | 500 RPD (Verified Active ~700ms)
+  'gemini-3.1-flash-lite',    // 15 RPM | 250K TPM | 500 RPD (Verified Active ~750ms)
+  'gemini-flash-lite-latest', // 15 RPM | 250K TPM | 500 RPD
   'gemini-3.8-flash',         // 5 RPM  | 250K TPM | 20 RPD
-  'gemma-4-31b-it',           // 30 RPM | 16K TPM  | 14,400 RPD
-  'gemma-4-26b-a4b-it',       // 30 RPM | 16K TPM  | 14,400 RPD
+  'gemini-flash-latest',      // General Flash fallback
 ];
 
 export const DICTATION_TEXT_MODELS = [
-  'gemma-4-31b-it',           // 30 RPM | 14,400 RPD (Ultra-high quota text polish)
-  'gemma-4-26b-a4b-it',       // 30 RPM | 14,400 RPD
+  'gemini-3.5-flash-lite',    // 15 RPM | 500 RPD (Ultra-fast clean dictation)
   'gemini-3.1-flash-lite',    // 15 RPM | 500 RPD
-  'gemini-3.5-flash-lite',    // 15 RPM | 500 RPD
-  'gemini-2.5-flash-lite',    // 10 RPM | 20 RPD
+  'gemini-flash-lite-latest', // 15 RPM | 500 RPD
+  'gemini-3.8-flash',         // 5 RPM  | 20 RPD
+  'gemini-flash-latest',
 ];
 
 export const AUDIO_TRANSCRIBE_MODELS = [
-  'gemini-3.1-flash-lite',    // 15 RPM | 500 RPD (Fast multimodal audio)
   'gemini-3.5-flash-lite',    // 15 RPM | 500 RPD (Fast multimodal audio)
-  'gemini-2.5-flash-lite',    // 10 RPM | 20 RPD
-  'gemini-2.5-flash',         // 5 RPM  | 20 RPD
+  'gemini-3.1-flash-lite',    // 15 RPM | 500 RPD (Fast multimodal audio)
+  'gemini-flash-lite-latest', // 15 RPM | 500 RPD
   'gemini-3.8-flash',         // 5 RPM  | 20 RPD
+  'gemini-flash-latest',
 ];
 
 // Cooldown cache so rate-limited (429) or unavailable (404) models are skipped in 0ms
@@ -187,13 +185,13 @@ export const GEMINI_TOOLS = [
     functionDeclarations: [
       {
         name: 'open_application',
-        description: 'Launch any installed desktop software, game, website, or Windows utility on the user PC. DO NOT call this when user asks to compose, write, or send an email (use compose_email instead).',
+        description: 'Launch any installed desktop software, game, website, Windows utility, or open any local file or document (e.g. "notes.docx", "report.pdf", "kibo.txt", "Spotify", "Chrome") on the user PC. DO NOT call this when user asks to compose, write, or send an email (use compose_email instead).',
         parameters: {
           type: 'OBJECT',
           properties: {
             appName: {
               type: 'STRING',
-              description: 'Application or site name, e.g. "spotify", "discord", "gmail", "vscode", "blender", "steam", "calculator"',
+              description: 'Application, website, or document/file name to open, e.g. "notes.docx", "spotify", "discord", "chrome", "vscode", "kibo.txt"',
             },
           },
           required: ['appName'],
@@ -440,11 +438,11 @@ const BASE_SYSTEM_INSTRUCTION = `You are Kibo, a fast, intelligent desktop compa
 - When the user asks to search YouTube/Google/Amazon/GitHub/Spotify, call search_web.
 - When the user asks to play a song, artist, playlist, or music on Spotify, ALWAYS call play_spotify.
 - When the user explicitly asks to design, code, or build a new website or landing page from scratch, call build_website. CRITICAL INTENT RULE: NEVER call build_website when the user talks about databases, tables, curation, storing or saving websites in Notion or bookmarks (e.g. "I want websites to be in the database").
-- When the user asks to open an app or launch an app, call open_application.
+- When the user asks to open an app, launch software, or open any file or document (e.g. "open notes.docx", "open Spotify", "open report.pdf", "launch Chrome", "open kibo.txt"), ALWAYS call open_application with appName set to the filename or app name.
 - Keep spoken replies concise, helpful, and natural (1-2 short sentences).`;
 
 /**
- * Universal auto-fallback router across high-quota models (500 RPD Flash-Lite, 14,400 RPD Gemma, and 20 RPD Flash).
+ * Universal auto-fallback router across high-quota models (500 RPD Flash-Lite and 20 RPD Flash).
  * Skips any rate-limited model immediately via cooldown cache so responses stay fast.
  */
 export async function callGeminiWithFallback(
@@ -490,6 +488,7 @@ export async function callGeminiWithFallback(
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(9000),
       });
 
       if (
@@ -502,6 +501,10 @@ export async function callGeminiWithFallback(
         setModelCooldown(model, res.status === 404 ? 600_000 : 90_000);
         console.warn(`[Kibo] ${model} status ${res.status}, cooling down & cascading...`);
         continue;
+      }
+
+      if (res.status === 401 || res.status === 403) {
+        throw new Error(`API key invalid or permission denied (HTTP ${res.status})`);
       }
 
       if (!res.ok) {
