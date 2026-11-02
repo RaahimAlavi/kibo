@@ -298,9 +298,9 @@ export function App() {
     const ctx = gsap.context(() => {
       gsap.fromTo(
         '.kibo-reveal-word',
-        { y: 28, opacity: 0 },
+        { yPercent: 105, opacity: 0 },
         {
-          y: 0,
+          yPercent: 0,
           opacity: 1,
           duration: 0.75,
           stagger: 0.045,
@@ -520,7 +520,7 @@ export function App() {
         .kibo-hero-h1 {
           font-size: clamp(2.6rem, 5vw, 4.25rem);
           font-weight: 800;
-          line-height: 1.07;
+          line-height: 1.16;
           letter-spacing: -0.035em;
           max-width: 780px;
           margin: 0 0 20px;
@@ -529,7 +529,11 @@ export function App() {
         .kibo-word-mask {
           display: inline-block;
           overflow: hidden;
-          vertical-align: bottom;
+          vertical-align: top;
+          padding-top: 0.04em;
+          margin-top: -0.04em;
+          padding-bottom: 0.24em;
+          margin-bottom: -0.24em;
           margin-right: 0.26em;
         }
         .kibo-reveal-word {
@@ -909,7 +913,7 @@ export function App() {
           }
           .kibo-hero-h1 {
             font-size: clamp(1.95rem, 7.5vw, 2.75rem);
-            line-height: 1.12;
+            line-height: 1.18;
             letter-spacing: -0.025em;
             margin-bottom: 14px;
           }
@@ -1040,6 +1044,7 @@ export function App() {
           }
           .kibo-hero-h1 {
             font-size: 1.8rem;
+            line-height: 1.2;
           }
           .kibo-stage-tabs {
             grid-template-columns: 1fr;
