@@ -1596,10 +1596,19 @@ export const KiboApp: React.FC = () => {
   const [tavilyKey, setTavilyKey] = useState<string>(() => localStorage.getItem('kibo_tavily_key') || '');
   const [tavilyDraftKey, setTavilyDraftKey] = useState<string>(() => localStorage.getItem('kibo_tavily_key') || '');
   const [composioApiKey, setComposioApiKey] = useState<string>(() => {
-    return localStorage.getItem('kibo_composio_key') || 'ak_WRHAv3a87hZMLRtQwcRK';
+    const stored = localStorage.getItem('kibo_composio_key');
+    if (!stored || stored === 'ak_WRHAv3a87hZMLRtQwcRK') {
+      localStorage.removeItem('kibo_composio_key');
+      return '';
+    }
+    return stored;
   });
   const [composioDraftKey, setComposioDraftKey] = useState<string>(() => {
-    return localStorage.getItem('kibo_composio_key') || 'ak_WRHAv3a87hZMLRtQwcRK';
+    const stored = localStorage.getItem('kibo_composio_key');
+    if (!stored || stored === 'ak_WRHAv3a87hZMLRtQwcRK') {
+      return '';
+    }
+    return stored;
   });
   const [composioKeySavedAlert, setComposioKeySavedAlert] = useState<string | null>(null);
   const [composioStatus, setComposioStatus] = useState<{
@@ -1636,7 +1645,7 @@ export const KiboApp: React.FC = () => {
   const [integrationsSearch, setIntegrationsSearch] = useState<string>('');
   const [showConnectModal, setShowConnectModal] = useState<boolean>(false);
   const [notchApiAlert, setNotchApiAlert] = useState<{ type: 'missing_key' | 'rate_limit'; text: string } | null>(null);
-  const CURRENT_APP_VERSION = '1.0.1';
+  const CURRENT_APP_VERSION = '1.0.0';
   const [availableUpdate, setAvailableUpdate] = useState<{
     version: string;
     downloadUrl: string;
@@ -1741,9 +1750,16 @@ export const KiboApp: React.FC = () => {
       }
       if (stored.kibo_composio_key && typeof stored.kibo_composio_key === 'string') {
         const val = stored.kibo_composio_key.trim();
-        setComposioApiKey(val);
-        setComposioDraftKey(val);
-        localStorage.setItem('kibo_composio_key', val);
+        if (val === 'ak_WRHAv3a87hZMLRtQwcRK') {
+          api?.saveStoredSettings?.({ kibo_composio_key: '' });
+          localStorage.removeItem('kibo_composio_key');
+          setComposioApiKey('');
+          setComposioDraftKey('');
+        } else {
+          setComposioApiKey(val);
+          setComposioDraftKey(val);
+          localStorage.setItem('kibo_composio_key', val);
+        }
       }
     }).catch(() => {});
   }, []);
@@ -1825,6 +1841,7 @@ export const KiboApp: React.FC = () => {
       api?.saveStoredSettings?.({ kibo_tavily_key: val });
     }
     localStorage.setItem('kibo_onboarded_v1', 'true');
+    api?.setAlwaysOnTop?.(true);
     setOnboardingStep(null);
   }, [geminiDraftKey, tavilyDraftKey]);
 
@@ -9974,7 +9991,7 @@ export const KiboApp: React.FC = () => {
                       </div>
 
                       <div className="kibo-settings-sidebar-bottom">
-                        <div className="kibo-settings-version">Kibo v1.0.1 (Win32)</div>
+                        <div className="kibo-settings-version">Kibo v1.0.0 (Win32)</div>
                         <button
                           onClick={() => {
                             if (window.kiboAPI?.quitApp) {

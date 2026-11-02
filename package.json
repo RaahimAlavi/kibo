@@ -1,7 +1,7 @@
 {
   "name": "kibo",
   "private": true,
-  "version": "1.0.1",
+  "version": "1.0.0",
   "description": "Kibo :  Ambient Top Bezel Cyber Companion for Windows",
   "author": "Raahim Alavi",
   "type": "module",

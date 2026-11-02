@@ -777,6 +777,9 @@ ipcMain.on('set-expanded', (event, { expanded, width = 640, height = 390 } = {})
 });
 
 ipcMain.on('window-minimize', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.minimize();
+  }
   activeAppWindowRect = null;
 });
 
@@ -1018,7 +1021,14 @@ const kiboSettingsFile = path.join(app.getPath('userData'), 'kibo_settings.json'
 function readKiboSettings() {
   try {
     if (fs.existsSync(kiboSettingsFile)) {
-      return JSON.parse(fs.readFileSync(kiboSettingsFile, 'utf8'));
+      const parsed = JSON.parse(fs.readFileSync(kiboSettingsFile, 'utf8'));
+      if (parsed.kibo_composio_key === 'ak_WRHAv3a87hZMLRtQwcRK') {
+        parsed.kibo_composio_key = '';
+        try {
+          fs.writeFileSync(kiboSettingsFile, JSON.stringify(parsed, null, 2), 'utf8');
+        } catch (_) {}
+      }
+      return parsed;
     }
   } catch (err) {
     console.error('[Kibo] Failed to read stored settings:', err);
@@ -2169,8 +2179,23 @@ ipcMain.handle('power-action', async (_event, action) => {
   });
 });
 
+ipcMain.handle('set-always-on-top', (_event, flag) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (flag) {
+      mainWindow.setAlwaysOnTop(true, 'pop-up-menu');
+    } else {
+      mainWindow.setAlwaysOnTop(false);
+    }
+    return true;
+  }
+  return false;
+});
+
 ipcMain.handle('open-url', async (_event, url) => {
   try {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setAlwaysOnTop(false);
+    }
     await shell.openExternal(url);
     return { success: true };
   } catch (err) {

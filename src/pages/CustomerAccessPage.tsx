@@ -13,6 +13,7 @@ interface CustomerAccessPageProps {
 
 export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNavigate }) => {
   const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
   const [verifiedEmail, setVerifiedEmail] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
     return localStorage.getItem('kibo_customer_email') || null;
@@ -40,8 +41,15 @@ export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNaviga
     setSetupNotice(null);
 
     const cleanEmail = email.trim().toLowerCase();
+    const cleanCode = code.trim().toUpperCase().replace(/^#/, '');
+
     if (!cleanEmail || !cleanEmail.includes('@') || cleanEmail.length < 5) {
       setErrorMsg('Please enter a valid email address.');
+      return;
+    }
+
+    if (!cleanCode) {
+      setErrorMsg('Please enter your Order # or License Key from your purchase confirmation receipt.');
       return;
     }
 
@@ -51,26 +59,19 @@ export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNaviga
       const response = await fetch('/api/verify-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: cleanEmail }),
+        body: JSON.stringify({ email: cleanEmail, code: cleanCode }),
       });
 
       const data = await response.json();
 
       if (data.verified) {
         localStorage.setItem('kibo_customer_email', cleanEmail);
-        setVerifiedEmail(cleanEmail);
-      } else if (data.needsSetup) {
-        // Lemon Squeezy API key is not yet set in Vercel environment variables
-        setSetupNotice(
-          'Your Lemon Squeezy API Key has not been added to Vercel Environment Variables yet. Once added in Vercel under Settings > Environment Variables, this automatically checks real orders in real-time.'
-        );
-        // Allow temporary verification for testing if email matches typical format
-        localStorage.setItem('kibo_customer_email', cleanEmail);
+        localStorage.setItem('kibo_license_key', cleanCode);
         setVerifiedEmail(cleanEmail);
       } else {
         setErrorMsg(
           data.error ||
-            `No active Founders Edition order was found for ${cleanEmail}. Please make sure you enter the exact email address used at checkout.`
+            `No matching order found for ${cleanEmail} with code ${cleanCode}. Please verify your purchase receipt.`
         );
       }
     } catch (err) {
@@ -84,9 +85,11 @@ export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNaviga
   const handleSignOut = () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('kibo_customer_email');
+      localStorage.removeItem('kibo_license_key');
     }
     setVerifiedEmail(null);
     setEmail('');
+    setCode('');
     setErrorMsg('');
     setSetupNotice(null);
   };
@@ -304,7 +307,7 @@ export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNaviga
               </p>
 
               <form onSubmit={handleSubmit}>
-                <div style={{ marginBottom: 18 }}>
+                <div style={{ marginBottom: 16 }}>
                   <label
                     htmlFor="portal-email"
                     style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#121316', marginBottom: 6 }}
@@ -330,6 +333,38 @@ export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNaviga
                       boxSizing: 'border-box',
                     }}
                   />
+                </div>
+
+                <div style={{ marginBottom: 18 }}>
+                  <label
+                    htmlFor="portal-code"
+                    style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#121316', marginBottom: 6 }}
+                  >
+                    Order # or License Key
+                  </label>
+                  <input
+                    id="portal-code"
+                    type="text"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    placeholder="e.g. 104829 or KIBO-..."
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '12px 14px',
+                      fontSize: 14,
+                      borderRadius: 10,
+                      border: '1px solid rgba(18, 19, 22, 0.16)',
+                      background: '#FFFFFF',
+                      color: '#121316',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                      fontFamily: 'monospace',
+                    }}
+                  />
+                  <span style={{ fontSize: 11.5, color: '#68707C', marginTop: 4, display: 'block' }}>
+                    Sent to your email in the purchase confirmation from Lemon Squeezy.
+                  </span>
                 </div>
 
                 {errorMsg && (

@@ -30,16 +30,23 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
   const [licenseEmail, setLicenseEmail] = useState<string>(() => {
     return localStorage.getItem('kibo_customer_email') || '';
   });
+  const [licenseCode, setLicenseCode] = useState<string>(() => {
+    return localStorage.getItem('kibo_license_key') || '';
+  });
   const [isVerifyingLicense, setIsVerifyingLicense] = useState(false);
   const [licenseVerified, setLicenseVerified] = useState<boolean>(() => {
-    return Boolean(localStorage.getItem('kibo_customer_email'));
+    return Boolean(localStorage.getItem('kibo_customer_email') && localStorage.getItem('kibo_license_key'));
   });
+  const [licenseError, setLicenseError] = useState<string>('');
   const [localGeminiKey, setLocalGeminiKey] = useState<string>(geminiDraftKey || '');
   const [keySaved, setKeySaved] = useState<boolean>(Boolean(geminiDraftKey));
 
   const openGoogleAiStudio = () => {
     const url = 'https://aistudio.google.com/app/apikey';
     const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
+    if (api?.setAlwaysOnTop) {
+      api.setAlwaysOnTop(false);
+    }
     if (api?.openUrl) {
       api.openUrl(url);
     } else {
@@ -47,28 +54,55 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
     }
   };
 
+  const handleMinimize = () => {
+    const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
+    if (api?.minimize) {
+      api.minimize();
+    }
+  };
+
   const handleVerifyLicense = async () => {
-    const clean = licenseEmail.trim().toLowerCase();
-    if (!clean || !clean.includes('@')) return;
+    const cleanEmail = licenseEmail.trim().toLowerCase();
+    const cleanCode = licenseCode.trim().toUpperCase().replace(/^#/, '');
+    setLicenseError('');
+
+    if (!cleanEmail || !cleanEmail.includes('@') || cleanEmail.length < 5) {
+      setLicenseError('Please enter a valid purchase email address.');
+      soundFX.playErrorChime();
+      return;
+    }
+
+    if (!cleanCode) {
+      setLicenseError('Please enter your Order # or License Key from your receipt.');
+      soundFX.playErrorChime();
+      return;
+    }
 
     setIsVerifyingLicense(true);
     try {
-      const res = await fetch(`https://kiboai.vercel.app/api/verify-email?email=${encodeURIComponent(clean)}`);
+      const res = await fetch('https://kiboai.vercel.app/api/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail, code: cleanCode }),
+      });
       const data = await res.json();
-      if (data && data.valid) {
-        localStorage.setItem('kibo_customer_email', clean);
+      if (data && data.verified) {
+        localStorage.setItem('kibo_customer_email', cleanEmail);
+        localStorage.setItem('kibo_license_key', cleanCode);
         setLicenseVerified(true);
+        setLicenseError('');
         soundFX.playSuccessChime();
       } else {
-        // Fallback for offline or test mode
-        localStorage.setItem('kibo_customer_email', clean);
-        setLicenseVerified(true);
-        soundFX.playSuccessChime();
+        setLicenseVerified(false);
+        setLicenseError(
+          data?.error || 'Verification failed. No matching paid order or valid license key found.'
+        );
+        soundFX.playErrorChime();
       }
     } catch {
-      localStorage.setItem('kibo_customer_email', clean);
-      setLicenseVerified(true);
-      soundFX.playSuccessChime();
+      setLicenseVerified(false);
+      setLicenseError('Unable to connect to verification server. Please check your internet connection.');
+      soundFX.playErrorChime();
     } finally {
       setIsVerifyingLicense(false);
     }
@@ -91,9 +125,15 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
     if (localGeminiKey.trim() && !keySaved) {
       handleSaveGeminiKey();
     }
+    const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
+    if (api?.setAlwaysOnTop) {
+      api.setAlwaysOnTop(true);
+    }
     soundFX.playSuccessChime();
     onComplete();
   };
+
+  const canContinue = currentStep !== 1 || licenseVerified;
 
   return (
     <div
@@ -103,9 +143,9 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
         left: 0,
         width: '100vw',
         height: '100vh',
-        background: 'rgba(5, 7, 10, 0.78)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
+        background: 'rgba(5, 7, 10, 0.72)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
         zIndex: 99999,
         display: 'flex',
         alignItems: 'center',
@@ -151,27 +191,72 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
             </div>
           </div>
 
-          {/* Step Dots */}
-          <div style={{ display: 'flex', gap: 6 }}>
-            {[0, 1, 2, 3].map((step) => (
-              <div
-                key={step}
-                onClick={() => setCurrentStep(step)}
-                style={{
-                  width: step === currentStep ? 24 : 8,
-                  height: 6,
-                  borderRadius: 999,
-                  background: step === currentStep ? '#38BDF8' : step < currentStep ? 'rgba(56, 189, 248, 0.4)' : 'rgba(255, 255, 255, 0.1)',
-                  transition: 'all 0.25s ease',
-                  cursor: 'pointer',
-                }}
-              />
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {/* Step Dots */}
+            <div style={{ display: 'flex', gap: 6 }}>
+              {[0, 1, 2, 3].map((step) => (
+                <div
+                  key={step}
+                  onClick={() => {
+                    if (step === 0 || licenseVerified || currentStep === 0) {
+                      setCurrentStep(step);
+                    }
+                  }}
+                  style={{
+                    width: step === currentStep ? 24 : 8,
+                    height: 6,
+                    borderRadius: 999,
+                    background:
+                      step === currentStep
+                        ? '#38BDF8'
+                        : step < currentStep
+                        ? 'rgba(56, 189, 248, 0.4)'
+                        : 'rgba(255, 255, 255, 0.1)',
+                    transition: 'all 0.25s ease',
+                    cursor: 'pointer',
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* Minimize Window Button */}
+            <button
+              type="button"
+              onClick={handleMinimize}
+              title="Minimize Kibo to taskbar"
+              style={{
+                background: 'rgba(255, 255, 255, 0.06)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                borderRadius: 8,
+                color: '#94A3B8',
+                cursor: 'pointer',
+                width: 28,
+                height: 28,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 16,
+                fontWeight: 700,
+                lineHeight: 1,
+                padding: 0,
+                transition: 'all 0.15s ease',
+              }}
+            >
+              &#x2212;
+            </button>
           </div>
         </div>
 
         {/* Step Body */}
-        <div style={{ padding: '28px', minHeight: 320, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <div
+          style={{
+            padding: '28px',
+            minHeight: 330,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+          }}
+        >
           {/* STEP 0: WELCOME */}
           {currentStep === 0 && (
             <div>
@@ -192,7 +277,15 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
               >
                 <span>FOUNDERS EDITION</span>
               </div>
-              <h2 style={{ fontSize: 22, fontWeight: 800, color: '#F8FAFC', margin: '0 0 10px', letterSpacing: '-0.02em' }}>
+              <h2
+                style={{
+                  fontSize: 22,
+                  fontWeight: 800,
+                  color: '#F8FAFC',
+                  margin: '0 0 10px',
+                  letterSpacing: '-0.02em',
+                }}
+              >
                 Meet Your Ambient Companion
               </h2>
               <p style={{ fontSize: 13.5, lineHeight: 1.6, color: '#94A3B8', margin: '0 0 20px' }}>
@@ -232,7 +325,7 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
             </div>
           )}
 
-          {/* STEP 1: LICENSE VERIFICATION */}
+          {/* STEP 1: LICENSE VERIFICATION WITH CODE */}
           {currentStep === 1 && (
             <div>
               <div
@@ -252,21 +345,28 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
               >
                 <span>{licenseVerified ? 'ORDER VERIFIED' : 'PURCHASE VERIFICATION'}</span>
               </div>
-              <h2 style={{ fontSize: 22, fontWeight: 800, color: '#F8FAFC', margin: '0 0 10px', letterSpacing: '-0.02em' }}>
+              <h2
+                style={{
+                  fontSize: 22,
+                  fontWeight: 800,
+                  color: '#F8FAFC',
+                  margin: '0 0 10px',
+                  letterSpacing: '-0.02em',
+                }}
+              >
                 Activate Founders License
               </h2>
-              <p style={{ fontSize: 13.5, lineHeight: 1.6, color: '#94A3B8', margin: '0 0 20px' }}>
-                Enter the email address associated with your Founders order to activate lifetime updates and personal activations.
+              <p style={{ fontSize: 13.5, lineHeight: 1.6, color: '#94A3B8', margin: '0 0 18px' }}>
+                Enter the email address and Order # or License Key from your purchase confirmation receipt.
               </p>
 
-              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
                 <input
                   type="email"
                   value={licenseEmail}
                   onChange={(e) => setLicenseEmail(e.target.value)}
-                  placeholder="name@example.com"
+                  placeholder="Purchase email (e.g. name@example.com)"
                   style={{
-                    flex: 1,
                     height: 42,
                     background: '#141822',
                     border: '1px solid rgba(255, 255, 255, 0.12)',
@@ -277,34 +377,107 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
                     outline: 'none',
                   }}
                 />
-                <button
-                  type="button"
-                  onClick={handleVerifyLicense}
-                  disabled={isVerifyingLicense}
-                  style={{
-                    height: 42,
-                    padding: '0 18px',
-                    borderRadius: 10,
-                    background: licenseVerified ? '#22C55E' : '#38BDF8',
-                    color: '#0A0E17',
-                    fontWeight: 700,
-                    fontSize: 13,
-                    border: 'none',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  {isVerifyingLicense ? 'Verifying...' : licenseVerified ? 'Verified' : 'Verify'}
-                </button>
+
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    type="text"
+                    value={licenseCode}
+                    onChange={(e) => setLicenseCode(e.target.value)}
+                    placeholder="Order # (e.g. 104829) or License Key"
+                    style={{
+                      flex: 1,
+                      height: 42,
+                      background: '#141822',
+                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      borderRadius: 10,
+                      padding: '0 14px',
+                      color: '#F8FAFC',
+                      fontSize: 13,
+                      fontFamily: 'var(--kibo-font-mono, monospace)',
+                      outline: 'none',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleVerifyLicense}
+                    disabled={isVerifyingLicense}
+                    style={{
+                      height: 42,
+                      padding: '0 20px',
+                      borderRadius: 10,
+                      background: licenseVerified ? '#22C55E' : '#38BDF8',
+                      color: '#0A0E17',
+                      fontWeight: 700,
+                      fontSize: 13,
+                      border: 'none',
+                      cursor: isVerifyingLicense ? 'wait' : 'pointer',
+                      transition: 'all 0.2s',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {isVerifyingLicense ? 'Verifying...' : licenseVerified ? 'Verified' : 'Verify'}
+                  </button>
+                </div>
               </div>
 
-              {licenseVerified ? (
-                <div style={{ fontSize: 12, color: '#22C55E', fontWeight: 600 }}>
-                  Founders license unlocked for {licenseEmail}.
+              {licenseVerified && (
+                <div
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: 8,
+                    background: 'rgba(34, 197, 94, 0.12)',
+                    border: '1px solid rgba(34, 197, 94, 0.3)',
+                    color: '#22C55E',
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                  }}
+                >
+                  Founders license unlocked for {licenseEmail}. You may proceed to step 3.
                 </div>
-              ) : (
-                <div style={{ fontSize: 12, color: '#64748B' }}>
-                  Testing or offline? You can click continue to test in preview mode.
+              )}
+
+              {licenseError && (
+                <div
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: 8,
+                    background: 'rgba(239, 68, 68, 0.12)',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    color: '#F87171',
+                    fontSize: 12.5,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {licenseError}
+                </div>
+              )}
+
+              {!licenseVerified && !licenseError && (
+                <div style={{ fontSize: 12, color: '#64748B', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>Don't have a license?</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const api = (window as any).kiboAPI || (window as any).hitodamaAPI;
+                      if (api?.openUrl) {
+                        api.openUrl('https://kiboai.vercel.app/buy');
+                      } else {
+                        window.open('https://kiboai.vercel.app/buy', '_blank');
+                      }
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#38BDF8',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      padding: 0,
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    Get Founders Edition ($8)
+                  </button>
                 </div>
               )}
             </div>
@@ -330,15 +503,23 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
               >
                 <span>{keySaved ? 'ENGINE CONNECTED' : 'INTELLIGENCE ENGINE'}</span>
               </div>
-              <h2 style={{ fontSize: 22, fontWeight: 800, color: '#F8FAFC', margin: '0 0 10px', letterSpacing: '-0.02em' }}>
+              <h2
+                style={{
+                  fontSize: 22,
+                  fontWeight: 800,
+                  color: '#F8FAFC',
+                  margin: '0 0 10px',
+                  letterSpacing: '-0.02em',
+                }}
+              >
                 Connect Google Gemini Key
               </h2>
               <p style={{ fontSize: 13.5, lineHeight: 1.6, color: '#94A3B8', margin: '0 0 16px' }}>
-                Kibo communicates directly with Google's Gemini models using your personal key. Google offers a generous free tier with zero subscription cost.
+                Kibo communicates directly with Google's Gemini models using your personal key. Google provides a generous free tier with zero subscription cost.
               </p>
 
-              {/* Redirectable Google AI Studio Button */}
-              <div style={{ marginBottom: 16 }}>
+              {/* Action Buttons: Open & Minimize to Foreground */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
                 <button
                   type="button"
                   onClick={openGoogleAiStudio}
@@ -349,7 +530,7 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
                     background: 'rgba(56, 189, 248, 0.12)',
                     border: '1px solid rgba(56, 189, 248, 0.35)',
                     color: '#38BDF8',
-                    padding: '8px 16px',
+                    padding: '9px 16px',
                     borderRadius: 10,
                     fontSize: 13,
                     fontWeight: 700,
@@ -359,6 +540,30 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
                 >
                   <span>Get Free Key on Google AI Studio</span>
                   <span style={{ fontSize: 14 }}>&#x2197;</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    openGoogleAiStudio();
+                    handleMinimize();
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    color: '#CBD5E1',
+                    padding: '9px 14px',
+                    borderRadius: 10,
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                  title="Opens browser and minimizes Kibo to taskbar so you can copy your key"
+                >
+                  <span>Open &amp; Minimize Kibo to Copy</span>
                 </button>
               </div>
 
@@ -401,7 +606,7 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
               </div>
 
               <div style={{ fontSize: 12, color: '#64748B' }}>
-                You can also add or change this key anytime under Preferences &gt; Account &amp; Keys.
+                Your browser will open in front. Create or copy your key, then click Kibo in your taskbar to paste it above.
               </div>
             </div>
           )}
@@ -426,7 +631,15 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
               >
                 <span>GLOBAL HOTKEYS</span>
               </div>
-              <h2 style={{ fontSize: 22, fontWeight: 800, color: '#F8FAFC', margin: '0 0 10px', letterSpacing: '-0.02em' }}>
+              <h2
+                style={{
+                  fontSize: 22,
+                  fontWeight: 800,
+                  color: '#F8FAFC',
+                  margin: '0 0 10px',
+                  letterSpacing: '-0.02em',
+                }}
+              >
                 How to Summon Kibo
               </h2>
               <p style={{ fontSize: 13.5, lineHeight: 1.6, color: '#94A3B8', margin: '0 0 16px' }}>
@@ -451,9 +664,33 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
                     <div style={{ fontSize: 11.5, color: '#64748B' }}>Hold, speak your command, and release</div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <kbd style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, padding: '4px 8px', fontSize: 12, color: '#F8FAFC', fontWeight: 700 }}>Win</kbd>
+                    <kbd
+                      style={{
+                        background: '#0D1117',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        borderRadius: 6,
+                        padding: '4px 8px',
+                        fontSize: 12,
+                        color: '#F8FAFC',
+                        fontWeight: 700,
+                      }}
+                    >
+                      Win
+                    </kbd>
                     <span style={{ color: '#64748B', fontSize: 12 }}>+</span>
-                    <kbd style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, padding: '4px 8px', fontSize: 12, color: '#F8FAFC', fontWeight: 700 }}>Alt</kbd>
+                    <kbd
+                      style={{
+                        background: '#0D1117',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        borderRadius: 6,
+                        padding: '4px 8px',
+                        fontSize: 12,
+                        color: '#F8FAFC',
+                        fontWeight: 700,
+                      }}
+                    >
+                      Alt
+                    </kbd>
                   </div>
                 </div>
 
@@ -474,9 +711,33 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
                     <div style={{ fontSize: 11.5, color: '#64748B' }}>Draw a lasso around any screen region to inspect</div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <kbd style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, padding: '4px 8px', fontSize: 12, color: '#F8FAFC', fontWeight: 700 }}>Ctrl</kbd>
+                    <kbd
+                      style={{
+                        background: '#0D1117',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        borderRadius: 6,
+                        padding: '4px 8px',
+                        fontSize: 12,
+                        color: '#F8FAFC',
+                        fontWeight: 700,
+                      }}
+                    >
+                      Ctrl
+                    </kbd>
                     <span style={{ color: '#64748B', fontSize: 12 }}>+</span>
-                    <kbd style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, padding: '4px 8px', fontSize: 12, color: '#F8FAFC', fontWeight: 700 }}>Shift</kbd>
+                    <kbd
+                      style={{
+                        background: '#0D1117',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        borderRadius: 6,
+                        padding: '4px 8px',
+                        fontSize: 12,
+                        color: '#F8FAFC',
+                        fontWeight: 700,
+                      }}
+                    >
+                      Shift
+                    </kbd>
                   </div>
                 </div>
 
@@ -497,9 +758,33 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
                     <div style={{ fontSize: 11.5, color: '#64748B' }}>Hold to dictate, types polished text at your cursor</div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <kbd style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, padding: '4px 8px', fontSize: 12, color: '#F8FAFC', fontWeight: 700 }}>Ctrl</kbd>
+                    <kbd
+                      style={{
+                        background: '#0D1117',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        borderRadius: 6,
+                        padding: '4px 8px',
+                        fontSize: 12,
+                        color: '#F8FAFC',
+                        fontWeight: 700,
+                      }}
+                    >
+                      Ctrl
+                    </kbd>
                     <span style={{ color: '#64748B', fontSize: 12 }}>+</span>
-                    <kbd style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, padding: '4px 8px', fontSize: 12, color: '#F8FAFC', fontWeight: 700 }}>Win</kbd>
+                    <kbd
+                      style={{
+                        background: '#0D1117',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        borderRadius: 6,
+                        padding: '4px 8px',
+                        fontSize: 12,
+                        color: '#F8FAFC',
+                        fontWeight: 700,
+                      }}
+                    >
+                      Win
+                    </kbd>
                   </div>
                 </div>
               </div>
@@ -540,21 +825,31 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
             {currentStep < 3 ? (
               <button
                 type="button"
-                onClick={() => setCurrentStep((prev) => Math.min(3, prev + 1))}
+                onClick={() => {
+                  if (canContinue) {
+                    setCurrentStep((prev) => Math.min(3, prev + 1));
+                  }
+                }}
+                disabled={!canContinue}
                 style={{
-                  background: '#38BDF8',
-                  color: '#0A0E17',
+                  background: canContinue ? '#38BDF8' : 'rgba(56, 189, 248, 0.15)',
+                  color: canContinue ? '#0A0E17' : '#64748B',
                   border: 'none',
                   borderRadius: 10,
                   padding: '10px 22px',
                   fontSize: 13,
                   fontWeight: 700,
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 10px rgba(56, 189, 248, 0.25)',
-                  transition: 'opacity 0.2s',
+                  cursor: canContinue ? 'pointer' : 'not-allowed',
+                  boxShadow: canContinue ? '0 2px 10px rgba(56, 189, 248, 0.25)' : 'none',
+                  transition: 'all 0.2s',
+                  opacity: canContinue ? 1 : 0.6,
                 }}
               >
-                {currentStep === 0 ? 'Get Started' : 'Continue'}
+                {currentStep === 0
+                  ? 'Get Started'
+                  : currentStep === 1 && !licenseVerified
+                  ? 'Verify License to Continue'
+                  : 'Continue'}
               </button>
             ) : (
               <button
