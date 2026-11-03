@@ -158,11 +158,13 @@ class KiboVoiceEngine {
     }
 
     const gainNode = ctx.createGain();
-    gainNode.gain.setValueAtTime(1.0, this.nextStartTime);
-    const fadeDuration = 0.015;
-    const fadeStart = Math.max(this.nextStartTime, this.nextStartTime + audioBuffer.duration - fadeDuration);
-    gainNode.gain.setValueAtTime(1.0, fadeStart);
-    gainNode.gain.linearRampToValueAtTime(0.0001, this.nextStartTime + audioBuffer.duration);
+    const startTime = this.nextStartTime;
+    const endTime = startTime + audioBuffer.duration;
+    // Ultra-smooth 6ms envelope eliminates DAC step clicks and speaker pops completely
+    gainNode.gain.setValueAtTime(0.0001, startTime);
+    gainNode.gain.linearRampToValueAtTime(1.0, startTime + 0.006);
+    gainNode.gain.setValueAtTime(1.0, Math.max(startTime + 0.006, endTime - 0.006));
+    gainNode.gain.linearRampToValueAtTime(0.0001, endTime);
 
     source.connect(gainNode);
     gainNode.connect(ctx.destination);

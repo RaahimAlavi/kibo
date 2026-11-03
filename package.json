@@ -47,7 +47,8 @@
     }
   },
   "dependencies": {
-    "@composio/core": "^0.27.0"
+    "@composio/core": "^0.27.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@designcodeio/threeui": "^1.2.0",

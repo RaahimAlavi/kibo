@@ -106,29 +106,27 @@ class KiboSoundEngine {
     sub.stop(now + 0.2);
   }
 
-  // 2. Island Collapse (Soft downward vacuum tuck)
+  // 2. Island Collapse (Ultra-soft gentle whisper tuck, zero static noise or pitch sweeps)
   public playCollapse() {
     const ctx = this.getContext();
     if (!ctx) return;
     const now = ctx.currentTime;
 
-    this.playTransientClick(1400, 0.025, 0.007);
-
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(420, now);
-    osc.frequency.exponentialRampToValueAtTime(140, now + 0.14);
+    osc.frequency.setValueAtTime(260, now);
 
-    gain.gain.setValueAtTime(0.055, now);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(0.015, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.06);
 
     osc.connect(gain);
     gain.connect(ctx.destination);
 
     osc.start(now);
-    osc.stop(now + 0.16);
+    osc.stop(now + 0.07);
   }
 
   // 3. Navigation Tab Switch (Crisp Dynamic Island glass detent)
@@ -319,27 +317,9 @@ class KiboSoundEngine {
     });
   }
 
-  // 10. Relief Breath / Gentle Calming Tone (Soft relaxing warm tone after cooling down)
+  // 10. Relief Breath / Gentle Calming State (Silent visual relaxation only)
   public playReliefBreath() {
-    const ctx = this.getContext();
-    if (!ctx) return;
-    const now = ctx.currentTime;
-
-    const osc = ctx.createOscillator();
-    const oscGain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(440, now);
-    osc.frequency.exponentialRampToValueAtTime(330, now + 0.28);
-
-    oscGain.gain.setValueAtTime(0.0001, now);
-    oscGain.gain.linearRampToValueAtTime(0.012, now + 0.04);
-    oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
-
-    osc.connect(oscGain);
-    oscGain.connect(ctx.destination);
-
-    osc.start(now);
-    osc.stop(now + 0.32);
+    // Intentionally silent so no unexpected tones or discharging sounds play when cooling down
   }
 
   // 14. Yawn Wake Stretch (Rising soulful pitch arc with breath sigh and wake chimes)
