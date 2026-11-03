@@ -383,7 +383,7 @@
 .companion-nav-header {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   height: 32px;
   margin-bottom: 14px;
   padding: 0 16px;
@@ -435,6 +435,7 @@
   align-items: center;
   gap: 4px;
   height: 28px;
+  margin-left: 6px;
   flex-shrink: 0;
 }
 

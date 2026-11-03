@@ -4498,16 +4498,21 @@ export const KiboApp: React.FC = () => {
         } catch (err: any) {
           const msg = String(err?.message || '');
           const isRateLimit = msg.includes('429');
+          const isAuthError = msg.includes('401') || msg.includes('403') || msg.toLowerCase().includes('permission denied');
           setNotchApiAlert({
             type: 'rate_limit',
             text: isRateLimit
-              ? 'Gemini API rate limit reached · Click to check key'
-              : 'Gemini API error · Click to check Settings',
+              ? 'Gemini rate limit reached · Please wait a moment'
+              : isAuthError
+              ? 'Invalid Gemini API key · Check Settings'
+              : 'Gemini error · Check Settings',
           });
           if (!speech || speech === 'Done.') {
             speech = isRateLimit
-              ? 'Rate limit reached. Please wait a moment.'
-              : 'Could not connect to Gemini. Check your API key in Settings.';
+              ? 'Rate limit reached (429). Please wait a moment for limits to reset.'
+              : isAuthError
+              ? 'Could not connect to Gemini. Your API key was rejected by Google (HTTP 401/403).'
+              : `Could not connect to Gemini: ${msg.slice(0, 80)}`;
           }
         }
       } else {

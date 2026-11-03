@@ -30,30 +30,35 @@ export interface GeminiActionResponse {
 
 // Ordered by highest available Free-Tier Quota & lowest latency from user's Google AI Studio project
 export const VISION_AND_QUERY_MODELS = [
-  'gemini-2.5-flash',
+  'gemini-3.5-flash-lite',
+  'gemini-3.1-flash-lite',
+  'gemini-3-flash',
+  'gemini-3.8-flash',
+  'gemini-3.6-flash',
   'gemini-2.5-flash-lite',
+  'gemini-2.5-flash',
+  'gemma-4-31b',
+  'gemma-4-26b',
   'gemini-2.0-flash',
-  'gemini-2.0-flash-lite',
   'gemini-1.5-flash',
-  'gemini-1.5-flash-8b',
-  'gemini-1.5-pro',
 ];
 
 export const DICTATION_TEXT_MODELS = [
+  'gemini-3.5-flash-lite',
+  'gemini-3.1-flash-lite',
+  'gemma-4-31b',
+  'gemma-4-26b',
+  'gemini-3-flash',
   'gemini-2.5-flash-lite',
-  'gemini-2.0-flash-lite',
   'gemini-2.5-flash',
-  'gemini-2.0-flash',
-  'gemini-1.5-flash-8b',
-  'gemini-1.5-flash',
 ];
 
 export const AUDIO_TRANSCRIBE_MODELS = [
-  'gemini-2.5-flash-lite',
-  'gemini-2.0-flash-lite',
+  'gemini-3.5-transcribe',
+  'gemini-3.5-flash-lite',
+  'gemini-3.1-flash-lite',
   'gemini-2.5-flash',
-  'gemini-2.0-flash',
-  'gemini-1.5-flash',
+  'gemini-2.5-flash-lite',
 ];
 
 // Cooldown cache so rate-limited (429) or unavailable (404) models are skipped in 0ms
@@ -501,13 +506,18 @@ export async function callGeminiWithFallback(
         res.status === 404 ||
         res.status === 400
       ) {
-        setModelCooldown(model, res.status === 404 ? 600_000 : 90_000);
+        lastError = new Error(
+          res.status === 429
+            ? `HTTP 429: Gemini rate limit reached on ${model}`
+            : `HTTP ${res.status}: ${model} unavailable`
+        );
+        setModelCooldown(model, res.status === 404 ? 300_000 : 25_000);
         console.warn(`[Kibo] ${model} status ${res.status}, cooling down & cascading...`);
         continue;
       }
 
       if (res.status === 401 || res.status === 403) {
-        throw new Error(`API key invalid or permission denied (HTTP ${res.status})`);
+        throw new Error(`HTTP ${res.status}: API key invalid or permission denied`);
       }
 
       if (!res.ok) {
@@ -530,7 +540,7 @@ export async function callGeminiWithFallback(
     }
   }
 
-  throw lastError || new Error('All fallback models exhausted.');
+  throw lastError || new Error('All fallback models exhausted or rate-limited (429).');
 }
 
 /**

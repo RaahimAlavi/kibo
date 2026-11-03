@@ -13,15 +13,20 @@ export interface SpeakOptions {
 
 // Ordered by Unlimited Quota Live API models from user's Google AI Studio project
 const LIVE_AUDIO_MODELS = [
+  'models/gemini-3.8-live',
+  'models/gemini-2.5-flash-native-audio-dialog',
   'models/gemini-2.0-flash-exp',
   'models/gemini-2.0-flash-realtime-exp',
 ];
 
 // Verified Active Google Gemini REST TTS Models from Google AI Studio
 const REST_TTS_MODELS = [
+  'gemini-3.1-flash-tts',
+  'gemini-3.8-flash-lite-tts',
+  'gemini-3.8-flash-tts',
+  'gemini-2.5-flash-tts',
   'gemini-2.5-flash',
   'gemini-2.0-flash',
-  'gemini-1.5-flash',
 ];
 
 const deadTtsModels = new Map<string, number>();
