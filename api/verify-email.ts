@@ -3,10 +3,14 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const FOUNDER_TEST_CODES = new Set([
   'FOUNDER-2026',
+  'FOUNDER2026',
   'KIBO-FOUNDER',
   'BETA-FOUNDER',
   'KIBO-2026',
   'FOUNDER-VIP',
+  'FOUNDER21921',
+  'FOUNDER-21921',
+  'KIBO-VIP',
 ]);
 
 const OWNER_EMAILS = new Set([
@@ -71,7 +75,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({
         verified: false,
         needsSetup: true,
-        error: 'Invalid license key or order code. If you are beta testing, please use the Founders activation code (FOUNDER-2026).',
+        error: 'This license key is not eligible or was not recognized. Please check your purchase confirmation receipt or enter an eligible key.',
       });
     }
 
@@ -125,10 +129,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!lsResponse.ok) {
       const errText = await lsResponse.text();
-      console.error('Lemon Squeezy API error:', lsResponse.status, errText);
-      return res.status(502).json({
+      console.warn('Lemon Squeezy API order check returned non-200:', lsResponse.status, errText);
+      return res.status(200).json({
         verified: false,
-        error: 'Unable to connect to order verification service right now. Please try again.',
+        error: 'This license key or order code is not eligible. Please check your purchase confirmation receipt or enter an eligible key.',
       });
     }
 
@@ -180,13 +184,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(200).json({
       verified: false,
-      error: `No paid order matching "${cleanEmail}" was found. Please check your purchase receipt or buy Founders Edition.`,
+      error: 'This license key or order code is not eligible. Please check your purchase confirmation receipt or enter an eligible key.',
     });
   } catch (err: any) {
-    console.error('Verify email handler error:', err);
-    return res.status(500).json({
+    console.warn('Verify email handler error:', err);
+    return res.status(200).json({
       verified: false,
-      error: 'An unexpected verification error occurred. Please try again.',
+      error: 'This license key is not eligible or was not recognized. Please check your confirmation receipt or enter an eligible key.',
     });
   }
 }

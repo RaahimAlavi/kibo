@@ -1939,6 +1939,8 @@ export const KiboApp: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState<boolean>(initialExpanded);
   const [isHovered, setIsHovered] = useState<boolean>(false);
   const [showMediaNotch, setShowMediaNotch] = useState<boolean>(false);
+  const [isCinemaMode, setIsCinemaMode] = useState<boolean>(false);
+  const [isCinemaPeek, setIsCinemaPeek] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<NavTab>(initialTab);
   const [soulMode, setSoulMode] = useState<'LISTENING' | 'THINKING' | 'TALKING' | 'MUTED' | 'DANCING'>('LISTENING');
   const [isKiboDancing, setIsKiboDancing] = useState<boolean>(false);
@@ -3121,6 +3123,52 @@ export const KiboApp: React.FC = () => {
     }
   }, [activeTab]);
 
+  // Cinema Mode: Fullscreen Auto-Retract & Top-Edge Peek Listeners
+  useEffect(() => {
+    const unsubFs = (window as any).kiboAPI?.onFullscreenChanged?.((isFs: boolean) => {
+      setIsCinemaMode(Boolean(isFs));
+      if (isFs) {
+        setIsExpanded(false);
+        setShowMediaNotch(false);
+      }
+    });
+
+    const unsubPeek = (window as any).kiboAPI?.onCinemaPeek?.((peeking: boolean) => {
+      setIsCinemaPeek(Boolean(peeking));
+    });
+
+    const handleCinemaHotkey = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && (e.key === 'H' || e.key === 'h')) {
+        e.preventDefault();
+        setIsCinemaMode((prev) => {
+          const next = !prev;
+          if (next) {
+            soundFX.playSoulPulse();
+            setActiveNotchNotification({
+              appId: 'cinema',
+              appName: 'Cinema Mode',
+              title: 'Cinema Mode Enabled',
+              subtitle: 'Notch hidden for movies. Hover top edge to peek.',
+              type: 'system',
+              actionType: 'none',
+              autoDismissSeconds: 4,
+            });
+          } else {
+            soundFX.playSuccessChime();
+          }
+          return next;
+        });
+      }
+    };
+
+    window.addEventListener('keydown', handleCinemaHotkey);
+    return () => {
+      unsubFs?.();
+      unsubPeek?.();
+      window.removeEventListener('keydown', handleCinemaHotkey);
+    };
+  }, []);
+
   // 3. Play mystical chord when opening Chassis Bay or cycling Soul skins
   useEffect(() => {
     if (showCompanionWindow && companionDockTab === 'soul') {
@@ -4236,12 +4284,14 @@ export const KiboApp: React.FC = () => {
   const isCompactAskBar = !showProactiveBanner && !showNotchNotification && (askNotchPhase === 'speaking' || askNotchPhase === 'thinking');
   const isStopwatchNotchActive = !isExpanded && !showProactiveBanner && !showNotchNotification && !showMediaNotch && !isCompactAskBar && (stopwatchRunning || stopwatchMs > 0);
   const isTimerNotchActive = !isExpanded && !showProactiveBanner && !showNotchNotification && !showMediaNotch && !isCompactAskBar && (isTimerRunning || isTimerSessionActive || timerSeconds < timerTotalSeconds || timerAlarmRinging || isStopwatchNotchActive);
-  const isMiniMediaPill = (bootPhase === 'ready' || bootPhase === 'tucking') && !isExpanded && !showProactiveBanner && !showNotchNotification && !showMediaNotch && !isCompactAskBar && !isTimerNotchActive && !notchApiAlert && !isFileDraggingOverNotch && hasMediaSession;
-  const isTuckedSliver = (isTucked || bootPhase === 'sleeping' || (bootPhase === 'tucking' && !hasMediaSession)) && !isExpanded && !showProactiveBanner && !showNotchNotification && !showMediaNotch && !isTimerNotchActive && !isCompactAskBar && !isMiniMediaPill && !notchApiAlert && !isFileDraggingOverNotch;
+  const isMiniMediaPill = (!isCinemaMode || isCinemaPeek) && (bootPhase === 'ready' || bootPhase === 'tucking') && !isExpanded && !showProactiveBanner && !showNotchNotification && !showMediaNotch && !isCompactAskBar && !isTimerNotchActive && !notchApiAlert && !isFileDraggingOverNotch && hasMediaSession;
+  const isTuckedSliver = ((isCinemaMode && !isCinemaPeek) || isTucked || bootPhase === 'sleeping' || (bootPhase === 'tucking' && !hasMediaSession)) && !isExpanded && !showProactiveBanner && !showNotchNotification && !showMediaNotch && !isTimerNotchActive && !isCompactAskBar && !isMiniMediaPill && !notchApiAlert && !isFileDraggingOverNotch;
 
   const archSize = (isTuckedSliver || bootPhase === 'sleeping') ? 9 : showProactiveBanner || isFileDraggingOverNotch || showNotchNotification ? 20 : isMiniMediaPill || isCompactAskBar || isTimerNotchActive || notchApiAlert ? 16 : 22;
 
-  const notchShellWidth = isExpanded
+  const notchShellWidth = (isCinemaMode && !isCinemaPeek)
+    ? 68
+    : isExpanded
     ? currentTabDimensions.w - archSize * 2
     : isFileDraggingOverNotch
     ? 336
@@ -4267,7 +4317,9 @@ export const KiboApp: React.FC = () => {
     ? 190
     : 196;
 
-  const notchShellHeight = isExpanded
+  const notchShellHeight = (isCinemaMode && !isCinemaPeek)
+    ? 2
+    : isExpanded
     ? currentTabDimensions.h
     : isFileDraggingOverNotch
     ? 108
@@ -7116,13 +7168,19 @@ export const KiboApp: React.FC = () => {
           ===================================================================== */}
       <div
         ref={notchShellRef}
-        className={`kibo-bezel-shell ${isExpanded ? 'is-expanded' : ''} ${isTuckedSliver ? 'is-tucked' : ''} ${isBooting ? 'is-booting' : ''}`}
+        className={`kibo-bezel-shell ${isExpanded ? 'is-expanded' : ''} ${isTuckedSliver ? 'is-tucked' : ''} ${isBooting ? 'is-booting' : ''} ${isCinemaMode && !isCinemaPeek ? 'is-cinema-mode' : ''}`}
         style={{
           width: `${notchShellWidth}px`,
           height: `${notchShellHeight}px`,
           borderBottomLeftRadius: `${bottomRadius}px`,
           borderBottomRightRadius: `${bottomRadius}px`,
+          opacity: isCinemaMode && !isCinemaPeek ? 0.02 : 1,
+          pointerEvents: isCinemaMode && !isCinemaPeek ? 'none' : 'auto',
+          transition: 'width 0.32s cubic-bezier(0.16, 1, 0.3, 1), height 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.24s ease',
           zIndex: onboardingStep !== null ? 9999 : undefined,
+        }}
+        onDoubleClick={() => {
+          setIsCinemaMode((prev) => !prev);
         }}
         onMouseEnter={handleIslandMouseEnter}
         onMouseLeave={handleIslandMouseLeave}

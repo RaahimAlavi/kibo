@@ -70,13 +70,13 @@ export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNaviga
         setVerifiedEmail(cleanEmail);
       } else {
         setErrorMsg(
-          data.error ||
-            `No matching order found for ${cleanEmail} with code ${cleanCode}. Please verify your purchase receipt.`
+          data?.error ||
+            'This license key is not eligible or was not recognized. Please check your purchase confirmation receipt or enter a valid key.'
         );
       }
     } catch (err) {
-      console.error('Verification error:', err);
-      setErrorMsg('Unable to connect to the order verification service. Please try again.');
+      console.warn('Verification error:', err);
+      setErrorMsg('This license key is not eligible or was not recognized. Please check your purchase confirmation receipt or enter a valid key.');
     } finally {
       setIsLoading(false);
     }

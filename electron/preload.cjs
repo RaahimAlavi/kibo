@@ -256,6 +256,16 @@ const kiboAPI = {
     ipcRenderer.on('grant-creator-embers', listener);
     return () => ipcRenderer.removeListener('grant-creator-embers', listener);
   },
+  onFullscreenChanged: (callback) => {
+    const listener = (_event, isFs) => callback(isFs);
+    ipcRenderer.on('context-fullscreen-changed', listener);
+    return () => ipcRenderer.removeListener('context-fullscreen-changed', listener);
+  },
+  onCinemaPeek: (callback) => {
+    const listener = (_event, peeking) => callback(peeking);
+    ipcRenderer.on('cinema-peek', listener);
+    return () => ipcRenderer.removeListener('cinema-peek', listener);
+  },
 };
 
 contextBridge.exposeInMainWorld('kiboAPI', kiboAPI);

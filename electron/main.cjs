@@ -100,6 +100,8 @@ function positionCanvasWindow() {
   });
 }
 
+let isTopEdgePeeking = false;
+
 function startHitTestLoop() {
   if (hitTestInterval) clearInterval(hitTestInterval);
 
@@ -112,6 +114,20 @@ function startHitTestLoop() {
     const notchHalfW = Math.max(activeNotchBounds.width / 2, 44);
     const notchHitHeight = Math.max(activeNotchBounds.height, 14);
     const centerX = winBounds.x + winBounds.width / 2;
+
+    if (lastFullscreenState) {
+      const nearTopBezel = cursor.y <= winBounds.y + 6 && cursor.x >= centerX - 200 && cursor.x <= centerX + 200;
+      if (nearTopBezel && !isTopEdgePeeking) {
+        isTopEdgePeeking = true;
+        mainWindow.webContents.send('cinema-peek', true);
+      } else if (cursor.y > winBounds.y + 65 && isTopEdgePeeking) {
+        isTopEdgePeeking = false;
+        mainWindow.webContents.send('cinema-peek', false);
+      }
+    } else if (isTopEdgePeeking) {
+      isTopEdgePeeking = false;
+      mainWindow.webContents.send('cinema-peek', false);
+    }
 
     const insideNotchX =
       cursor.x >= centerX - notchHalfW && cursor.x <= centerX + notchHalfW;
@@ -310,7 +326,7 @@ function updateTrayMenu() {
       click: () => {
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.showInactive();
-          mainWindow.setAlwaysOnTop(true, 'pop-up-menu');
+          mainWindow.setAlwaysOnTop(true, 'screen-saver');
           mainWindow.webContents.send('open-settings', 'Account');
         }
       },
@@ -464,13 +480,14 @@ function createWindow() {
     console.error('[Renderer Fail Load]', errorCode, errorDescription, validatedURL);
   });
 
-  // Use 'pop-up-menu' level instead of 'screen-saver' so Windows DWM keeps hardware video overlays alive
-  mainWindow.setAlwaysOnTop(true, 'pop-up-menu');
+  // Use 'screen-saver' level so Windows DWM guarantees Kibo stays above Chrome and active apps
+  mainWindow.setAlwaysOnTop(true, 'screen-saver');
   isIgnoringMouse = true;
   mainWindow.setIgnoreMouseEvents(true);
 
   mainWindow.on('blur', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setAlwaysOnTop(true, 'screen-saver');
       mainWindow.webContents.send('desktop-clicked-outside');
     }
   });
@@ -685,7 +702,7 @@ function createWindow() {
   mainWindow.webContents.on('did-finish-load', () => {
     if (!mainWindow || mainWindow.isDestroyed()) return;
     mainWindow.showInactive();
-    mainWindow.setAlwaysOnTop(true, 'pop-up-menu');
+    mainWindow.setAlwaysOnTop(true, 'screen-saver');
   });
 
   mainWindow.on('closed', () => {
@@ -2194,7 +2211,7 @@ ipcMain.handle('power-action', async (_event, action) => {
 ipcMain.handle('set-always-on-top', (_event, flag) => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     if (flag) {
-      mainWindow.setAlwaysOnTop(true, 'pop-up-menu');
+      mainWindow.setAlwaysOnTop(true, 'screen-saver');
     } else {
       mainWindow.setAlwaysOnTop(false);
     }
@@ -2205,14 +2222,12 @@ ipcMain.handle('set-always-on-top', (_event, flag) => {
 
 ipcMain.handle('open-url', async (_event, url) => {
   try {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.setAlwaysOnTop(false);
-    }
     await shell.openExternal(url);
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };
   }
+});
 });
 
 ipcMain.handle('type-text', async (_event, text) => {
@@ -2344,6 +2359,29 @@ function initNativeUIWorker() {
       [DllImport("user32.dll")]
       public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
+      [StructLayout(LayoutKind.Sequential)]
+      public struct RECT {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+      }
+
+      [DllImport("user32.dll")]
+      public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+      [DllImport("user32.dll")]
+      public static extern int GetSystemMetrics(int nIndex);
+
+      public static bool IsForegroundFullscreen(IntPtr hWnd) {
+        if (hWnd == IntPtr.Zero) return false;
+        RECT rect;
+        if (!GetWindowRect(hWnd, out rect)) return false;
+        int screenW = GetSystemMetrics(0);
+        int screenH = GetSystemMetrics(1);
+        return (rect.Left <= 0 && rect.Top <= 0 && rect.Right >= screenW && rect.Bottom >= screenH);
+      }
+
       public const uint MOUSEEVENTF_LEFTDOWN = 0x0002;
       public const uint MOUSEEVENTF_LEFTUP = 0x0004;
 
@@ -2459,7 +2497,8 @@ function initNativeUIWorker() {
           if ($pidVal -gt 0) {
             try { $pName = (Get-Process -Id $pidVal -ErrorAction SilentlyContinue).ProcessName } catch {}
           }
-          [Console]::Out.WriteLine((@{ ok = $true; title = $t; proc = $pName } | ConvertTo-Json -Compress))
+          $isFs = [Win32Input]::IsForegroundFullscreen($fg)
+          [Console]::Out.WriteLine((@{ ok = $true; title = $t; proc = $pName; fullscreen = $isFs } | ConvertTo-Json -Compress))
         }
       } catch {
         $errJson = @{ ok = $false; error = $_.Exception.Message } | ConvertTo-Json -Compress
@@ -2526,9 +2565,10 @@ ipcMain.handle('execute-ui-action', async (_event, { action, x, y, text, pressEn
 });
 
 // ============================================================================
-// 1. AUTOMATIC ACTIVE APP / WEBSITE DETECTOR (GitHub, Notion, VS Code, Figma, Gmail)
+// 1. AUTOMATIC ACTIVE APP & FULLSCREEN DETECTOR (GitHub, Notion, VS Code, Cinema Mode)
 // ============================================================================
 let lastDetectedAppId = null;
+let lastFullscreenState = false;
 let activeAppWatcherInterval = null;
 
 function startActiveAppWatcher() {
@@ -2540,6 +2580,19 @@ function startActiveAppWatcher() {
     try {
       const info = await sendUIWorkerCommand({ action: 'get_foreground_info' });
       if (!info || !info.ok) return;
+
+      const isFullscreen = Boolean(info.fullscreen);
+      if (isFullscreen !== lastFullscreenState) {
+        lastFullscreenState = isFullscreen;
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('context-fullscreen-changed', isFullscreen);
+        }
+      }
+
+      // Re-assert topmost on screen-saver level so Chrome never covers Kibo
+      if (!isIgnoringMouse || !isFullscreen) {
+        mainWindow.setAlwaysOnTop(true, 'screen-saver');
+      }
 
       const rawTitle = (info.title || '').trim();
       const title = rawTitle.toLowerCase();

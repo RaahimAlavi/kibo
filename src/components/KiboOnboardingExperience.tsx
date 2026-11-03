@@ -99,13 +99,13 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
       } else {
         setLicenseVerified(false);
         setLicenseError(
-          data?.error || 'Verification failed. No matching paid order or valid license key found.'
+          data?.error || 'This license key is not eligible or was not recognized. Please check your purchase confirmation receipt or enter a valid key.'
         );
         soundFX.playErrorChime();
       }
     } catch {
       setLicenseVerified(false);
-      setLicenseError('Unable to connect to verification server. Please check your internet connection.');
+      setLicenseError('This license key is not eligible or was not recognized. Please check your purchase confirmation receipt or enter a valid key.');
       soundFX.playErrorChime();
     } finally {
       setIsVerifyingLicense(false);
