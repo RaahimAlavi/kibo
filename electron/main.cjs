@@ -829,27 +829,13 @@ ipcMain.handle('open-app', async (_event, appNameOrPath) => {
   const raw = String(appNameOrPath || '').trim();
   if (!raw) return { success: false };
 
-  // 1. Direct file or user file across Desktop, Downloads, Documents, Pictures
-  if (fs.existsSync(raw) && fs.statSync(raw).isFile()) {
-    const errStr = await shell.openPath(raw);
-    return { success: !errStr, app: path.basename(raw), path: raw, error: errStr || null };
-  }
-
-  const userFileHit = findUserFileByName(raw);
-  if (userFileHit && fs.existsSync(userFileHit)) {
-    const errStr = await shell.openPath(userFileHit);
-    return { success: !errStr, app: path.basename(userFileHit), path: userFileHit, error: errStr || null };
-  }
-
-  // 1B. Direct shortcut path (.lnk, .url, .exe)
-  if (
-    (raw.toLowerCase().endsWith('.lnk') ||
-      raw.toLowerCase().endsWith('.url') ||
-      raw.toLowerCase().endsWith('.exe')) &&
-    fs.existsSync(raw)
-  ) {
-    const errStr = await shell.openPath(raw);
-    return { success: !errStr, app: raw, error: errStr || null };
+  // 1. Direct explicit absolute file or shortcut path on disk
+  if (path.isAbsolute(raw) && fs.existsSync(raw)) {
+    const stat = fs.statSync(raw);
+    if (stat.isFile()) {
+      const errStr = await shell.openPath(raw);
+      return { success: !errStr, app: path.basename(raw), path: raw, error: errStr || null };
+    }
   }
 
   // 2. Direct URL or domain (e.g., "github.com", "https://...", "youtube.com")
@@ -887,10 +873,18 @@ ipcMain.handle('open-app', async (_event, appNameOrPath) => {
     return { success: true, app: query };
   }
 
-  // 4. Fast System & Protocol Handlers (Spotify, Discord, VS Code, Calculator, Notepad, etc.)
+  // 4. Fast System & Native Desktop Apps (Chrome, Edge, Spotify, Discord, VS Code, etc.)
   const FAST_SYSTEM_LAUNCH = {
+    chrome: 'chrome',
+    'google chrome': 'chrome',
+    edge: 'msedge',
+    msedge: 'msedge',
+    'microsoft edge': 'msedge',
+    brave: 'brave',
+    firefox: 'firefox',
     spotify: 'spotify:',
     discord: 'discord:',
+    steam: 'steam:',
     calc: 'calc',
     calculator: 'calc',
     notepad: 'notepad',
@@ -905,6 +899,8 @@ ipcMain.handle('open-app', async (_event, appNameOrPath) => {
     'command prompt': 'cmd',
     powershell: 'powershell',
     settings: 'ms-settings:',
+    paint: 'mspaint',
+    taskmgr: 'taskmgr',
   };
 
   if (FAST_SYSTEM_LAUNCH[query]) {
@@ -955,7 +951,14 @@ ipcMain.handle('open-app', async (_event, appNameOrPath) => {
     }
   } catch (_) {}
 
-  // 6. Universal Windows OS Resolver: Queries Get-StartApps (UWP + Win32) & Registry App Paths dynamically
+  // 6. User Documents & Files Search across Desktop, Downloads, Documents, Pictures
+  const userFileHit = findUserFileByName(raw);
+  if (userFileHit && fs.existsSync(userFileHit)) {
+    const errStr = await shell.openPath(userFileHit);
+    return { success: !errStr, app: path.basename(userFileHit), path: userFileHit, error: errStr || null };
+  }
+
+  // 7. Universal Windows OS Resolver: Queries Get-StartApps (UWP + Win32) & Registry App Paths dynamically
   return new Promise((resolve) => {
     const safeQuery = raw.replace(/'/g, "''");
     const psUniversalLaunch = `
@@ -1450,12 +1453,18 @@ function findUserFileByName(query) {
   const allowedExts = queryExt ? extAliases[queryExt] || [queryExt] : null;
 
   const rootDirs = [
-    process.cwd(),
     app.getPath('desktop'),
     app.getPath('downloads'),
     app.getPath('documents'),
     app.getPath('pictures'),
   ];
+
+  // Whitelist safe human document, media, and shortcut extensions only
+  const ALLOWED_USER_EXTENSIONS = new Set([
+    '.txt', '.docx', '.doc', '.pdf', '.xlsx', '.xls', '.pptx', '.ppt',
+    '.csv', '.png', '.jpg', '.jpeg', '.webp', '.gif', '.md', '.json',
+    '.html', '.mp3', '.mp4', '.wav', '.zip', '.lnk', '.url',
+  ]);
 
   // Collect root directories + 1 level of subdirectories
   const searchDirs = [];
@@ -1482,6 +1491,7 @@ function findUserFileByName(query) {
         if (!entry.isFile()) continue;
         const lowerName = entry.name.toLowerCase();
         const ext = path.extname(lowerName).toLowerCase();
+        if (!ALLOWED_USER_EXTENSIONS.has(ext)) continue;
         const base = path.basename(lowerName, ext).trim();
         const compactBase = base.replace(/[\s_-]+/g, '');
         const extMatches = !allowedExts || allowedExts.includes(ext);
