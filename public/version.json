@@ -1,7 +1,7 @@
 {
   "version": "1.0.1",
   "minVersion": "1.0.0",
-  "downloadUrl": "https://www.dropbox.com/scl/fi/9m5zchyncn46oslr6qso2/Kibo-Setup-1.0.0.exe?rlkey=fo4vo0hz2n205d4n26o5nrpf4&st=m9m3esyh&dl=1",
+  "downloadUrl": "https://www.dropbox.com/scl/fi/m9riledsm4rum3825armm/Kibo-Setup-1.0.1.exe?rlkey=gxbnqh7c8v7tjlkiy44hp3tmd&st=3my4c08y&dl=1",
   "releaseDate": "2026-11-03",
   "title": "Voice Intelligence & Architecture Update",
   "notes": "Includes faster voice interaction, smart wake-word stripping, local document and app launching, responsive web portal, and complete branding refinement."
