@@ -319,56 +319,16 @@ function refreshTrayIconAndTooltip() {
 
 function updateTrayMenu() {
   if (!tray) return;
-  const settings = readKiboSettings() || {};
-  const showTaskbar = settings.kibo_show_taskbar === true;
 
   const contextMenu = Menu.buildFromTemplate([
     {
-      label: 'Open Kibo Companion',
-      click: () => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.show();
-          mainWindow.focus();
-          mainWindow.setAlwaysOnTop(true, 'screen-saver');
-          mainWindow.webContents.send('open-companion-tab', 'Chat');
-        }
-      },
-    },
-    {
-      label: 'Open Preferences',
+      label: 'Open Settings',
       click: () => {
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.show();
           mainWindow.focus();
           mainWindow.setAlwaysOnTop(true, 'screen-saver');
           mainWindow.webContents.send('open-settings', 'Account');
-        }
-      },
-    },
-    {
-      label: 'Show in Taskbar',
-      type: 'checkbox',
-      checked: showTaskbar,
-      click: (menuItem) => {
-        const next = menuItem.checked;
-        writeKiboSettings({ kibo_show_taskbar: next });
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.setSkipTaskbar(!next);
-          mainWindow.webContents.send('taskbar-setting-changed', next);
-        }
-        updateTrayMenu();
-      },
-    },
-    {
-      label: 'Replay Setup / Onboarding...',
-      click: () => {
-        writeKiboSettings({ kibo_onboarded_v1: false });
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.setSkipTaskbar(false);
-          mainWindow.show();
-          mainWindow.focus();
-          mainWindow.setAlwaysOnTop(true, 'screen-saver');
-          mainWindow.webContents.send('reset-onboarding');
         }
       },
     },
