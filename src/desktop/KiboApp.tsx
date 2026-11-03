@@ -1780,6 +1780,10 @@ export const KiboApp: React.FC = () => {
     const completed = localStorage.getItem('kibo_onboarded_v1');
     return completed === 'true' ? null : 0;
   });
+  const [showInTaskbar, setShowInTaskbar] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('kibo_show_taskbar') === 'true';
+  });
   const [lastHotkeyAction, setLastHotkeyAction] = useState<string | null>(null);
 
   useEffect(() => {
@@ -1810,10 +1814,6 @@ export const KiboApp: React.FC = () => {
     api?.setShowTaskbar?.(showInTaskbar);
   }, [geminiDraftKey, tavilyDraftKey, showInTaskbar]);
 
-  const [showInTaskbar, setShowInTaskbar] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    return localStorage.getItem('kibo_show_taskbar') === 'true';
-  });
   const [autoTuckEnabled, setAutoTuckEnabled] = useState<boolean>(() => localStorage.getItem('kibo_autotuck') !== 'false');
   const [voiceFeedbackEnabled, setVoiceFeedbackEnabled] = useState<boolean>(() => localStorage.getItem('kibo_voice_tts') !== 'false');
   const [launchAtStartup, setLaunchAtStartup] = useState<boolean>(() => localStorage.getItem('kibo_startup') !== 'false');
