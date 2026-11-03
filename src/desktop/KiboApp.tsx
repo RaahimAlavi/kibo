@@ -2592,20 +2592,33 @@ export const KiboApp: React.FC = () => {
         setComposioConnectingSlug(null);
         return;
       }
+
+      const activeKey = (composioDraftKey || '').trim() || (composioApiKey || '').trim();
+      if (!activeKey) {
+        showReplyWithSpeech('Please enter your Composio project API key in the Apps tab above to connect external services.', 'Composio Key Needed');
+        return;
+      }
+
+      if (activeKey !== composioApiKey) {
+        setComposioApiKey(activeKey);
+        localStorage.setItem('kibo_composio_key', activeKey);
+        api?.saveStoredSettings?.({ kibo_composio_key: activeKey });
+      }
+
       if (composioPollTimerRef.current) {
         clearInterval(composioPollTimerRef.current);
         composioPollTimerRef.current = null;
       }
       setComposioConnectingSlug(slug);
       try {
-        const res = await api.composioConnectApp(slug, composioApiKey);
+        const res = await api.composioConnectApp(slug, activeKey);
         if (res && res.success) {
           soundFX.playSuccessChime();
           let pollAttempts = 0;
           composioPollTimerRef.current = setInterval(async () => {
             pollAttempts++;
             try {
-              const statusRes = await api.composioGetStatus(composioApiKey);
+              const statusRes = await api.composioGetStatus(activeKey);
               if (statusRes?.success) {
                 setComposioStatus({
                   connected: true,
@@ -5245,6 +5258,7 @@ export const KiboApp: React.FC = () => {
     setIsExpanded(false);
     setShowMediaNotch(false);
     setIsTucked(true);
+    setAskNotchPhase('idle');
     setLassoActive(true);
     window.kiboAPI?.setLassoActive?.(true);
     // Clear all previous speech state so old questions never appear!
@@ -5951,6 +5965,7 @@ export const KiboApp: React.FC = () => {
         setIsExpanded(false);
         setShowMediaNotch(false);
         setIsTucked(true);
+        setAskNotchPhase('idle');
         setLassoActive(true);
         window.kiboAPI?.setLassoActive?.(true);
         // Clear all previous speech state so old questions never appear!
@@ -11987,7 +12002,7 @@ export const KiboApp: React.FC = () => {
         </div>
       )}
 
-      {!isExpanded && !showCompanionWindow && askNotchPhase !== 'idle' && (
+      {!isExpanded && !showCompanionWindow && askNotchPhase !== 'idle' && !lassoActive && dictationState === 'idle' && (
         <div className="kibo-ask-stage-hud">
           <div className="kibo-voice-pill user-white ask-wide-pill">
             <span className="pill-tag">YOU</span>

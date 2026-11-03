@@ -319,53 +319,27 @@ class KiboSoundEngine {
     });
   }
 
-  // 10. Relief Breath / Sigh (Soft relaxing exhale after cooling down from anger)
+  // 10. Relief Breath / Gentle Calming Tone (Soft relaxing warm tone after cooling down)
   public playReliefBreath() {
     const ctx = this.getContext();
     if (!ctx) return;
     const now = ctx.currentTime;
 
-    const bufferSize = Math.floor(ctx.sampleRate * 1.4);
-    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const data = noiseBuffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = (Math.random() * 2 - 1) * 0.35;
-    }
-
-    const noise = ctx.createBufferSource();
-    noise.buffer = noiseBuffer;
-
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(450, now);
-    filter.frequency.exponentialRampToValueAtTime(180, now + 1.2);
-
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.linearRampToValueAtTime(0.038, now + 0.35);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.35);
-
-    noise.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
-
     const osc = ctx.createOscillator();
     const oscGain = ctx.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(320, now);
-    osc.frequency.exponentialRampToValueAtTime(160, now + 1.1);
+    osc.frequency.setValueAtTime(440, now);
+    osc.frequency.exponentialRampToValueAtTime(330, now + 0.28);
 
     oscGain.gain.setValueAtTime(0.0001, now);
-    oscGain.gain.linearRampToValueAtTime(0.018, now + 0.3);
-    oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.15);
+    oscGain.gain.linearRampToValueAtTime(0.012, now + 0.04);
+    oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
 
     osc.connect(oscGain);
     oscGain.connect(ctx.destination);
 
-    noise.start(now);
-    noise.stop(now + 1.4);
     osc.start(now);
-    osc.stop(now + 1.2);
+    osc.stop(now + 0.32);
   }
 
   // 14. Yawn Wake Stretch (Rising soulful pitch arc with breath sigh and wake chimes)

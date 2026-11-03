@@ -13,18 +13,15 @@ export interface SpeakOptions {
 
 // Ordered by Unlimited Quota Live API models from user's Google AI Studio project
 const LIVE_AUDIO_MODELS = [
-  'models/gemini-3.8-live',
-  'models/gemini-3-flash-live',
-  'models/gemini-2.5-flash-native-audio-dialog',
-  'models/gemini-2.5-flash-native-audio-preview-12-2025',
+  'models/gemini-2.0-flash-exp',
+  'models/gemini-2.0-flash-realtime-exp',
 ];
 
 // Verified Active Google Gemini REST TTS Models from Google AI Studio
 const REST_TTS_MODELS = [
-  'gemini-3.8-flash-lite-tts',
-  'gemini-3.8-flash-tts',
-  'gemini-3.1-flash-tts-preview',
-  'gemini-2.5-flash-preview-tts',
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
 ];
 
 const deadTtsModels = new Map<string, number>();
@@ -149,12 +146,21 @@ class KiboVoiceEngine {
 
     const source = ctx.createBufferSource();
     source.buffer = audioBuffer;
-    source.connect(ctx.destination);
 
     const currentTime = ctx.currentTime;
     if (this.nextStartTime < currentTime) {
       this.nextStartTime = currentTime + 0.015;
     }
+
+    const gainNode = ctx.createGain();
+    gainNode.gain.setValueAtTime(1.0, this.nextStartTime);
+    const fadeDuration = 0.015;
+    const fadeStart = Math.max(this.nextStartTime, this.nextStartTime + audioBuffer.duration - fadeDuration);
+    gainNode.gain.setValueAtTime(1.0, fadeStart);
+    gainNode.gain.linearRampToValueAtTime(0.0001, this.nextStartTime + audioBuffer.duration);
+
+    source.connect(gainNode);
+    gainNode.connect(ctx.destination);
 
     source.start(this.nextStartTime);
     this.nextStartTime += audioBuffer.duration;

@@ -2685,7 +2685,7 @@ function startActiveAppWatcher() {
         }
       }
     } catch (_) {}
-  }, 1000);
+  }, 2000);
 }
 
 // ============================================================================
@@ -3076,7 +3076,7 @@ function getComposioClient(customKey) {
     : (settings.kibo_composio_key || process.env.COMPOSIO_API_KEY || DEFAULT_COMPOSIO_API_KEY);
 
   if (!key) {
-    return null;
+    return { client: null, error: 'No Composio API key provided. Please enter your key in the Apps tab.' };
   }
 
   if (!composioInstance || composioInstance._kiboApiKey !== key) {
@@ -3086,10 +3086,10 @@ function getComposioClient(customKey) {
       composioInstance._kiboApiKey = key;
     } catch (err) {
       console.error('[Kibo] Failed to initialize Composio SDK:', err.message);
-      return null;
+      return { client: null, error: `Invalid Composio API key: ${err.message}` };
     }
   }
-  return composioInstance;
+  return { client: composioInstance, error: null };
 }
 
 const discordProfileCache = new Map();
@@ -3182,8 +3182,8 @@ function parseAccountProfile(a, slug) {
 
 ipcMain.handle('composio-get-status', async (_event, customKey) => {
   try {
-    const comp = getComposioClient(customKey);
-    if (!comp) return { success: false, connected: false, error: 'Composio SDK not initialized' };
+    const { client: comp, error: initErr } = getComposioClient(customKey);
+    if (!comp) return { success: false, connected: false, error: initErr || 'Composio API key not found' };
 
     const client = comp.getClient();
     let accounts = [];
@@ -3267,8 +3267,8 @@ ipcMain.handle('composio-get-status', async (_event, customKey) => {
 
 ipcMain.handle('composio-connect-app', async (_event, toolkitSlug, customKey) => {
   try {
-    const comp = getComposioClient(customKey);
-    if (!comp) return { success: false, error: 'Composio SDK not initialized' };
+    const { client: comp, error: initErr } = getComposioClient(customKey);
+    if (!comp) return { success: false, error: initErr || 'Composio API key missing. Please enter your key in Apps tab.' };
 
     const session = await comp.create('kibo_user_default');
     const authRes = await session.authorize(toolkitSlug);
@@ -3291,7 +3291,7 @@ ipcMain.handle('composio-connect-app', async (_event, toolkitSlug, customKey) =>
 
 ipcMain.handle('composio-get-connected-accounts', async (_event, customKey) => {
   try {
-    const comp = getComposioClient(customKey);
+    const { client: comp } = getComposioClient(customKey);
     if (!comp) return { success: false, accounts: [] };
     const client = comp.getClient();
     const list = await client.connectedAccounts.list();
@@ -3318,8 +3318,8 @@ ipcMain.handle('composio-get-connected-accounts', async (_event, customKey) => {
 
 ipcMain.handle('composio-disconnect-account', async (_event, accountId, customKey) => {
   try {
-    const comp = getComposioClient(customKey);
-    if (!comp) return { success: false, error: 'Composio not initialized' };
+    const { client: comp, error: initErr } = getComposioClient(customKey);
+    if (!comp) return { success: false, error: initErr || 'Composio API key not found' };
     const client = comp.getClient();
     await client.connectedAccounts.delete(accountId);
     return { success: true };
@@ -3344,6 +3344,7 @@ function getNewestMtimeInDir(dirPath) {
 }
 
 function ensureLatestFrontendBuild() {
+  if (app.isPackaged) return;
   try {
     const rootDir = path.join(__dirname, '..');
     const distIndex = path.join(rootDir, 'dist', 'index.html');
@@ -3360,12 +3361,11 @@ app.whenReady().then(() => {
   ensureLatestFrontendBuild();
   createWindow();
   createSystemTray();
-  // Defer background PowerShell daemons until after the 2.25s startup wake animation completes for 60fps smoothness
+  // Defer background PowerShell daemons past startup to keep laptop boot silky smooth and lag-free
   setTimeout(() => {
     initSystemDaemon();
-    preCacheDefaultWallpapers();
     startActiveAppWatcher();
-  }, 2600);
+  }, 4500);
 
   app.on('second-instance', () => {
     if (mainWindow && !mainWindow.isDestroyed()) { mainWindow.webContents.reloadIgnoringCache(); }

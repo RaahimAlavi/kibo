@@ -30,27 +30,30 @@ export interface GeminiActionResponse {
 
 // Ordered by highest available Free-Tier Quota & lowest latency from user's Google AI Studio project
 export const VISION_AND_QUERY_MODELS = [
-  'gemini-3.5-flash-lite',    // 15 RPM | 250K TPM | 500 RPD (Verified Active ~700ms)
-  'gemini-3.1-flash-lite',    // 15 RPM | 250K TPM | 500 RPD (Verified Active ~750ms)
-  'gemini-flash-lite-latest', // 15 RPM | 250K TPM | 500 RPD
-  'gemini-3.8-flash',         // 5 RPM  | 250K TPM | 20 RPD
-  'gemini-flash-latest',      // General Flash fallback
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-lite',
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-8b',
+  'gemini-1.5-pro',
 ];
 
 export const DICTATION_TEXT_MODELS = [
-  'gemini-3.5-flash-lite',    // 15 RPM | 500 RPD (Ultra-fast clean dictation)
-  'gemini-3.1-flash-lite',    // 15 RPM | 500 RPD
-  'gemini-flash-lite-latest', // 15 RPM | 500 RPD
-  'gemini-3.8-flash',         // 5 RPM  | 20 RPD
-  'gemini-flash-latest',
+  'gemini-2.5-flash-lite',
+  'gemini-2.0-flash-lite',
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash-8b',
+  'gemini-1.5-flash',
 ];
 
 export const AUDIO_TRANSCRIBE_MODELS = [
-  'gemini-3.5-flash-lite',    // 15 RPM | 500 RPD (Fast multimodal audio)
-  'gemini-3.1-flash-lite',    // 15 RPM | 500 RPD (Fast multimodal audio)
-  'gemini-flash-lite-latest', // 15 RPM | 500 RPD
-  'gemini-3.8-flash',         // 5 RPM  | 20 RPD
-  'gemini-flash-latest',
+  'gemini-2.5-flash-lite',
+  'gemini-2.0-flash-lite',
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
 ];
 
 // Cooldown cache so rate-limited (429) or unavailable (404) models are skipped in 0ms

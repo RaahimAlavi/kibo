@@ -1344,7 +1344,7 @@ function startClipboardWatcher(getMainWindow) {
   if (clipboardTimer) clearInterval(clipboardTimer);
   clipboardTimer = setInterval(() => {
     pollClipboardOnce(getMainWindow);
-  }, 400);
+  }, 1200);
 }
 
 async function getClipboardHistory() {
