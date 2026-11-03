@@ -166,6 +166,21 @@ const kiboAPI = {
     ipcRenderer.on('open-settings', listener);
     return () => ipcRenderer.removeListener('open-settings', listener);
   },
+  onOpenCompanionTab: (callback) => {
+    const listener = (_event, tab) => callback(tab);
+    ipcRenderer.on('open-companion-tab', listener);
+    return () => ipcRenderer.removeListener('open-companion-tab', listener);
+  },
+  onResetOnboarding: (callback) => {
+    const listener = () => callback();
+    ipcRenderer.on('reset-onboarding', listener);
+    return () => ipcRenderer.removeListener('reset-onboarding', listener);
+  },
+  onTaskbarSettingChanged: (callback) => {
+    const listener = (_event, show) => callback(show);
+    ipcRenderer.on('taskbar-setting-changed', listener);
+    return () => ipcRenderer.removeListener('taskbar-setting-changed', listener);
+  },
   onClipboardItemAdded: (callback) => {
     const listener = (_event, item) => callback(item);
     ipcRenderer.on('clipboard-item-added', listener);

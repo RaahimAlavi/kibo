@@ -319,18 +319,60 @@ function refreshTrayIconAndTooltip() {
 
 function updateTrayMenu() {
   if (!tray) return;
+  const settings = readKiboSettings() || {};
+  const showTaskbar = settings.kibo_show_taskbar === true;
 
   const contextMenu = Menu.buildFromTemplate([
     {
-      label: 'Open Settings',
+      label: 'Open Kibo Companion',
       click: () => {
         if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.showInactive();
+          mainWindow.show();
+          mainWindow.focus();
+          mainWindow.setAlwaysOnTop(true, 'screen-saver');
+          mainWindow.webContents.send('open-companion-tab', 'Chat');
+        }
+      },
+    },
+    {
+      label: 'Open Preferences',
+      click: () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.show();
+          mainWindow.focus();
           mainWindow.setAlwaysOnTop(true, 'screen-saver');
           mainWindow.webContents.send('open-settings', 'Account');
         }
       },
     },
+    {
+      label: 'Show in Taskbar',
+      type: 'checkbox',
+      checked: showTaskbar,
+      click: (menuItem) => {
+        const next = menuItem.checked;
+        writeKiboSettings({ kibo_show_taskbar: next });
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.setSkipTaskbar(!next);
+          mainWindow.webContents.send('taskbar-setting-changed', next);
+        }
+        updateTrayMenu();
+      },
+    },
+    {
+      label: 'Replay Setup / Onboarding...',
+      click: () => {
+        writeKiboSettings({ kibo_onboarded_v1: false });
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.setSkipTaskbar(false);
+          mainWindow.show();
+          mainWindow.focus();
+          mainWindow.setAlwaysOnTop(true, 'screen-saver');
+          mainWindow.webContents.send('reset-onboarding');
+        }
+      },
+    },
+    { type: 'separator' },
     {
       label: isKiboPaused ? 'Resume Kibo' : 'Pause Kibo',
       click: () => {
@@ -411,7 +453,8 @@ function createSystemTray() {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.show();
       mainWindow.focus();
-      mainWindow.webContents.send('open-settings', 'Account');
+      mainWindow.setAlwaysOnTop(true, 'screen-saver');
+      mainWindow.webContents.send('open-companion-tab', 'Chat');
     }
   });
 
@@ -426,6 +469,10 @@ function createSystemTray() {
 function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { bounds } = primaryDisplay;
+
+  const initialSettings = readKiboSettings() || {};
+  const isOnboarded = initialSettings.kibo_onboarded_v1 === true;
+  const shouldShowTaskbar = initialSettings.kibo_show_taskbar === true || !isOnboarded;
 
   // Automatically grant microphone & media permissions for Hold-to-Speak voice capture
   session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => {
@@ -447,7 +494,7 @@ function createWindow() {
     resizable: false,
     movable: false,
     hasShadow: false,
-    skipTaskbar: true,
+    skipTaskbar: !shouldShowTaskbar,
     icon: path.join(__dirname, '../public/icon-256.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -709,7 +756,12 @@ function createWindow() {
 
   mainWindow.webContents.on('did-finish-load', () => {
     if (!mainWindow || mainWindow.isDestroyed()) return;
-    mainWindow.showInactive();
+    if (!isOnboarded) {
+      mainWindow.show();
+      mainWindow.focus();
+    } else {
+      mainWindow.showInactive();
+    }
     mainWindow.setAlwaysOnTop(true, 'screen-saver');
   });
 

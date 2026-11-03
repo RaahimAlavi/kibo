@@ -1,5 +1,5 @@
 // src/components/KiboOnboardingExperience.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SoulConfig } from '../lib/soulMath';
 import { SoulCanvas } from './SoulCanvas';
 import { soundFX } from '../lib/soundFX';
@@ -17,7 +17,7 @@ export interface KiboOnboardingExperienceProps {
   onAwardEmbers: (amount: number) => void;
   onSpeak: (text: string) => void;
   onPreviewExpandIsland: (expand: boolean) => void;
-  onComplete: () => void;
+  onComplete: (key?: string) => void;
 }
 
 export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> = ({
@@ -132,7 +132,8 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
   };
 
   const handleFinish = () => {
-    if (localGeminiKey.trim() && !keySaved) {
+    const trimmed = localGeminiKey.trim();
+    if (trimmed) {
       handleSaveGeminiKey();
     }
     const api = (window as any).kiboAPI;
@@ -140,7 +141,7 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
       api.setAlwaysOnTop(true);
     }
     soundFX.playSuccessChime();
-    onComplete();
+    onComplete(trimmed);
   };
 
   const canContinue = currentStep !== 1 || licenseVerified;

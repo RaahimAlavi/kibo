@@ -1793,14 +1793,16 @@ export const KiboApp: React.FC = () => {
     return () => clearTimeout(timer);
   }, [checkForAppUpdates]);
 
-  const completeOnboarding = useCallback(() => {
+  const completeOnboarding = useCallback((overrideGeminiKey?: string) => {
     const api = (window as any).kiboAPI;
-    if (geminiDraftKey.trim()) {
-      const val = geminiDraftKey.trim();
-      setApiKey(val);
-      localStorage.setItem('kibo_gemini_key', val);
-      api?.saveStoredSettings?.({ kibo_gemini_key: val });
+    const finalGemini = (overrideGeminiKey || geminiDraftKey || localStorage.getItem('kibo_gemini_key') || '').trim();
+    if (finalGemini) {
+      setApiKey(finalGemini);
+      setGeminiDraftKey(finalGemini);
+      localStorage.setItem('kibo_gemini_key', finalGemini);
+      api?.saveStoredSettings?.({ kibo_gemini_key: finalGemini });
       setNotchApiAlert(null);
+      setSoulMode('LISTENING');
     }
     if (tavilyDraftKey.trim()) {
       const val = tavilyDraftKey.trim();
@@ -1809,6 +1811,7 @@ export const KiboApp: React.FC = () => {
       api?.saveStoredSettings?.({ kibo_tavily_key: val });
     }
     localStorage.setItem('kibo_onboarded_v1', 'true');
+    api?.saveStoredSettings?.({ kibo_onboarded_v1: true });
     api?.setAlwaysOnTop?.(true);
     setOnboardingStep(null);
     api?.setShowTaskbar?.(showInTaskbar);
@@ -3679,6 +3682,37 @@ export const KiboApp: React.FC = () => {
         })
       : () => {};
 
+    // 5. Tray left-click / direct tab open
+    const unregOpenCompanion = window.kiboAPI?.onOpenCompanionTab
+      ? window.kiboAPI.onOpenCompanionTab((tab) => {
+          setIsTucked(false);
+          setShowMediaNotch(false);
+          setShowCompanionWindow(false);
+          setIsExpanded(true);
+          setActiveTab((tab as NavTab) || 'Chat');
+        })
+      : () => {};
+
+    // 6. Reset / Replay onboarding setup
+    const unregResetOnboarding = window.kiboAPI?.onResetOnboarding
+      ? window.kiboAPI.onResetOnboarding(() => {
+          localStorage.removeItem('kibo_onboarded_v1');
+          window.kiboAPI?.saveStoredSettings?.({ kibo_onboarded_v1: false });
+          setOnboardingStep(0);
+          window.kiboAPI?.setShowTaskbar?.(true);
+          setIsTucked(false);
+          setIsExpanded(false);
+        })
+      : () => {};
+
+    // 7. Dynamic taskbar toggle sync from system tray
+    const unregTaskbarChanged = window.kiboAPI?.onTaskbarSettingChanged
+      ? window.kiboAPI.onTaskbarSettingChanged((show) => {
+          setShowInTaskbar(show);
+          localStorage.setItem('kibo_show_taskbar', String(show));
+        })
+      : () => {};
+
     // 5. Focus/Sync reader (supports both Electron direct readers and Browser navigator.clipboard)
     const syncActiveClipboard = async () => {
       if (window.kiboAPI?.getClipboardHistory) {
@@ -3727,6 +3761,9 @@ export const KiboApp: React.FC = () => {
       unreg();
       unregSettings();
       unregOutsideClick();
+      unregOpenCompanion();
+      unregResetOnboarding();
+      unregTaskbarChanged();
     };
   }, [mergeClipboardSafely]);
 
@@ -4233,7 +4270,7 @@ export const KiboApp: React.FC = () => {
       Convert:   { w: 820, h: 468 },
       Focus:     expandedStickyId ? { w: 880, h: 520 } : { w: 820, h: 460 },
       Skills:    { w: 820, h: 460 },
-      Media:     { w: 740, h: 260 },
+      Media:     { w: 780, h: 260 },
       Controls:  { w: 708, h: 396 },
       Today:     { w: 860, h: 440 },
       Clipboard: { w: 860, h: 444 },
@@ -10445,6 +10482,37 @@ export const KiboApp: React.FC = () => {
                                 }}
                               >
                                 <span className="kibo-switch-knob" />
+                              </button>
+                            </div>
+
+                            <div className="kibo-settings-row">
+                              <div>
+                                <div className="kibo-settings-row-label">Replay Onboarding Setup</div>
+                                <div className="kibo-settings-row-desc">Rerun the welcome walkthrough and initial configuration at any time</div>
+                              </div>
+                              <button
+                                type="button"
+                                style={{
+                                  background: 'rgba(255, 255, 255, 0.08)',
+                                  color: '#F1F5F9',
+                                  border: '1px solid rgba(255, 255, 255, 0.14)',
+                                  borderRadius: 8,
+                                  padding: '7px 16px',
+                                  fontSize: 12,
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s',
+                                }}
+                                onClick={() => {
+                                  localStorage.removeItem('kibo_onboarded_v1');
+                                  (window as any).kiboAPI?.saveStoredSettings?.({ kibo_onboarded_v1: false });
+                                  (window as any).kiboAPI?.setShowTaskbar?.(true);
+                                  setIsTucked(false);
+                                  setIsExpanded(false);
+                                  setOnboardingStep(0);
+                                }}
+                              >
+                                Replay Setup
                               </button>
                             </div>
 

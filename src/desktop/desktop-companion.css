@@ -383,10 +383,10 @@
 .companion-nav-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   height: 32px;
   margin-bottom: 14px;
-  padding: 0 12px;
+  padding: 0 16px;
   position: relative;
   width: 100%;
   box-sizing: border-box;
@@ -394,10 +394,13 @@
 }
 
 .companion-header-actions {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-left: auto;
   flex-shrink: 0;
   z-index: 4;
 }
@@ -430,7 +433,7 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   height: 28px;
   flex-shrink: 0;
 }
