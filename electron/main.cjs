@@ -383,6 +383,7 @@ function updateTrayMenu() {
         app.setLoginItemSettings({
           openAtLogin: menuItem.checked,
           path: process.execPath,
+          args: ['--hidden'],
         });
         updateTrayMenu();
       },
@@ -2522,7 +2523,7 @@ function initNativeUIWorker() {
           [void][Win32Input]::GetWindowThreadProcessId($fg, [ref]$pidVal)
           $pName = ""
           if ($pidVal -gt 0) {
-            try { $pName = (Get-Process -Id $pidVal -ErrorAction SilentlyContinue).ProcessName } catch {}
+            try { $pName = [System.Diagnostics.Process]::GetProcessById($pidVal).ProcessName } catch {}
           }
           $isFs = [Win32Input]::IsForegroundFullscreen($fg)
           [Console]::Out.WriteLine((@{ ok = $true; title = $t; proc = $pName; fullscreen = $isFs } | ConvertTo-Json -Compress))
@@ -2697,7 +2698,7 @@ function startActiveAppWatcher() {
         }
       }
     } catch (_) {}
-  }, 2000);
+  }, 3500);
 }
 
 // ============================================================================
@@ -3377,7 +3378,7 @@ app.whenReady().then(() => {
   setTimeout(() => {
     initSystemDaemon();
     startActiveAppWatcher();
-  }, 4500);
+  }, 9000);
 
   app.on('second-instance', () => {
     if (mainWindow && !mainWindow.isDestroyed()) { mainWindow.webContents.reloadIgnoringCache(); }

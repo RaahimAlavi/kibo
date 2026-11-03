@@ -106,27 +106,9 @@ class KiboSoundEngine {
     sub.stop(now + 0.2);
   }
 
-  // 2. Island Collapse (Ultra-soft gentle whisper tuck, zero static noise or pitch sweeps)
+  // 2. Island Collapse (Completely silent tuck so speech and drawer closing leave zero sound artifacts)
   public playCollapse() {
-    const ctx = this.getContext();
-    if (!ctx) return;
-    const now = ctx.currentTime;
-
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(260, now);
-
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.linearRampToValueAtTime(0.015, now + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.06);
-
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-
-    osc.start(now);
-    osc.stop(now + 0.07);
+    // Pure silence - pristine, zero-noise collapse
   }
 
   // 3. Navigation Tab Switch (Crisp Dynamic Island glass detent)

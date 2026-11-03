@@ -21,12 +21,8 @@ const LIVE_AUDIO_MODELS = [
 
 // Verified Active Google Gemini REST TTS Models from Google AI Studio
 const REST_TTS_MODELS = [
-  'gemini-3.1-flash-tts',
   'gemini-3.8-flash-lite-tts',
   'gemini-3.8-flash-tts',
-  'gemini-2.5-flash-tts',
-  'gemini-2.5-flash',
-  'gemini-2.0-flash',
 ];
 
 const deadTtsModels = new Map<string, number>();
@@ -129,18 +125,36 @@ class KiboVoiceEngine {
     this.setSpeaking(false);
   }
 
-  // Decode base64 16-bit 24kHz little-endian PCM chunk and schedule gapless playback
-  private async enqueuePcm24kChunk(base64Pcm: string, sinkId?: string, onEnd?: () => void) {
+  // Decode base64 16-bit 24kHz little-endian PCM or WAV audio and schedule gapless, pop-free playback
+  private async enqueuePcm24kChunk(base64Audio: string, sinkId?: string, onEnd?: () => void) {
     const ctx = await this.getAudioContext(sinkId);
-    const binaryStr = atob(base64Pcm);
+    const binaryStr = atob(base64Audio);
     const len = binaryStr.length;
     const bytes = new Uint8Array(len);
     for (let i = 0; i < len; i++) {
       bytes[i] = binaryStr.charCodeAt(i);
     }
 
-    const samplesCount = Math.floor(len / 2);
-    const int16 = new Int16Array(bytes.buffer, bytes.byteOffset, samplesCount);
+    // Strip RIFF / WAVE header if present (standard 44 bytes or search for 'data' chunk)
+    let pcmOffset = 0;
+    if (len >= 44 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46) {
+      for (let i = 12; i < Math.min(len - 8, 200); i++) {
+        if (bytes[i] === 0x64 && bytes[i + 1] === 0x61 && bytes[i + 2] === 0x74 && bytes[i + 3] === 0x61) {
+          pcmOffset = i + 8;
+          break;
+        }
+      }
+      if (pcmOffset === 0) pcmOffset = 44;
+    }
+
+    const rawLen = len - pcmOffset;
+    const samplesCount = Math.floor(rawLen / 2);
+    if (samplesCount <= 0) {
+      onEnd?.();
+      return;
+    }
+
+    const int16 = new Int16Array(bytes.buffer, bytes.byteOffset + pcmOffset, samplesCount);
     const float32 = new Float32Array(samplesCount);
     for (let i = 0; i < samplesCount; i++) {
       float32[i] = int16[i] / 32768.0;
@@ -160,10 +174,10 @@ class KiboVoiceEngine {
     const gainNode = ctx.createGain();
     const startTime = this.nextStartTime;
     const endTime = startTime + audioBuffer.duration;
-    // Ultra-smooth 6ms envelope eliminates DAC step clicks and speaker pops completely
+    // Ultra-smooth 8ms envelope completely eliminates DAC step clicks and speaker pops
     gainNode.gain.setValueAtTime(0.0001, startTime);
-    gainNode.gain.linearRampToValueAtTime(1.0, startTime + 0.006);
-    gainNode.gain.setValueAtTime(1.0, Math.max(startTime + 0.006, endTime - 0.006));
+    gainNode.gain.linearRampToValueAtTime(1.0, startTime + 0.008);
+    gainNode.gain.setValueAtTime(1.0, Math.max(startTime + 0.008, endTime - 0.012));
     gainNode.gain.linearRampToValueAtTime(0.0001, endTime);
 
     source.connect(gainNode);
@@ -425,7 +439,7 @@ class KiboVoiceEngine {
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            signal: AbortSignal.timeout(6000),
+            signal: AbortSignal.timeout(18000),
             body: JSON.stringify({
               contents: [{ parts: [{ text: cleanText }] }],
               generationConfig: {
