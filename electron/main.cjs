@@ -492,6 +492,14 @@ function createWindow() {
     }
   });
 
+  mainWindow.on('restore', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show();
+      mainWindow.setAlwaysOnTop(true, 'screen-saver');
+      mainWindow.focus();
+    }
+  });
+
   startHitTestLoop();
   // Defer heavy PowerShell watchers until after the 2.25s startup wake-and-hide animation completes
   setTimeout(() => {
@@ -2215,6 +2223,14 @@ ipcMain.handle('set-always-on-top', (_event, flag) => {
     } else {
       mainWindow.setAlwaysOnTop(false);
     }
+    return true;
+  }
+  return false;
+});
+
+ipcMain.handle('set-show-taskbar', (_event, show) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.setSkipTaskbar(!show);
     return true;
   }
   return false;

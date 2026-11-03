@@ -1807,12 +1807,26 @@ export const KiboApp: React.FC = () => {
     localStorage.setItem('kibo_onboarded_v1', 'true');
     api?.setAlwaysOnTop?.(true);
     setOnboardingStep(null);
-  }, [geminiDraftKey, tavilyDraftKey]);
+    api?.setShowTaskbar?.(showInTaskbar);
+  }, [geminiDraftKey, tavilyDraftKey, showInTaskbar]);
 
+  const [showInTaskbar, setShowInTaskbar] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('kibo_show_taskbar') === 'true';
+  });
   const [autoTuckEnabled, setAutoTuckEnabled] = useState<boolean>(() => localStorage.getItem('kibo_autotuck') !== 'false');
   const [voiceFeedbackEnabled, setVoiceFeedbackEnabled] = useState<boolean>(() => localStorage.getItem('kibo_voice_tts') !== 'false');
   const [launchAtStartup, setLaunchAtStartup] = useState<boolean>(() => localStorage.getItem('kibo_startup') !== 'false');
   const [sfxEnabled, setSfxEnabled] = useState<boolean>(() => soundFX.isEnabled());
+
+  useEffect(() => {
+    const api = (window as any).kiboAPI;
+    if (onboardingStep !== null) {
+      api?.setShowTaskbar?.(true);
+    } else {
+      api?.setShowTaskbar?.(showInTaskbar);
+    }
+  }, [onboardingStep, showInTaskbar]);
 
   useEffect(() => {
     window.kiboAPI?.getStartupSetting?.().then((enabled: boolean) => {
@@ -4201,9 +4215,9 @@ export const KiboApp: React.FC = () => {
       return { w: 708, h: hasMediaSession ? 396 : 268 };
     }
     const dims: Record<NavTab, { w: number; h: number }> = {
-      Chat:      { w: 774, h: 460 },
+      Chat:      { w: 820, h: 460 },
       Agents:    { w: 860, h: 440 },
-      Convert:   { w: 780, h: 468 },
+      Convert:   { w: 820, h: 468 },
       Focus:     expandedStickyId ? { w: 880, h: 520 } : { w: 820, h: 460 },
       Skills:    { w: 820, h: 460 },
       Media:     { w: 740, h: 260 },
@@ -10401,6 +10415,26 @@ export const KiboApp: React.FC = () => {
 
                             <div className="kibo-settings-row">
                               <div>
+                                <div className="kibo-settings-row-label">Show Kibo in Windows Taskbar</div>
+                                <div className="kibo-settings-row-desc">Keep Kibo visible in the taskbar even while docked at the top of your screen</div>
+                              </div>
+                              <button
+                                type="button"
+                                className={`kibo-switch ${showInTaskbar ? 'is-on' : ''}`}
+                                onClick={() => {
+                                  const next = !showInTaskbar;
+                                  setShowInTaskbar(next);
+                                  localStorage.setItem('kibo_show_taskbar', String(next));
+                                  (window as any).kiboAPI?.saveStoredSettings?.({ kibo_show_taskbar: next });
+                                  (window as any).kiboAPI?.setShowTaskbar?.(next);
+                                }}
+                              >
+                                <span className="kibo-switch-knob" />
+                              </button>
+                            </div>
+
+                            <div className="kibo-settings-row">
+                              <div>
                                 <div className="kibo-settings-row-label">Auto-Tuck Notch When Inactive</div>
                                 <div className="kibo-settings-row-desc">Glides smoothly up into the top bezel when you move your mouse away</div>
                               </div>
@@ -11645,6 +11679,24 @@ export const KiboApp: React.FC = () => {
                           className="config-pill-btn"
                         >
                           {launchAtStartup ? 'Active' : 'Off'}
+                        </button>
+                      </div>
+                      <div className="config-card-row">
+                        <div className="config-row-copy">
+                          <div className="config-row-title">Show Kibo in Windows taskbar</div>
+                          <div className="config-row-desc">Keep Kibo visible in the taskbar even while docked at the top of your screen</div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            const next = !showInTaskbar;
+                            setShowInTaskbar(next);
+                            localStorage.setItem('kibo_show_taskbar', String(next));
+                            (window as any).kiboAPI?.saveStoredSettings?.({ kibo_show_taskbar: next });
+                            (window as any).kiboAPI?.setShowTaskbar?.(next);
+                          }}
+                          className="config-pill-btn"
+                        >
+                          {showInTaskbar ? 'Active' : 'Off'}
                         </button>
                       </div>
                       <div className="config-card-row">

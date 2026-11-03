@@ -17,6 +17,7 @@ const kiboAPI = {
     ),
   setExpanded: (expanded, height) => ipcRenderer.send('set-expanded', { expanded, height }),
   minimize: () => ipcRenderer.send('window-minimize'),
+  setShowTaskbar: (show) => ipcRenderer.invoke('set-show-taskbar', Boolean(show)),
   setAlwaysOnTop: (flag) => ipcRenderer.invoke('set-always-on-top', flag),
   close: () => ipcRenderer.send('window-close'),
 

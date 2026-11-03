@@ -41,6 +41,11 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
   const [localGeminiKey, setLocalGeminiKey] = useState<string>(geminiDraftKey || '');
   const [keySaved, setKeySaved] = useState<boolean>(Boolean(geminiDraftKey));
 
+  useEffect(() => {
+    const api = (window as any).kiboAPI;
+    api?.setShowTaskbar?.(true);
+  }, []);
+
   const openGoogleAiStudio = () => {
     const url = 'https://aistudio.google.com/app/apikey';
     const api = (window as any).kiboAPI;
@@ -56,6 +61,7 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
 
   const handleMinimize = () => {
     const api = (window as any).kiboAPI;
+    api?.setShowTaskbar?.(true);
     if (api?.minimize) {
       api.minimize();
     }
