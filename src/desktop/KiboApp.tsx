@@ -10181,33 +10181,63 @@ export const KiboApp: React.FC = () => {
                                   </div>
                                 </div>
                                 {availableUpdate ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const url = availableUpdate.downloadUrl;
-                                      const api = (window as any).kiboAPI;
-                                      if (api?.openUrl) {
-                                        api.openUrl(url);
-                                      } else {
-                                        window.open(url, '_blank');
-                                      }
-                                    }}
-                                    style={{
-                                      background: '#38BDF8',
-                                      color: '#0A0E17',
-                                      border: 'none',
-                                      borderRadius: 999,
-                                      padding: '8px 20px',
-                                      fontSize: 13,
-                                      fontWeight: 800,
-                                      cursor: 'pointer',
-                                      boxShadow: '0 2px 10px rgba(56, 189, 248, 0.35)',
-                                      transition: 'opacity 0.2s',
-                                      flexShrink: 0,
-                                    }}
-                                  >
-                                    Download Update (v{availableUpdate.version})
-                                  </button>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                                    <button
+                                      type="button"
+                                      onClick={async () => {
+                                        let url = availableUpdate.downloadUrl;
+                                        try {
+                                          const freshRes = await fetch(`https://kiboai.vercel.app/version.json?_t=${Date.now()}`);
+                                          if (freshRes.ok) {
+                                            const freshData = await freshRes.json();
+                                            if (freshData?.downloadUrl) {
+                                              url = freshData.downloadUrl;
+                                              setAvailableUpdate(freshData);
+                                            }
+                                          }
+                                        } catch {}
+                                        const api = (window as any).kiboAPI;
+                                        if (api?.openUrl) {
+                                          api.openUrl(url);
+                                        } else {
+                                          window.open(url, '_blank');
+                                        }
+                                      }}
+                                      style={{
+                                        background: '#38BDF8',
+                                        color: '#0A0E17',
+                                        border: 'none',
+                                        borderRadius: 999,
+                                        padding: '8px 20px',
+                                        fontSize: 13,
+                                        fontWeight: 800,
+                                        cursor: 'pointer',
+                                        boxShadow: '0 2px 10px rgba(56, 189, 248, 0.35)',
+                                        transition: 'opacity 0.2s',
+                                        flexShrink: 0,
+                                      }}
+                                    >
+                                      Download Update (v{availableUpdate.version})
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => checkForAppUpdates(true)}
+                                      disabled={isCheckingUpdate}
+                                      title="Re-check for latest update"
+                                      style={{
+                                        background: 'rgba(255, 255, 255, 0.08)',
+                                        color: '#94A3B8',
+                                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                                        borderRadius: 999,
+                                        padding: '7px 12px',
+                                        fontSize: 12,
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                      }}
+                                    >
+                                      {isCheckingUpdate ? 'Checking...' : 'Refresh'}
+                                    </button>
+                                  </div>
                                 ) : (
                                   <button
                                     type="button"
