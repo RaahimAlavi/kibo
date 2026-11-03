@@ -1291,13 +1291,13 @@ const NAV_TABS: ReadonlyArray<{
   icon: string;
   width: number;
 }> = [
-  { id: 'Chat', label: 'Chat', icon: 'chat', width: 62 },
-  { id: 'Agents', label: 'Agents', icon: 'bolt', width: 72 },
-  { id: 'Convert', label: 'Convert', icon: 'convert', width: 76 },
-  { id: 'Focus', label: 'Focus', icon: 'timer', width: 66 },
-  { id: 'Skills', label: 'Skills', icon: 'skill', width: 64 },
-  { id: 'Media', label: 'Media', icon: 'music', width: 66 },
-  { id: 'Apps', label: 'Apps +', icon: 'apps', width: 78 },
+  { id: 'Chat', label: 'Chat', icon: 'chat', width: 58 },
+  { id: 'Agents', label: 'Agents', icon: 'bolt', width: 68 },
+  { id: 'Convert', label: 'Convert', icon: 'convert', width: 72 },
+  { id: 'Focus', label: 'Focus', icon: 'timer', width: 62 },
+  { id: 'Skills', label: 'Skills', icon: 'skill', width: 60 },
+  { id: 'Media', label: 'Media', icon: 'music', width: 62 },
+  { id: 'Apps', label: 'Apps +', icon: 'apps', width: 72 },
 ];
 
 const DEFAULT_KIBO_SKILLS: KiboSkillItem[] = [
@@ -1557,6 +1557,8 @@ export const KiboApp: React.FC = () => {
   });
   const [tavilyKey, setTavilyKey] = useState<string>(() => localStorage.getItem('kibo_tavily_key') || '');
   const [tavilyDraftKey, setTavilyDraftKey] = useState<string>(() => localStorage.getItem('kibo_tavily_key') || '');
+  const [geminiKeySaved, setGeminiKeySaved] = useState<boolean>(false);
+  const [tavilyKeySaved, setTavilyKeySaved] = useState<boolean>(false);
   const [composioApiKey, setComposioApiKey] = useState<string>(() => {
     const stored = localStorage.getItem('kibo_composio_key');
     if (!stored || stored === 'ak_WRHAv3a87hZMLRtQwcRK') {
@@ -4199,12 +4201,12 @@ export const KiboApp: React.FC = () => {
       return { w: 708, h: hasMediaSession ? 396 : 268 };
     }
     const dims: Record<NavTab, { w: number; h: number }> = {
-      Chat:      { w: 720, h: 460 },
+      Chat:      { w: 774, h: 460 },
       Agents:    { w: 860, h: 440 },
       Convert:   { w: 780, h: 468 },
       Focus:     expandedStickyId ? { w: 880, h: 520 } : { w: 820, h: 460 },
       Skills:    { w: 820, h: 460 },
-      Media:     { w: 664, h: 248 },
+      Media:     { w: 740, h: 260 },
       Controls:  { w: 708, h: 396 },
       Today:     { w: 860, h: 440 },
       Clipboard: { w: 860, h: 444 },
@@ -5712,6 +5714,9 @@ export const KiboApp: React.FC = () => {
       localStorage.removeItem('kibo_gemini_key');
       api?.saveStoredSettings?.({ kibo_gemini_key: '' });
     }
+    setGeminiKeySaved(true);
+    soundFX.playSuccessChime();
+    setTimeout(() => setGeminiKeySaved(false), 2400);
     setShowConnectModal(false);
   };
 
@@ -7971,6 +7976,7 @@ export const KiboApp: React.FC = () => {
                       style={{
                         width: 'auto',
                         padding: '0 8px',
+                        height: '26px',
                         borderRadius: 999,
                         background: 'rgba(56, 189, 248, 0.18)',
                         border: '1px solid rgba(56, 189, 248, 0.45)',
@@ -7981,6 +7987,7 @@ export const KiboApp: React.FC = () => {
                         display: 'flex',
                         alignItems: 'center',
                         cursor: 'pointer',
+                        flexShrink: 0,
                       }}
                     >
                       <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#38BDF8', boxShadow: '0 0 6px #38BDF8' }} />
@@ -10156,9 +10163,19 @@ export const KiboApp: React.FC = () => {
                                 <button
                                   onClick={handleSaveGeminiKey}
                                   className="config-pill-btn"
-                                  style={{ background: '#38BDF8', color: '#0A0E17', fontWeight: 700, padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer' }}
+                                  style={{
+                                    background: geminiKeySaved ? '#10B981' : '#38BDF8',
+                                    color: geminiKeySaved ? '#FFFFFF' : '#0A0E17',
+                                    fontWeight: 700,
+                                    padding: '8px 18px',
+                                    borderRadius: 8,
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                                    minWidth: 80,
+                                  }}
                                 >
-                                  Save
+                                  {geminiKeySaved ? 'Saved!' : 'Save'}
                                 </button>
                               </div>
                               <span style={{ fontSize: 11, color: '#64748B' }}>
@@ -10197,11 +10214,24 @@ export const KiboApp: React.FC = () => {
                                       localStorage.removeItem('kibo_tavily_key');
                                       api?.saveStoredSettings?.({ kibo_tavily_key: '' });
                                     }
+                                    setTavilyKeySaved(true);
+                                    soundFX.playSuccessChime();
+                                    setTimeout(() => setTavilyKeySaved(false), 2400);
                                   }}
                                   className="config-pill-btn"
-                                  style={{ background: '#38BDF8', color: '#0A0E17', fontWeight: 700, padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer' }}
+                                  style={{
+                                    background: tavilyKeySaved ? '#10B981' : '#38BDF8',
+                                    color: tavilyKeySaved ? '#FFFFFF' : '#0A0E17',
+                                    fontWeight: 700,
+                                    padding: '8px 18px',
+                                    borderRadius: 8,
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                                    minWidth: 80,
+                                  }}
                                 >
-                                  Save
+                                  {tavilyKeySaved ? 'Saved!' : 'Save'}
                                 </button>
                               </div>
                               <span style={{ fontSize: 11, color: '#64748B' }}>
@@ -11333,10 +11363,14 @@ export const KiboApp: React.FC = () => {
                                 localStorage.removeItem('kibo_tavily_key');
                                 api?.saveStoredSettings?.({ kibo_tavily_key: '' });
                               }
+                              setTavilyKeySaved(true);
+                              soundFX.playSuccessChime();
+                              setTimeout(() => setTavilyKeySaved(false), 2400);
                             }}
                             className="config-pill-btn"
+                            style={tavilyKeySaved ? { background: '#10B981', color: '#FFFFFF', fontWeight: 700 } : undefined}
                           >
-                            {tavilyKey ? 'Update' : 'Save'}
+                            {tavilyKeySaved ? 'Saved!' : tavilyKey ? 'Update' : 'Save'}
                           </button>
                         </div>
                       </div>
