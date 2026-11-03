@@ -37,34 +37,33 @@ class KiboSoundEngine {
     if (val) this.playToggle(true);
   }
 
-  // Helper: Short filtered noise burst for physical "glass tap" texture
-  private playTransientClick(freq = 2400, gainAmount = 0.04, duration = 0.008) {
+  // Helper: Pure micro-sine pulse for tactile physical haptics with zero noise or static
+  private playTransientClick(freq = 2200, gainAmount = 0.025, duration = 0.006) {
     const ctx = this.getContext();
     if (!ctx) return;
+    const now = ctx.currentTime;
 
-    const bufferSize = Math.floor(ctx.sampleRate * duration);
-    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.3));
-    }
-
-    const noise = ctx.createBufferSource();
-    noise.buffer = buffer;
-
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(freq, ctx.currentTime);
-    filter.Q.setValueAtTime(3.5, ctx.currentTime);
-
+    const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(gainAmount, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
 
-    noise.connect(filter);
-    filter.connect(gain);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, now);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(200, freq * 0.5), now + duration);
+
+    gain.gain.setValueAtTime(gainAmount, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    osc.connect(gain);
     gain.connect(ctx.destination);
-    noise.start();
+
+    osc.start(now);
+    osc.stop(now + duration + 0.002);
+    osc.onended = () => {
+      try {
+        osc.disconnect();
+        gain.disconnect();
+      } catch (_) {}
+    };
   }
 
   // 1. Island Expand (Liquid upward swell + airy shimmer)
@@ -459,48 +458,35 @@ class KiboSoundEngine {
     });
   }
 
-  // 17. Tactile Sticky Note Paper Flip / Rustle SFX (when enlarging or folding a sticky note)
+  // 17. Tactile Sticky Note Paper Flip / Rustle SFX (pure warm harmonics, zero static noise)
   public playPaperRustle(isOpening = true) {
     const ctx = this.getContext();
     if (!ctx) return;
     const now = ctx.currentTime;
-    const duration = 0.13;
+    const duration = 0.08;
 
-    const bufferSize = Math.floor(ctx.sampleRate * duration);
-    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      const progress = i / bufferSize;
-      // Crisp double-envelope paper slide texture
-      const env = Math.sin(progress * Math.PI) * (0.7 + 0.3 * Math.sin(progress * Math.PI * 5));
-      data[i] = (Math.random() * 2 - 1) * env;
-    }
-
-    const noise = ctx.createBufferSource();
-    noise.buffer = buffer;
-
-    const bandpass = ctx.createBiquadFilter();
-    bandpass.type = 'bandpass';
-    bandpass.frequency.setValueAtTime(isOpening ? 1650 : 2300, now);
-    bandpass.frequency.exponentialRampToValueAtTime(isOpening ? 2850 : 1350, now + duration);
-    bandpass.Q.setValueAtTime(1.8, now);
-
-    const highpass = ctx.createBiquadFilter();
-    highpass.type = 'highpass';
-    highpass.frequency.setValueAtTime(650, now);
-
+    const osc = ctx.createOscillator();
     const gain = ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(isOpening ? 440 : 660, now);
+    osc.frequency.exponentialRampToValueAtTime(isOpening ? 880 : 330, now + duration);
+
     gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(0.075, now + 0.024);
+    gain.gain.linearRampToValueAtTime(0.03, now + 0.015);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
-    noise.connect(bandpass);
-    bandpass.connect(highpass);
-    highpass.connect(gain);
+    osc.connect(gain);
     gain.connect(ctx.destination);
 
-    noise.start(now);
-    noise.stop(now + duration + 0.01);
+    osc.start(now);
+    osc.stop(now + duration + 0.005);
+    osc.onended = () => {
+      try {
+        osc.disconnect();
+        gain.disconnect();
+      } catch (_) {}
+    };
   }
 }
 

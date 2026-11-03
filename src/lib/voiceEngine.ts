@@ -11,12 +11,9 @@ export interface SpeakOptions {
   onEnd?: () => void;
 }
 
-// Ordered by Unlimited Quota Live API models from user's Google AI Studio project
+// Verified Active Unlimited Quota Live API models from Google AI Studio
 const LIVE_AUDIO_MODELS = [
   'models/gemini-3.8-live',
-  'models/gemini-2.5-flash-native-audio-dialog',
-  'models/gemini-2.0-flash-exp',
-  'models/gemini-2.0-flash-realtime-exp',
 ];
 
 // Verified Active Google Gemini REST TTS Models from Google AI Studio
@@ -191,6 +188,10 @@ class KiboVoiceEngine {
 
     source.onended = () => {
       this.activeSources = this.activeSources.filter((s) => s !== source);
+      try {
+        source.disconnect();
+        gainNode.disconnect();
+      } catch (_) {}
       if (this.activeSources.length === 0 && !this.activeWs) {
         this.nextStartTime = 0;
         this.setSpeaking(false);
@@ -596,7 +597,11 @@ class KiboVoiceEngine {
       (typeof window !== 'undefined' ? localStorage.getItem('kibo_gemini_key') || '' : '');
 
     if (apiKey) {
-      // 1. Primary: Sub-second Google Gemini REST TTS Models (~600ms latency)
+      // 1. Primary: Unlimited Quota Gemini Live API (gemini-3.8-live) with natural neural voices
+      const okLive = await this.speakViaLiveAPI(text, 'SAY_EXACT', { ...options, apiKey });
+      if (okLive) return;
+
+      // 2. Secondary: Sub-second Google Gemini REST TTS Models (~600ms latency)
       const okRest = await this.speakViaRestTTS(text, { ...options, apiKey });
       if (okRest) return;
     }
