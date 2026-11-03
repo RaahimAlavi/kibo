@@ -2228,7 +2228,6 @@ ipcMain.handle('open-url', async (_event, url) => {
     return { success: false, error: err.message };
   }
 });
-});
 
 ipcMain.handle('type-text', async (_event, text) => {
   return new Promise((resolve) => {
