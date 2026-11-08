@@ -1,8 +1,8 @@
 {
-  "version": "1.0.1",
+  "version": "1.0.2",
   "minVersion": "1.0.0",
   "downloadUrl": "https://www.dropbox.com/scl/fi/r4ulhbgex5f29u29ua4jt/Kibo-Setup-1.0.1.exe?rlkey=vaxl7c61mrf8j75iwseqedbxt&st=b38z49mj&dl=1",
-  "releaseDate": "2026-11-03",
-  "title": "Voice Intelligence & Architecture Update",
-  "notes": "Includes faster voice interaction, smart wake-word stripping, local document and app launching, responsive web portal, and complete branding refinement."
+  "releaseDate": "2026-11-08",
+  "title": "High-Quota Gemma 4 & Reliable Drag-and-Drop Update",
+  "notes": "Direct Google Calendar queries without opening settings, high-quota Gemma 4 multimodal model prioritization (14,400 daily requests), persistent neural voice selection, and rock-solid drag-and-drop file detection without notch disappearance."
 }

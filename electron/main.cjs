@@ -111,8 +111,8 @@ function startHitTestLoop() {
     const cursor = screen.getCursorScreenPoint();
     const winBounds = mainWindow.getBounds();
 
-    const notchHalfW = Math.max(activeNotchBounds.width / 2, 44);
-    const notchHitHeight = Math.max(activeNotchBounds.height, 14);
+    const notchHalfW = Math.max(activeNotchBounds.width / 2, 75);
+    const notchHitHeight = Math.max(activeNotchBounds.height, 46);
     const centerX = winBounds.x + winBounds.width / 2;
 
     if (lastFullscreenState) {
@@ -134,7 +134,12 @@ function startHitTestLoop() {
     const insideNotchY =
       cursor.y >= winBounds.y &&
       cursor.y <= winBounds.y + notchHitHeight;
-    const insideNotch = insideNotchX && insideNotchY;
+    const nearTopCenter =
+      cursor.y >= winBounds.y &&
+      cursor.y <= winBounds.y + 54 &&
+      cursor.x >= centerX - 140 &&
+      cursor.x <= centerX + 140;
+    const insideNotch = (insideNotchX && insideNotchY) || nearTopCenter;
 
     let insideAppWin = false;
     if (activeAppWindowRect) {
@@ -186,7 +191,7 @@ function startHitTestLoop() {
     if (shouldIgnore !== isIgnoringMouse) {
       isIgnoringMouse = shouldIgnore;
       if (shouldIgnore) {
-        mainWindow.setIgnoreMouseEvents(true);
+        mainWindow.setIgnoreMouseEvents(true, { forward: true });
       } else {
         mainWindow.setIgnoreMouseEvents(false);
       }

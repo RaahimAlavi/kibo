@@ -1634,7 +1634,7 @@ export const KiboApp: React.FC = () => {
   const [integrationsSearch, setIntegrationsSearch] = useState<string>('');
   const [showConnectModal, setShowConnectModal] = useState<boolean>(false);
   const [notchApiAlert, setNotchApiAlert] = useState<{ type: 'missing_key' | 'rate_limit'; text: string } | null>(null);
-  const CURRENT_APP_VERSION = '1.0.1';
+  const CURRENT_APP_VERSION = '1.0.2';
   const [availableUpdate, setAvailableUpdate] = useState<{
     version: string;
     downloadUrl: string;
@@ -2118,6 +2118,7 @@ export const KiboApp: React.FC = () => {
   const [isConvertDragOver, setIsConvertDragOver] = useState<boolean>(false);
   const [isFileDraggingOverNotch, setIsFileDraggingOverNotch] = useState<boolean>(false);
   const fileDragLeaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dragCounterRef = useRef<number>(0);
   const isNativeDialogOpenRef = useRef<boolean>(false);
   const skillFileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -2146,6 +2147,63 @@ export const KiboApp: React.FC = () => {
     setActiveTab('Convert');
     setIsExpanded(true);
     soundFX.playExpand();
+  }, []);
+
+  // Keep notch awake and untucked whenever any file is being dragged from Windows Explorer
+  useEffect(() => {
+    let winDragCounter = 0;
+    const onWinDragEnter = (e: DragEvent) => {
+      if (e.dataTransfer?.types?.includes('Files')) {
+        e.preventDefault();
+        winDragCounter += 1;
+        setIsTucked(false);
+        if (leaveCollapseTimerRef.current) {
+          clearTimeout(leaveCollapseTimerRef.current);
+          leaveCollapseTimerRef.current = null;
+        }
+        if (idleTuckTimerRef.current) {
+          clearTimeout(idleTuckTimerRef.current);
+          idleTuckTimerRef.current = null;
+        }
+      }
+    };
+    const onWinDragOver = (e: DragEvent) => {
+      if (e.dataTransfer?.types?.includes('Files')) {
+        e.preventDefault();
+        setIsTucked(false);
+        if (leaveCollapseTimerRef.current) {
+          clearTimeout(leaveCollapseTimerRef.current);
+          leaveCollapseTimerRef.current = null;
+        }
+        if (idleTuckTimerRef.current) {
+          clearTimeout(idleTuckTimerRef.current);
+          idleTuckTimerRef.current = null;
+        }
+      }
+    };
+    const onWinDragLeave = () => {
+      winDragCounter = Math.max(0, winDragCounter - 1);
+      if (winDragCounter === 0) {
+        dragCounterRef.current = 0;
+        setIsFileDraggingOverNotch(false);
+      }
+    };
+    const onWinDrop = () => {
+      winDragCounter = 0;
+      dragCounterRef.current = 0;
+      setIsFileDraggingOverNotch(false);
+    };
+
+    window.addEventListener('dragenter', onWinDragEnter);
+    window.addEventListener('dragover', onWinDragOver);
+    window.addEventListener('dragleave', onWinDragLeave);
+    window.addEventListener('drop', onWinDrop);
+    return () => {
+      window.removeEventListener('dragenter', onWinDragEnter);
+      window.removeEventListener('dragover', onWinDragOver);
+      window.removeEventListener('dragleave', onWinDragLeave);
+      window.removeEventListener('drop', onWinDrop);
+    };
   }, []);
 
   const [recentConversions, setRecentConversions] = useState<ConvertedFileRecord[]>(() => {
@@ -3125,7 +3183,7 @@ export const KiboApp: React.FC = () => {
     setIsHoverHoldActive(false);
     setHoverHoldProgress(0);
 
-    if (isDraggingVolumeRef.current || isDraggingMediaScrubRef.current || isNativeDialogOpenRef.current) {
+    if (isDraggingVolumeRef.current || isDraggingMediaScrubRef.current || isNativeDialogOpenRef.current || isFileDraggingOverNotch) {
       return;
     }
 
@@ -3137,7 +3195,7 @@ export const KiboApp: React.FC = () => {
     if (isExpanded || showMediaNotch) {
       const collapseDelay = 320;
       leaveCollapseTimerRef.current = setTimeout(() => {
-        if (isDraggingVolumeRef.current || isDraggingMediaScrubRef.current || isNativeDialogOpenRef.current) return;
+        if (isDraggingVolumeRef.current || isDraggingMediaScrubRef.current || isNativeDialogOpenRef.current || isFileDraggingOverNotch) return;
         if (soulAnnoyanceRef.current > 0.05 || isBreathingReliefRef.current) return;
         setActiveControlDropdown(null);
         setShowMediaNotch(false);
@@ -3147,12 +3205,12 @@ export const KiboApp: React.FC = () => {
       }, collapseDelay);
     } else if (autoTuckEnabled) {
       leaveCollapseTimerRef.current = setTimeout(() => {
-        if (isDraggingVolumeRef.current || isDraggingMediaScrubRef.current || isNativeDialogOpenRef.current) return;
+        if (isDraggingVolumeRef.current || isDraggingMediaScrubRef.current || isNativeDialogOpenRef.current || isFileDraggingOverNotch) return;
         if (soulAnnoyanceRef.current > 0.05 || isBreathingReliefRef.current) return;
         setIsTucked(true);
-      }, 1500);
+      }, 4500);
     }
-  }, [isExpanded, showMediaNotch, autoTuckEnabled]);
+  }, [isExpanded, showMediaNotch, autoTuckEnabled, isFileDraggingOverNotch]);
 
   // Collapse expanded notch immediately when clicking outside into another desktop window
   useEffect(() => {
@@ -4275,6 +4333,8 @@ export const KiboApp: React.FC = () => {
       Boolean(notchApiAlert) ||
       isExpanded ||
       showMediaNotch ||
+      isFileDraggingOverNotch ||
+      isConvertDragOver ||
       isTimerRunning ||
       isTimerSessionActive ||
       timerSeconds < timerTotalSeconds ||
@@ -4296,7 +4356,7 @@ export const KiboApp: React.FC = () => {
     if (!isBusy && !isTucked) {
       idleTuckTimerRef.current = setTimeout(() => {
         setIsTucked(true);
-      }, 4500);
+      }, 25000);
     }
 
     return () => {
@@ -4308,6 +4368,8 @@ export const KiboApp: React.FC = () => {
     notchApiAlert,
     isExpanded,
     showMediaNotch,
+    isFileDraggingOverNotch,
+    isConvertDragOver,
     isTimerRunning,
     isTimerSessionActive,
     timerSeconds,
@@ -7415,6 +7477,7 @@ export const KiboApp: React.FC = () => {
         onDragEnter={(e) => {
           if (e.dataTransfer?.types?.includes('Files')) {
             e.preventDefault();
+            dragCounterRef.current += 1;
             if (leaveCollapseTimerRef.current) {
               clearTimeout(leaveCollapseTimerRef.current);
               leaveCollapseTimerRef.current = null;
@@ -7431,19 +7494,28 @@ export const KiboApp: React.FC = () => {
           if (e.dataTransfer?.types?.includes('Files')) {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'copy';
+            if (leaveCollapseTimerRef.current) {
+              clearTimeout(leaveCollapseTimerRef.current);
+              leaveCollapseTimerRef.current = null;
+            }
+            if (idleTuckTimerRef.current) {
+              clearTimeout(idleTuckTimerRef.current);
+              idleTuckTimerRef.current = null;
+            }
+            setIsTucked(false);
             if (!isFileDraggingOverNotch) {
-              setIsTucked(false);
               setIsFileDraggingOverNotch(true);
             }
           }
         }}
         onDragLeave={(e) => {
-          const related = e.relatedTarget as Node | null;
-          if (!related || !notchShellRef.current?.contains(related)) {
+          dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
+          if (dragCounterRef.current === 0) {
             setIsFileDraggingOverNotch(false);
           }
         }}
         onDrop={(e) => {
+          dragCounterRef.current = 0;
           const droppedFile = e.dataTransfer?.files?.[0];
           if (droppedFile) {
             e.preventDefault();
