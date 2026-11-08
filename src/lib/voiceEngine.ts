@@ -14,6 +14,7 @@ export interface SpeakOptions {
 // Verified Active Unlimited Quota Live API models from Google AI Studio
 const LIVE_AUDIO_MODELS = [
   'models/gemini-3.8-live',
+  'models/gemini-3-flash-live',
 ];
 
 // Verified Active Google Gemini REST TTS Models from Google AI Studio

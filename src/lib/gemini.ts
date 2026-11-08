@@ -6,6 +6,7 @@ export interface GeminiFunctionCall {
     | 'system_action'
     | 'schedule_routine'
     | 'add_todo'
+    | 'check_calendar'
     | 'get_scheduled_tasks'
     | 'find_and_point'
     | 'computer_action'
@@ -28,27 +29,28 @@ export interface GeminiActionResponse {
   modelUsed?: string;
 }
 
-// Ordered by highest available Free-Tier Quota & lowest latency from user's Google AI Studio project
+// Ordered by highest available Free-Tier Quota (Gemma 4: 14,400 RPD -> Flash-Lite: 500 RPD -> Flash: 20 RPD)
 export const VISION_AND_QUERY_MODELS = [
+  'gemma-4-31b-it',
   'gemini-3.5-flash-lite',
   'gemini-3.1-flash-lite',
-  'gemini-3-flash',
+  'gemma-4-26b-a4b-it',
   'gemini-3.8-flash',
   'gemini-3.6-flash',
+  'gemini-3.7-flash',
+  'gemini-3-flash-preview',
   'gemini-2.5-flash-lite',
   'gemini-2.5-flash',
-  'gemma-4-31b',
-  'gemma-4-26b',
-  'gemini-2.0-flash',
-  'gemini-1.5-flash',
+  'gemini-flash-latest',
+  'gemini-flash-lite-latest',
 ];
 
 export const DICTATION_TEXT_MODELS = [
+  'gemma-4-31b-it',
+  'gemma-4-26b-a4b-it',
   'gemini-3.5-flash-lite',
   'gemini-3.1-flash-lite',
-  'gemma-4-31b',
-  'gemma-4-26b',
-  'gemini-3-flash',
+  'gemini-3.8-flash',
   'gemini-2.5-flash-lite',
   'gemini-2.5-flash',
 ];
@@ -376,6 +378,23 @@ export const GEMINI_TOOLS = [
         },
       },
       {
+        name: 'check_calendar',
+        description: 'Check, view, inspect, or query the user calendar, schedule, classes, meetings, appointments, or events for today, tomorrow, or an upcoming timeframe.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            timeframe: {
+              type: 'STRING',
+              description: 'Target day or window, e.g. "tomorrow", "today", "this_week", "upcoming"',
+            },
+            query: {
+              type: 'STRING',
+              description: 'Optional keyword or event type to filter, e.g. "class", "meeting", "lecture"',
+            },
+          },
+        },
+      },
+      {
         name: 'get_scheduled_tasks',
         description: 'Check, list, view, or show the user scheduled routines, tasks, reminders, or alarms.',
         parameters: {
@@ -636,6 +655,8 @@ export async function queryGemini(
       ? 'Done.'
       : detectedCall.name === 'schedule_routine'
       ? "Scheduled. I'll run it on time."
+      : detectedCall.name === 'check_calendar'
+      ? 'Checking your schedule.'
       : detectedCall.name === 'get_scheduled_tasks'
       ? 'Here are your scheduled tasks.'
       : 'Done.'

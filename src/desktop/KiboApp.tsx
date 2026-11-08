@@ -185,6 +185,22 @@ declare global {
         success: boolean;
         error?: string;
       }>;
+      composioGetCalendarEvents?: (opts?: {
+        timeMin?: string;
+        timeMax?: string;
+        customKey?: string;
+      }) => Promise<{
+        success: boolean;
+        error?: string;
+        events: Array<{
+          id: string;
+          summary: string;
+          start: string;
+          end: string;
+          description?: string;
+          location?: string;
+        }>;
+      }>;
     };
   }
 }
@@ -1245,6 +1261,15 @@ const LOADOUT_CARDS: LoadoutCardItem[] = [
     iconKind: 'lock',
   },
   {
+    id: 'voice_kore',
+    slot: 'Voice',
+    name: 'Kore',
+    description: 'Gentle, balanced conversational tone',
+    cost: 80,
+    cardTint: 'linear-gradient(165deg, #425258 0%, #343E42 60%, #2A3032 100%)',
+    iconKind: 'wave',
+  },
+  {
     id: 'pers_true_chad',
     slot: 'Personality',
     name: 'Prime Operator',
@@ -1725,6 +1750,32 @@ export const KiboApp: React.FC = () => {
           localStorage.setItem('kibo_composio_key', val);
         }
       }
+      if (stored.kibo_voice_name && typeof stored.kibo_voice_name === 'string') {
+        const vName = stored.kibo_voice_name.trim();
+        localStorage.setItem('kibo_voice_name', vName);
+      }
+      if (stored.kibo_equipped_cards && typeof stored.kibo_equipped_cards === 'object') {
+        setEquippedCards(stored.kibo_equipped_cards);
+        localStorage.setItem('kibo_equipped_cards', JSON.stringify(stored.kibo_equipped_cards));
+      } else if (stored.kibo_voice_name) {
+        const revMap: Record<string, string> = {
+          Charon: 'voice_charon',
+          Aoede: 'voice_aoede',
+          Fenrir: 'voice_fenrir',
+          Puck: 'voice_puck',
+          Kore: 'voice_kore',
+        };
+        const cardId = revMap[stored.kibo_voice_name] || 'voice_charon';
+        setEquippedCards((prev) => {
+          const next = { ...prev, Voice: cardId };
+          localStorage.setItem('kibo_equipped_cards', JSON.stringify(next));
+          return next;
+        });
+      }
+      if (stored.kibo_unlocked_cards && Array.isArray(stored.kibo_unlocked_cards)) {
+        setUnlockedCardIds(stored.kibo_unlocked_cards);
+        localStorage.setItem('kibo_unlocked_cards', JSON.stringify(stored.kibo_unlocked_cards));
+      }
     }).catch(() => {});
   }, []);
 
@@ -1871,14 +1922,32 @@ export const KiboApp: React.FC = () => {
   });
   const [equippedCards, setEquippedCards] = useState<Record<LoadoutSlotType, string>>(() => {
     const saved = localStorage.getItem('kibo_equipped_cards');
-    return saved
-      ? JSON.parse(saved)
-      : {
-          Soul: 'soul_kibo_mk1',
-          Voice: 'voice_charon',
-          Personality: 'pers_true_chad',
-          Abilities: 'none',
-        };
+    const savedVoice = localStorage.getItem('kibo_voice_name');
+    const defaultVoiceCard =
+      savedVoice === 'Aoede'
+        ? 'voice_aoede'
+        : savedVoice === 'Fenrir'
+        ? 'voice_fenrir'
+        : savedVoice === 'Puck'
+        ? 'voice_puck'
+        : savedVoice === 'Kore'
+        ? 'voice_kore'
+        : 'voice_charon';
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (savedVoice && (!parsed.Voice || parsed.Voice === 'voice_charon')) {
+          parsed.Voice = defaultVoiceCard;
+        }
+        return parsed;
+      } catch (_) {}
+    }
+    return {
+      Soul: 'soul_kibo_mk1',
+      Voice: defaultVoiceCard,
+      Personality: 'pers_true_chad',
+      Abilities: 'none',
+    };
   });
   const [activeDeckSlot, setActiveDeckSlot] = useState<LoadoutSlotType | null>(null);
   const [deckCardIndex, setDeckCardIndex] = useState<number>(0);
@@ -4963,8 +5032,11 @@ export const KiboApp: React.FC = () => {
         return;
       }
 
-      const isAskingForScheduled =
+      const isAskingCalendarOrSchedule =
+        fc?.name === 'check_calendar' ||
         fc?.name === 'get_scheduled_tasks' ||
+        lower.includes('class') ||
+        lower.includes('calendar') ||
         lower.includes('scheduled task') ||
         lower.includes('what are my tasks') ||
         lower.includes('show tasks') ||
@@ -4979,13 +5051,73 @@ export const KiboApp: React.FC = () => {
         lower.includes('what is on my schedule') ||
         lower.includes('my schedule');
 
-      if (isAskingForScheduled) {
-        fc = { name: 'get_scheduled_tasks', args: {} };
-        if (routines.length > 0) {
-          const routineList = routines.slice(0, 3).map((r) => r.title).join(', ');
-          speech = `You have ${routines.length} scheduled task${routines.length > 1 ? 's' : ''}: ${routineList}.`;
+      let scheduleFetchedFromGoogle = false;
+      let scheduleDayLabel = 'upcoming';
+
+      if (isAskingCalendarOrSchedule) {
+        fc = { name: 'check_calendar', args: {} };
+        const isTomorrow = lower.includes('tomorrow');
+        const isToday = lower.includes('today') || (!isTomorrow && !lower.includes('week') && !lower.includes('routine'));
+        scheduleDayLabel = isTomorrow ? 'tomorrow' : isToday ? 'today' : 'upcoming';
+
+        let calEvents: any[] = [];
+        const api = (window as any).kiboAPI;
+
+        if (api?.composioGetCalendarEvents) {
+          try {
+            const now = new Date();
+            let start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+            let end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 23, 59, 59);
+            if (isTomorrow) {
+              start = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+              end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 23, 59, 59);
+            } else if (!isToday) {
+              end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7, 23, 59, 59);
+            }
+
+            const calRes = await api.composioGetCalendarEvents({
+              timeMin: start.toISOString(),
+              timeMax: end.toISOString(),
+            });
+
+            if (calRes && calRes.success) {
+              scheduleFetchedFromGoogle = true;
+              calEvents = calRes.events || [];
+            }
+          } catch (_) {}
+        }
+
+        if (scheduleFetchedFromGoogle) {
+          if (calEvents.length > 0) {
+            const listStr = calEvents
+              .slice(0, 4)
+              .map((e) => {
+                let t = '';
+                if (e.start) {
+                  try {
+                    const d = new Date(e.start);
+                    if (!isNaN(d.getTime())) {
+                      t = ` at ${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+                    }
+                  } catch (_) {}
+                }
+                return `${e.summary}${t}`;
+              })
+              .join(', ');
+            speech = `For ${scheduleDayLabel}, you have: ${listStr}.`;
+          } else {
+            const itemType = lower.includes('class') ? 'classes' : 'events';
+            speech = `You have no ${itemType} scheduled for ${scheduleDayLabel} on your calendar.`;
+          }
         } else {
-          speech = 'You have no scheduled tasks yet.';
+          // Fallback to local routines
+          if (routines.length > 0) {
+            const routineList = routines.slice(0, 3).map((r) => r.title).join(', ');
+            speech = `You have ${routines.length} scheduled task${routines.length > 1 ? 's' : ''}: ${routineList}.`;
+          } else {
+            const itemType = lower.includes('class') ? 'classes or scheduled tasks' : 'scheduled tasks';
+            speech = `You have no ${itemType} scheduled for ${scheduleDayLabel}.`;
+          }
         }
       } else if (!fc) {
         if (lower.includes('night light') || lower.includes('nightlight') || lower.includes('blue light')) {
@@ -5045,15 +5177,12 @@ export const KiboApp: React.FC = () => {
       setKiboReply({ bold: speech });
 
       if (fc) {
-        if (fc.name === 'get_scheduled_tasks') {
-          setShowCompanionWindow(true);
-          setCompanionDockTab('settings');
-          setSettingsSection('Your data');
+        if (fc.name === 'check_calendar' || fc.name === 'get_scheduled_tasks') {
           setContextCard({
-            header: 'Today · Scheduled Routines',
-            title: `${routines.length} Scheduled Task${routines.length !== 1 ? 's' : ''}`,
-            subtitle: routines.length > 0 ? routines.map((r) => r.title).join(' · ') : 'No scheduled tasks yet',
-            domain: 'Kibo Today',
+            header: `Schedule · ${scheduleDayLabel.toUpperCase()}`,
+            title: speech,
+            subtitle: scheduleFetchedFromGoogle ? 'Google Calendar' : 'Local Schedule',
+            domain: 'Calendar & Routines',
           });
         } else if (fc.name === 'open_application') {
           const appName = String(fc.args.appName || '').trim();
@@ -5156,9 +5285,6 @@ export const KiboApp: React.FC = () => {
             },
             ...prev,
           ]);
-          setShowCompanionWindow(true);
-          setCompanionDockTab('settings');
-          setSettingsSection('Your data');
           setContextCard({
             header: 'Scheduled · Added to Routines',
             title,
@@ -5737,6 +5863,14 @@ export const KiboApp: React.FC = () => {
       }
       if (card.slot === 'Voice') {
         const voiceName = (card.name || 'Charon') as KiboVoiceName;
+        localStorage.setItem('kibo_voice_name', voiceName);
+        localStorage.setItem('kibo_loadout_voice', card.id);
+        const api = (window as any).kiboAPI;
+        api?.saveStoredSettings?.({
+          kibo_voice_name: voiceName,
+          kibo_loadout_voice: card.id,
+          kibo_equipped_cards: nextEquipped,
+        });
         voiceEngine.speak(`Voice switched to ${voiceName}. Kibo voice module online. Systems calibrated.`, {
           voice: voiceName,
         });
@@ -5745,6 +5879,8 @@ export const KiboApp: React.FC = () => {
       const nextEquipped = { ...equippedCards, Abilities: card.id };
       setEquippedCards(nextEquipped);
       localStorage.setItem('kibo_equipped_cards', JSON.stringify(nextEquipped));
+      const api = (window as any).kiboAPI;
+      api?.saveStoredSettings?.({ kibo_equipped_cards: nextEquipped });
     } else if (embers >= card.cost && !card.notForSale) {
       const nextEmbers = embers - card.cost;
       setEmbers(nextEmbers);
@@ -5764,8 +5900,23 @@ export const KiboApp: React.FC = () => {
       }
       if (card.slot === 'Voice') {
         const voiceName = (card.name || 'Charon') as KiboVoiceName;
+        localStorage.setItem('kibo_voice_name', voiceName);
+        localStorage.setItem('kibo_loadout_voice', card.id);
+        const api = (window as any).kiboAPI;
+        api?.saveStoredSettings?.({
+          kibo_voice_name: voiceName,
+          kibo_loadout_voice: card.id,
+          kibo_equipped_cards: nextEquipped,
+          kibo_unlocked_cards: nextUnlocked,
+        });
         voiceEngine.speak(`Voice unlocked: ${voiceName}. Kibo voice module online. Systems calibrated.`, {
           voice: voiceName,
+        });
+      } else {
+        const api = (window as any).kiboAPI;
+        api?.saveStoredSettings?.({
+          kibo_equipped_cards: nextEquipped,
+          kibo_unlocked_cards: nextUnlocked,
         });
       }
     }
@@ -10674,8 +10825,25 @@ export const KiboApp: React.FC = () => {
                                   value={equippedCards.Voice || 'voice_charon'}
                                   onChange={(e) => {
                                     const val = e.target.value;
-                                    setEquippedCards((prev) => ({ ...prev, Voice: val as any }));
+                                    const voiceNameMap: Record<string, KiboVoiceName> = {
+                                      voice_charon: 'Charon',
+                                      voice_aoede: 'Aoede',
+                                      voice_fenrir: 'Fenrir',
+                                      voice_puck: 'Puck',
+                                      voice_kore: 'Kore',
+                                    };
+                                    const vName = voiceNameMap[val] || 'Charon';
+                                    const nextEquipped = { ...equippedCards, Voice: val };
+                                    setEquippedCards(nextEquipped);
+                                    localStorage.setItem('kibo_equipped_cards', JSON.stringify(nextEquipped));
+                                    localStorage.setItem('kibo_voice_name', vName);
                                     localStorage.setItem('kibo_loadout_voice', val);
+                                    const api = (window as any).kiboAPI;
+                                    api?.saveStoredSettings?.({
+                                      kibo_voice_name: vName,
+                                      kibo_loadout_voice: val,
+                                      kibo_equipped_cards: nextEquipped,
+                                    });
                                   }}
                                   style={{
                                     height: '32px',
@@ -10694,6 +10862,7 @@ export const KiboApp: React.FC = () => {
                                   <option value="voice_aoede">Aoede (Warm & Expressive)</option>
                                   <option value="voice_fenrir">Fenrir (Crisp & Direct)</option>
                                   <option value="voice_puck">Puck (Kinetic & Friendly)</option>
+                                  <option value="voice_kore">Kore (Gentle & Balanced)</option>
                                 </select>
                                 <button
                                   type="button"

@@ -3352,6 +3352,42 @@ ipcMain.handle('composio-disconnect-account', async (_event, accountId, customKe
   }
 });
 
+ipcMain.handle('composio-get-calendar-events', async (_event, opts = {}) => {
+  try {
+    const { client: comp, error: initErr } = getComposioClient(opts.customKey);
+    if (!comp) return { success: false, error: initErr || 'Composio not initialized', events: [] };
+    const client = comp.getClient();
+    const accList = await client.connectedAccounts.list();
+    const calAcc = (accList?.items || []).find(
+      (a) => (a.toolkit?.slug || a.appUniqueId || a.app_unique_id || '').toLowerCase() === 'googlecalendar' && a.status === 'ACTIVE'
+    );
+    if (!calAcc) {
+      return { success: false, error: 'Google Calendar not connected', events: [] };
+    }
+    const timeMin = opts.timeMin || new Date().toISOString();
+    const timeMax = opts.timeMax || new Date(Date.now() + 48 * 3600 * 1000).toISOString();
+    const endpoint = `/calendars/primary/events?singleEvents=true&orderBy=startTime&timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`;
+    const res = await client.tools.proxy({
+      connected_account_id: calAcc.id,
+      user_id: calAcc.user_id || 'kibo_user_default',
+      endpoint,
+      method: 'GET',
+    });
+    const items = (res?.data?.items || []).map((ev) => ({
+      id: ev.id,
+      summary: ev.summary || 'Untitled Event',
+      start: ev.start?.dateTime || ev.start?.date || '',
+      end: ev.end?.dateTime || ev.end?.date || '',
+      description: ev.description || '',
+      location: ev.location || '',
+    }));
+    return { success: true, events: items };
+  } catch (err) {
+    console.error('[Kibo] Failed to fetch calendar events:', err?.message);
+    return { success: false, error: err?.message, events: [] };
+  }
+});
+
 function getNewestMtimeInDir(dirPath) {
   let newest = 0;
   if (!fs.existsSync(dirPath)) return 0;
