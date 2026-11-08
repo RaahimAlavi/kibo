@@ -244,6 +244,8 @@ const kiboAPI = {
   composioGetConnectedAccounts: (customKey) => ipcRenderer.invoke('composio-get-connected-accounts', customKey),
   composioDisconnectAccount: (accountId, customKey) => ipcRenderer.invoke('composio-disconnect-account', accountId, customKey),
   composioGetCalendarEvents: (opts) => ipcRenderer.invoke('composio-get-calendar-events', opts),
+  elevenlabsSpeak: (opts) => ipcRenderer.invoke('elevenlabs-speak', opts),
+  elevenlabsCheckStatus: () => ipcRenderer.invoke('elevenlabs-check-status'),
   getFilePath: (file) => {
     try {
       if (webUtils && typeof webUtils.getPathForFile === 'function') {

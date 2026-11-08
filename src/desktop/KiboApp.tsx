@@ -1270,6 +1270,60 @@ const LOADOUT_CARDS: LoadoutCardItem[] = [
     iconKind: 'wave',
   },
   {
+    id: 'voice_sarah',
+    slot: 'Voice',
+    name: 'Sarah',
+    description: 'ElevenLabs AI - Soft, natural, crystal-clear studio voice',
+    cost: 0,
+    cardTint: 'linear-gradient(165deg, #3A506B 0%, #29384D 60%, #1C2633 100%)',
+    iconKind: 'wave',
+  },
+  {
+    id: 'voice_charlotte',
+    slot: 'Voice',
+    name: 'Charlotte',
+    description: 'ElevenLabs AI - Warm, conversational and friendly',
+    cost: 0,
+    cardTint: 'linear-gradient(165deg, #51425F 0%, #3C3047 60%, #2A2131 100%)',
+    iconKind: 'wave',
+  },
+  {
+    id: 'voice_george',
+    slot: 'Voice',
+    name: 'George',
+    description: 'ElevenLabs AI - Warm narrative British voice',
+    cost: 0,
+    cardTint: 'linear-gradient(165deg, #42584A 0%, #304137 60%, #222E26 100%)',
+    iconKind: 'wave',
+  },
+  {
+    id: 'voice_daniel',
+    slot: 'Voice',
+    name: 'Daniel',
+    description: 'ElevenLabs AI - Deep, authoritative, broadcast quality',
+    cost: 0,
+    cardTint: 'linear-gradient(165deg, #56483C 0%, #40362D 60%, #2C251F 100%)',
+    iconKind: 'wave',
+  },
+  {
+    id: 'voice_rachel',
+    slot: 'Voice',
+    name: 'Rachel',
+    description: 'ElevenLabs AI - Calm, confident and composed',
+    cost: 0,
+    cardTint: 'linear-gradient(165deg, #385E5A 0%, #294744 60%, #1D312F 100%)',
+    iconKind: 'wave',
+  },
+  {
+    id: 'voice_adam',
+    slot: 'Voice',
+    name: 'Adam',
+    description: 'ElevenLabs AI - Smooth, approachable American narrator',
+    cost: 0,
+    cardTint: 'linear-gradient(165deg, #4A4D5C 0%, #363844 60%, #25262E 100%)',
+    iconKind: 'wave',
+  },
+  {
     id: 'pers_true_chad',
     slot: 'Personality',
     name: 'Prime Operator',
@@ -1582,8 +1636,11 @@ export const KiboApp: React.FC = () => {
   });
   const [tavilyKey, setTavilyKey] = useState<string>(() => localStorage.getItem('kibo_tavily_key') || '');
   const [tavilyDraftKey, setTavilyDraftKey] = useState<string>(() => localStorage.getItem('kibo_tavily_key') || '');
+  const [elevenlabsApiKey, setElevenlabsApiKey] = useState<string>(() => localStorage.getItem('kibo_elevenlabs_key') || '');
+  const [elevenlabsDraftKey, setElevenlabsDraftKey] = useState<string>(() => localStorage.getItem('kibo_elevenlabs_key') || '');
   const [geminiKeySaved, setGeminiKeySaved] = useState<boolean>(false);
   const [tavilyKeySaved, setTavilyKeySaved] = useState<boolean>(false);
+  const [elevenlabsKeySaved, setElevenlabsKeySaved] = useState<boolean>(false);
   const [composioApiKey, setComposioApiKey] = useState<string>(() => {
     const stored = localStorage.getItem('kibo_composio_key');
     if (!stored || stored === 'ak_WRHAv3a87hZMLRtQwcRK') {
@@ -1729,6 +1786,12 @@ export const KiboApp: React.FC = () => {
         setTavilyDraftKey(val);
         localStorage.setItem('kibo_tavily_key', val);
       }
+      if (stored.kibo_elevenlabs_key && typeof stored.kibo_elevenlabs_key === 'string') {
+        const val = stored.kibo_elevenlabs_key.trim();
+        setElevenlabsApiKey(val);
+        setElevenlabsDraftKey(val);
+        localStorage.setItem('kibo_elevenlabs_key', val);
+      }
       if (stored.kibo_user_name && typeof stored.kibo_user_name === 'string') {
         const cleanName = stored.kibo_user_name.trim();
         localStorage.setItem('kibo_user_name', cleanName);
@@ -1759,13 +1822,19 @@ export const KiboApp: React.FC = () => {
         localStorage.setItem('kibo_equipped_cards', JSON.stringify(stored.kibo_equipped_cards));
       } else if (stored.kibo_voice_name) {
         const revMap: Record<string, string> = {
+          Sarah: 'voice_sarah',
+          Charlotte: 'voice_charlotte',
+          George: 'voice_george',
+          Daniel: 'voice_daniel',
+          Rachel: 'voice_rachel',
+          Adam: 'voice_adam',
           Charon: 'voice_charon',
           Aoede: 'voice_aoede',
           Fenrir: 'voice_fenrir',
           Puck: 'voice_puck',
           Kore: 'voice_kore',
         };
-        const cardId = revMap[stored.kibo_voice_name] || 'voice_charon';
+        const cardId = revMap[stored.kibo_voice_name] || 'voice_sarah';
         setEquippedCards((prev) => {
           const next = { ...prev, Voice: cardId };
           localStorage.setItem('kibo_equipped_cards', JSON.stringify(next));
@@ -1918,13 +1987,37 @@ export const KiboApp: React.FC = () => {
 
   const [unlockedCardIds, setUnlockedCardIds] = useState<string[]>(() => {
     const saved = localStorage.getItem('kibo_unlocked_cards');
-    return saved ? JSON.parse(saved) : ['soul_kibo_mk1', 'voice_charon', 'pers_true_chad'];
+    return saved
+      ? JSON.parse(saved)
+      : [
+          'soul_kibo_mk1',
+          'voice_sarah',
+          'voice_charlotte',
+          'voice_george',
+          'voice_daniel',
+          'voice_rachel',
+          'voice_adam',
+          'voice_charon',
+          'pers_true_chad',
+        ];
   });
   const [equippedCards, setEquippedCards] = useState<Record<LoadoutSlotType, string>>(() => {
     const saved = localStorage.getItem('kibo_equipped_cards');
     const savedVoice = localStorage.getItem('kibo_voice_name');
     const defaultVoiceCard =
-      savedVoice === 'Aoede'
+      savedVoice === 'Sarah'
+        ? 'voice_sarah'
+        : savedVoice === 'Charlotte'
+        ? 'voice_charlotte'
+        : savedVoice === 'George'
+        ? 'voice_george'
+        : savedVoice === 'Daniel'
+        ? 'voice_daniel'
+        : savedVoice === 'Rachel'
+        ? 'voice_rachel'
+        : savedVoice === 'Adam'
+        ? 'voice_adam'
+        : savedVoice === 'Aoede'
         ? 'voice_aoede'
         : savedVoice === 'Fenrir'
         ? 'voice_fenrir'
@@ -1932,7 +2025,9 @@ export const KiboApp: React.FC = () => {
         ? 'voice_puck'
         : savedVoice === 'Kore'
         ? 'voice_kore'
-        : 'voice_charon';
+        : savedVoice === 'Charon'
+        ? 'voice_charon'
+        : 'voice_sarah';
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -10478,6 +10573,92 @@ export const KiboApp: React.FC = () => {
                             </div>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <label className="kibo-settings-row-label">ElevenLabs API Key</label>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const url = 'https://elevenlabs.io/app/settings/api-keys';
+                                    const api = (window as any).kiboAPI;
+                                    if (api?.openUrl) {
+                                      api.openUrl(url);
+                                    } else {
+                                      window.open(url, '_blank');
+                                    }
+                                  }}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    padding: 0,
+                                    color: '#38BDF8',
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                    textDecoration: 'underline',
+                                  }}
+                                >
+                                  <span>Get key on ElevenLabs</span>
+                                  <span style={{ fontSize: 13 }}>&#x2197;</span>
+                                </button>
+                              </div>
+                              <div style={{ display: 'flex', gap: 8 }}>
+                                <input
+                                  type="password"
+                                  value={elevenlabsDraftKey}
+                                  onChange={(e) => setElevenlabsDraftKey(e.target.value)}
+                                  placeholder="Paste ElevenLabs API key..."
+                                  style={{
+                                    flex: 1,
+                                    background: '#141519',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    borderRadius: 8,
+                                    padding: '8px 12px',
+                                    color: '#F8FAFC',
+                                    fontSize: 13,
+                                    fontFamily: 'var(--kibo-font-mono)',
+                                  }}
+                                />
+                                <button
+                                  onClick={() => {
+                                    const trimmed = elevenlabsDraftKey.trim();
+                                    setElevenlabsApiKey(trimmed);
+                                    const api = (window as any).kiboAPI;
+                                    if (trimmed) {
+                                      localStorage.setItem('kibo_elevenlabs_key', trimmed);
+                                      api?.saveStoredSettings?.({ kibo_elevenlabs_key: trimmed });
+                                    } else {
+                                      localStorage.removeItem('kibo_elevenlabs_key');
+                                      api?.saveStoredSettings?.({ kibo_elevenlabs_key: '' });
+                                    }
+                                    setElevenlabsKeySaved(true);
+                                    soundFX.playSuccessChime();
+                                    setTimeout(() => setElevenlabsKeySaved(false), 2400);
+                                  }}
+                                  className="config-pill-btn"
+                                  style={{
+                                    background: elevenlabsKeySaved ? '#10B981' : '#38BDF8',
+                                    color: elevenlabsKeySaved ? '#FFFFFF' : '#0A0E17',
+                                    fontWeight: 700,
+                                    padding: '8px 18px',
+                                    borderRadius: 8,
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                                    minWidth: 80,
+                                  }}
+                                >
+                                  {elevenlabsKeySaved ? 'Saved!' : 'Save'}
+                                </button>
+                              </div>
+                              <span style={{ fontSize: 11, color: '#64748B' }}>
+                                Enables crystal-clear, zero-jitter ElevenLabs studio AI voices (Sarah, Charlotte, George, etc.).
+                              </span>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                               <label className="kibo-settings-row-label">Tavily Search API Key (Optional)</label>
                               <div style={{ display: 'flex', gap: 8 }}>
                                 <input
@@ -10889,22 +11070,28 @@ export const KiboApp: React.FC = () => {
                           <div className="kibo-settings-card">
                             <div className="kibo-settings-row" style={{ flexWrap: 'wrap', gap: '8px' }}>
                               <div style={{ flex: '1 1 180px', minWidth: 0, paddingRight: 6 }}>
-                                <div className="kibo-settings-row-label">Google Gemini Neural Voice</div>
-                                <div className="kibo-settings-row-desc">Unlimited-quota Gemini Live & TTS neural voice used when Kibo speaks</div>
+                                <div className="kibo-settings-row-label">AI Voice Module (ElevenLabs & Gemini)</div>
+                                <div className="kibo-settings-row-desc">High-fidelity ElevenLabs AI voice & Gemini neural voice used when Kibo speaks</div>
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, flexWrap: 'nowrap' }}>
                                 <select
-                                  value={equippedCards.Voice || 'voice_charon'}
+                                  value={equippedCards.Voice || 'voice_sarah'}
                                   onChange={(e) => {
                                     const val = e.target.value;
                                     const voiceNameMap: Record<string, KiboVoiceName> = {
+                                      voice_sarah: 'Sarah',
+                                      voice_charlotte: 'Charlotte',
+                                      voice_george: 'George',
+                                      voice_daniel: 'Daniel',
+                                      voice_rachel: 'Rachel',
+                                      voice_adam: 'Adam',
                                       voice_charon: 'Charon',
                                       voice_aoede: 'Aoede',
                                       voice_fenrir: 'Fenrir',
                                       voice_puck: 'Puck',
                                       voice_kore: 'Kore',
                                     };
-                                    const vName = voiceNameMap[val] || 'Charon';
+                                    const vName = voiceNameMap[val] || 'Sarah';
                                     const nextEquipped = { ...equippedCards, Voice: val };
                                     setEquippedCards(nextEquipped);
                                     localStorage.setItem('kibo_equipped_cards', JSON.stringify(nextEquipped));
@@ -10919,7 +11106,7 @@ export const KiboApp: React.FC = () => {
                                   }}
                                   style={{
                                     height: '32px',
-                                    maxWidth: '160px',
+                                    maxWidth: '190px',
                                     boxSizing: 'border-box',
                                     background: '#141519',
                                     color: '#F8FAFC',
@@ -10930,16 +11117,26 @@ export const KiboApp: React.FC = () => {
                                     outline: 'none',
                                   }}
                                 >
-                                  <option value="voice_charon">Charon (Deep & Calming)</option>
-                                  <option value="voice_aoede">Aoede (Warm & Expressive)</option>
-                                  <option value="voice_fenrir">Fenrir (Crisp & Direct)</option>
-                                  <option value="voice_puck">Puck (Kinetic & Friendly)</option>
-                                  <option value="voice_kore">Kore (Gentle & Balanced)</option>
+                                  <optgroup label="ElevenLabs AI Voices">
+                                    <option value="voice_sarah">Sarah (Natural Soft)</option>
+                                    <option value="voice_charlotte">Charlotte (Conversational)</option>
+                                    <option value="voice_george">George (Narrative British)</option>
+                                    <option value="voice_daniel">Daniel (Deep & Crisp)</option>
+                                    <option value="voice_rachel">Rachel (Composed & Calm)</option>
+                                    <option value="voice_adam">Adam (Smooth American)</option>
+                                  </optgroup>
+                                  <optgroup label="Google Neural Voices">
+                                    <option value="voice_charon">Charon (Tactical Synth)</option>
+                                    <option value="voice_aoede">Aoede (Expressive)</option>
+                                    <option value="voice_fenrir">Fenrir (Sub-Bass)</option>
+                                    <option value="voice_puck">Puck (Kinetic)</option>
+                                    <option value="voice_kore">Kore (Balanced)</option>
+                                  </optgroup>
                                 </select>
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    speakAsKibo('Hello! I am Kibo, speaking with my Google Gemini neural voice.');
+                                    speakAsKibo('Hello! I am Kibo, speaking with my calibrated voice module.');
                                   }}
                                   className="config-pill-btn"
                                   style={{

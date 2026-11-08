@@ -1,6 +1,20 @@
 // src/lib/voiceEngine.ts
+import { synthesizeElevenLabsAudio } from './elevenlabs';
 
-export type KiboVoiceName = 'Charon' | 'Aoede' | 'Fenrir' | 'Puck' | 'Kore';
+export type KiboVoiceName =
+  | 'Charon'
+  | 'Aoede'
+  | 'Fenrir'
+  | 'Puck'
+  | 'Kore'
+  | 'Sarah'
+  | 'Charlotte'
+  | 'Rachel'
+  | 'Jessica'
+  | 'George'
+  | 'Daniel'
+  | 'Adam'
+  | 'Brian';
 
 export interface SpeakOptions {
   apiKey?: string;
@@ -44,6 +58,8 @@ class KiboVoiceEngine {
   private currentSinkId: string = 'default';
   private nextStartTime: number = 0;
   private activeSources: AudioBufferSourceNode[] = [];
+  private activeAudioEl: HTMLAudioElement | null = null;
+  private activeBlobUrl: string | null = null;
   private isSpeakingState: boolean = false;
   private listeners: Set<(speaking: boolean) => void> = new Set();
   private keepAliveTimer: any = null;
@@ -52,7 +68,7 @@ class KiboVoiceEngine {
   private async getAudioContext(sinkId?: string): Promise<AudioContext> {
     if (!this.audioCtx) {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      this.audioCtx = new AudioCtx({ sampleRate: 24000 });
+      this.audioCtx = new AudioCtx();
     }
     if (this.audioCtx.state === 'suspended') {
       await this.audioCtx.resume().catch(() => {});
@@ -96,8 +112,26 @@ class KiboVoiceEngine {
     this.listeners.forEach((cb) => cb(val));
   }
 
+  private cleanupAudioEl() {
+    if (this.activeAudioEl) {
+      try {
+        this.activeAudioEl.pause();
+        this.activeAudioEl.currentTime = 0;
+        this.activeAudioEl.src = '';
+      } catch (_) {}
+      this.activeAudioEl = null;
+    }
+    if (this.activeBlobUrl) {
+      try {
+        URL.revokeObjectURL(this.activeBlobUrl);
+      } catch (_) {}
+      this.activeBlobUrl = null;
+    }
+  }
+
   // Stop any currently playing speech immediately (barge-in support)
   public stop() {
+    this.cleanupAudioEl();
     if (this.keepAliveTimer) {
       clearInterval(this.keepAliveTimer);
       this.keepAliveTimer = null;
@@ -166,7 +200,8 @@ class KiboVoiceEngine {
 
     const currentTime = ctx.currentTime;
     if (this.nextStartTime < currentTime) {
-      this.nextStartTime = currentTime + 0.015;
+      // 85ms jitter buffer ensures network packet arrival variations do not cause gap chatter
+      this.nextStartTime = currentTime + 0.085;
     }
 
     const gainNode = ctx.createGain();
@@ -585,7 +620,88 @@ class KiboVoiceEngine {
     speakNextChunk();
   }
 
-  // Main Public Method 1: Speak exact text aloud using Google Gemini voices (Unlimited Live API -> REST TTS -> Offline Fallback)
+  // Tier 0: ElevenLabs AI Studio Voice Synthesis (Pristine studio fidelity, zero glitching, gapless)
+  public async speakViaElevenLabs(
+    text: string,
+    options: SpeakOptions = {}
+  ): Promise<boolean> {
+    const cleanText = text
+      .replace(/[*_#`~[\]]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!cleanText) {
+      options.onEnd?.();
+      return true;
+    }
+
+    const savedVoice =
+      typeof window !== 'undefined' ? (localStorage.getItem('kibo_voice_name') as KiboVoiceName) : null;
+    const voice = options.voice || savedVoice || 'Sarah';
+
+    try {
+      const arrayBuffer = await synthesizeElevenLabsAudio(cleanText, voice);
+      if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+        return false;
+      }
+
+      this.cleanupAudioEl();
+
+      const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
+      const url = URL.createObjectURL(blob);
+      this.activeBlobUrl = url;
+
+      const audio = new Audio(url);
+      this.activeAudioEl = audio;
+
+      const targetSink =
+        options.outputDeviceId ||
+        (typeof window !== 'undefined' ? localStorage.getItem('kibo_audio_output_device') || 'default' : 'default');
+
+      if (targetSink && targetSink !== 'default' && typeof (audio as any).setSinkId === 'function') {
+        try {
+          await (audio as any).setSinkId(targetSink);
+        } catch (_) {}
+      }
+
+      return await new Promise<boolean>((resolve) => {
+        let isDone = false;
+        const done = (ok: boolean) => {
+          if (isDone) return;
+          isDone = true;
+          this.setSpeaking(false);
+          this.cleanupAudioEl();
+          if (ok) {
+            options.onEnd?.();
+          }
+          resolve(ok);
+        };
+
+        audio.onplay = () => {
+          this.setSpeaking(true);
+          options.onStart?.();
+        };
+
+        audio.onended = () => {
+          done(true);
+        };
+
+        audio.onerror = (e) => {
+          console.warn('[ElevenLabs Audio] Playback error:', e);
+          done(false);
+        };
+
+        audio.play().catch((err) => {
+          console.warn('[ElevenLabs Audio] play() rejected:', err);
+          done(false);
+        });
+      });
+    } catch (err) {
+      console.warn('[ElevenLabs Engine] Synthesis/playback failed:', err);
+      return false;
+    }
+  }
+
+  // Main Public Method 1: Speak exact text aloud using ElevenLabs AI Voices -> REST TTS -> Gemini Live -> Offline Fallback
   public async speak(text: string, options: SpeakOptions = {}) {
     if (!text || !text.trim()) {
       options.onEnd?.();
@@ -593,21 +709,25 @@ class KiboVoiceEngine {
     }
     this.stop();
 
+    // 0. Primary: ElevenLabs Studio Voice AI (Ultra-clean, lifelike, 100% gapless, zero jitter)
+    const okEleven = await this.speakViaElevenLabs(text, options);
+    if (okEleven) return;
+
     const apiKey =
       options.apiKey ||
       (typeof window !== 'undefined' ? localStorage.getItem('kibo_gemini_key') || '' : '');
 
     if (apiKey) {
-      // 1. Primary: Unlimited Quota Gemini Live API (gemini-3.8-live) with natural neural voices
-      const okLive = await this.speakViaLiveAPI(text, 'SAY_EXACT', { ...options, apiKey });
-      if (okLive) return;
-
-      // 2. Secondary: Sub-second Google Gemini REST TTS Models (~600ms latency)
+      // 1. Secondary: Single-payload Google Gemini REST TTS Models (~600ms latency, zero WebSocket chunk jitter)
       const okRest = await this.speakViaRestTTS(text, { ...options, apiKey });
       if (okRest) return;
+
+      // 2. Tertiary: Streaming Gemini Live API
+      const okLive = await this.speakViaLiveAPI(text, 'SAY_EXACT', { ...options, apiKey });
+      if (okLive) return;
     }
 
-    // 2. Offline native OS fallback
+    // 3. Offline native OS fallback
     this.speakViaNativeOS(text, options);
   }
 

@@ -18,6 +18,27 @@ const { exec, execSync, spawn } = require('child_process');
 const fs = require('fs');
 const http = require('http');
 
+// Safely load local environment variables from .env.local without exposing them
+try {
+  const envPath = path.join(__dirname, '..', '.env.local');
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    envContent.split(/\r?\n/).forEach((line) => {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#')) {
+        const eqIdx = trimmed.indexOf('=');
+        if (eqIdx !== -1) {
+          const key = trimmed.slice(0, eqIdx).trim();
+          const val = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, '');
+          if (!process.env[key]) {
+            process.env[key] = val;
+          }
+        }
+      }
+    });
+  }
+} catch (_) {}
+
 const {
   initSystemDaemon,
   killSystemDaemon,
@@ -3391,6 +3412,57 @@ ipcMain.handle('composio-get-calendar-events', async (_event, opts = {}) => {
     console.error('[Kibo] Failed to fetch calendar events:', err?.message);
     return { success: false, error: err?.message, events: [] };
   }
+});
+
+ipcMain.handle('elevenlabs-speak', async (_event, opts = {}) => {
+  try {
+    const settings = readKiboSettings();
+    const apiKey =
+      (opts.apiKey && typeof opts.apiKey === 'string' && opts.apiKey.trim()) ||
+      process.env.ELEVENLABS_API_KEY ||
+      settings.kibo_elevenlabs_key ||
+      '';
+
+    if (!apiKey) {
+      console.warn('[Kibo ElevenLabs] No API key available');
+      return null;
+    }
+    const { ElevenLabsClient } = require('@elevenlabs/elevenlabs-js');
+    const client = new ElevenLabsClient({ apiKey });
+    const cleanText = String(opts.text || '')
+      .replace(/[*_#`~[\]]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!cleanText) return null;
+
+    const stream = await client.textToSpeech.convert(opts.voiceId || 'EXAVITQu4vr4xnSDxMaL', {
+      text: cleanText,
+      modelId: opts.modelId || 'eleven_flash_v2_5',
+      outputFormat: 'mp3_44100_128',
+    });
+
+    const chunks = [];
+    const reader = stream.getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value) chunks.push(Buffer.from(value));
+    }
+    const fullBuffer = Buffer.concat(chunks);
+    return fullBuffer.toString('base64');
+  } catch (err) {
+    console.error('[Kibo ElevenLabs] Synthesis error:', err?.message || err);
+    return null;
+  }
+});
+
+ipcMain.handle('elevenlabs-check-status', async () => {
+  const settings = readKiboSettings();
+  const hasKey = Boolean(
+    (process.env.ELEVENLABS_API_KEY && process.env.ELEVENLABS_API_KEY.trim().length > 0) ||
+    (settings.kibo_elevenlabs_key && settings.kibo_elevenlabs_key.trim().length > 0)
+  );
+  return { hasKey };
 });
 
 function getNewestMtimeInDir(dirPath) {
