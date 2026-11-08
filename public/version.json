@@ -1,8 +1,8 @@
 {
   "version": "1.0.2",
   "minVersion": "1.0.0",
-  "downloadUrl": "https://www.dropbox.com/scl/fi/r4ulhbgex5f29u29ua4jt/Kibo-Setup-1.0.1.exe?rlkey=vaxl7c61mrf8j75iwseqedbxt&st=b38z49mj&dl=1",
-  "releaseDate": "2026-11-08",
-  "title": "High-Quota Gemma 4 & Reliable Drag-and-Drop Update",
-  "notes": "Direct Google Calendar queries without opening settings, high-quota Gemma 4 multimodal model prioritization (14,400 daily requests), persistent neural voice selection, and rock-solid drag-and-drop file detection without notch disappearance."
+  "downloadUrl": "https://www.dropbox.com/scl/fi/k9ygliszmhj4w1os646xq/Kibo-Setup-1.0.2.exe?rlkey=f2a5hdr1fmwt82z8f8mekf74h&st=w7p47c6j&dl=1",
+  "releaseDate": "2026-11-09",
+  "title": "ElevenLabs Studio Voice Engine, Gemma 4 & Drag-and-Drop Update",
+  "notes": "ElevenLabs studio voice integration, zero-jitter gapless HTML5 audio pipeline, direct Google Calendar queries without opening settings, high-quota Gemma 4 multimodal model prioritization (14,400 daily requests), and rock-solid drag-and-drop file detection without notch disappearance."
 }
