@@ -8,6 +8,8 @@ export type KiboVoiceName =
   | 'Puck'
   | 'Kore'
   | 'Sarah'
+  | 'Alice'
+  | 'Lily'
   | 'Charlotte'
   | 'Rachel'
   | 'Jessica'

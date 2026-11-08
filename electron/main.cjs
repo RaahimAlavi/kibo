@@ -3435,11 +3435,26 @@ ipcMain.handle('elevenlabs-speak', async (_event, opts = {}) => {
       .trim();
     if (!cleanText) return null;
 
-    const stream = await client.textToSpeech.convert(opts.voiceId || 'EXAVITQu4vr4xnSDxMaL', {
-      text: cleanText,
-      modelId: opts.modelId || 'eleven_flash_v2_5',
-      outputFormat: 'mp3_44100_128',
-    });
+    let stream = null;
+    const requestedVoice = opts.voiceId || 'EXAVITQu4vr4xnSDxMaL';
+    try {
+      stream = await client.textToSpeech.convert(requestedVoice, {
+        text: cleanText,
+        modelId: opts.modelId || 'eleven_flash_v2_5',
+        outputFormat: 'mp3_44100_128',
+      });
+    } catch (err) {
+      if (requestedVoice !== 'EXAVITQu4vr4xnSDxMaL') {
+        console.warn(`[Kibo ElevenLabs] Voice ${requestedVoice} unavailable, falling back to Sarah:`, err?.message || err);
+        stream = await client.textToSpeech.convert('EXAVITQu4vr4xnSDxMaL', {
+          text: cleanText,
+          modelId: opts.modelId || 'eleven_flash_v2_5',
+          outputFormat: 'mp3_44100_128',
+        });
+      } else {
+        throw err;
+      }
+    }
 
     const chunks = [];
     const reader = stream.getReader();

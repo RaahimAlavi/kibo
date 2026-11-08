@@ -18,18 +18,18 @@ export const ELEVENLABS_VOICES: ElevenLabsVoiceOption[] = [
     description: 'Gentle, modern, and natural female voice',
   },
   {
-    id: 'XB0fDUnXU5powFXDhCwa',
-    name: 'Charlotte',
+    id: 'Xb7hH8MSUJpSbSDYk0k2',
+    name: 'Alice',
     gender: 'female',
-    preview: 'Conversational, warm, and friendly',
-    description: 'Crisp conversational female voice',
+    preview: 'Clear, engaging, and articulate',
+    description: 'Natural, balanced educator and companion voice',
   },
   {
-    id: '21m00Tcm4TlvDq8ikWAM',
-    name: 'Rachel',
+    id: 'pFZP5JQG7iQjIQuC4Bku',
+    name: 'Lily',
     gender: 'female',
-    preview: 'Calm, confident, and professional',
-    description: 'Smooth, composed female voice',
+    preview: 'Calm, velvety, and composed',
+    description: 'Smooth, warm expressive female voice',
   },
   {
     id: 'cgSgspJ2msm6clMCkdW9',
@@ -69,10 +69,10 @@ export const ELEVENLABS_VOICES: ElevenLabsVoiceOption[] = [
 ];
 
 export const ELEVENLABS_VOICE_MAP: Record<string, string> = {
-  // ElevenLabs Standard Voice Names
+  // ElevenLabs Verified Free Premade Voice Names
   Sarah: 'EXAVITQu4vr4xnSDxMaL',
-  Charlotte: 'XB0fDUnXU5powFXDhCwa',
-  Rachel: '21m00Tcm4TlvDq8ikWAM',
+  Alice: 'Xb7hH8MSUJpSbSDYk0k2',
+  Lily: 'pFZP5JQG7iQjIQuC4Bku',
   Jessica: 'cgSgspJ2msm6clMCkdW9',
   George: 'JBFqnCBsd6RMkjVDRZzb',
   Daniel: 'onwK4e9ZLuTAKqWW03F9',
@@ -81,25 +81,31 @@ export const ELEVENLABS_VOICE_MAP: Record<string, string> = {
 
   // Loadout Card ID Mappings
   voice_sarah: 'EXAVITQu4vr4xnSDxMaL',
-  voice_charlotte: 'XB0fDUnXU5powFXDhCwa',
-  voice_rachel: '21m00Tcm4TlvDq8ikWAM',
+  voice_alice: 'Xb7hH8MSUJpSbSDYk0k2',
+  voice_lily: 'pFZP5JQG7iQjIQuC4Bku',
   voice_jessica: 'cgSgspJ2msm6clMCkdW9',
   voice_george: 'JBFqnCBsd6RMkjVDRZzb',
   voice_daniel: 'onwK4e9ZLuTAKqWW03F9',
   voice_adam: 'pNInz6obpgDQGcFmaJgB',
   voice_brian: 'nPczCjzI2devNBz1zQrb',
 
+  // Backwards compatibility aliases (map community library names to verified premade voices)
+  Charlotte: 'Xb7hH8MSUJpSbSDYk0k2',
+  voice_charlotte: 'Xb7hH8MSUJpSbSDYk0k2',
+  Rachel: 'pFZP5JQG7iQjIQuC4Bku',
+  voice_rachel: 'pFZP5JQG7iQjIQuC4Bku',
+
   // Neural Persona mappings to ElevenLabs counterparts
   Charon: 'onwK4e9ZLuTAKqWW03F9',
   Aoede: 'EXAVITQu4vr4xnSDxMaL',
   Fenrir: 'nPczCjzI2devNBz1zQrb',
   Puck: 'cgSgspJ2msm6clMCkdW9',
-  Kore: 'XB0fDUnXU5powFXDhCwa',
+  Kore: 'Xb7hH8MSUJpSbSDYk0k2',
   voice_charon: 'onwK4e9ZLuTAKqWW03F9',
   voice_aoede: 'EXAVITQu4vr4xnSDxMaL',
   voice_fenrir: 'nPczCjzI2devNBz1zQrb',
   voice_puck: 'cgSgspJ2msm6clMCkdW9',
-  voice_kore: 'XB0fDUnXU5powFXDhCwa',
+  voice_kore: 'Xb7hH8MSUJpSbSDYk0k2',
 };
 
 export async function synthesizeElevenLabsAudio(

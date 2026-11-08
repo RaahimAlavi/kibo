@@ -1279,12 +1279,21 @@ const LOADOUT_CARDS: LoadoutCardItem[] = [
     iconKind: 'wave',
   },
   {
-    id: 'voice_charlotte',
+    id: 'voice_alice',
     slot: 'Voice',
-    name: 'Charlotte',
-    description: 'ElevenLabs AI - Warm, conversational and friendly',
+    name: 'Alice',
+    description: 'ElevenLabs AI - Clear, engaging, and articulate',
     cost: 0,
     cardTint: 'linear-gradient(165deg, #51425F 0%, #3C3047 60%, #2A2131 100%)',
+    iconKind: 'wave',
+  },
+  {
+    id: 'voice_lily',
+    slot: 'Voice',
+    name: 'Lily',
+    description: 'ElevenLabs AI - Calm, velvety, and expressive',
+    cost: 0,
+    cardTint: 'linear-gradient(165deg, #385E5A 0%, #294744 60%, #1D312F 100%)',
     iconKind: 'wave',
   },
   {
@@ -1306,12 +1315,12 @@ const LOADOUT_CARDS: LoadoutCardItem[] = [
     iconKind: 'wave',
   },
   {
-    id: 'voice_rachel',
+    id: 'voice_brian',
     slot: 'Voice',
-    name: 'Rachel',
-    description: 'ElevenLabs AI - Calm, confident and composed',
+    name: 'Brian',
+    description: 'ElevenLabs AI - Deep, resonant and comforting',
     cost: 0,
-    cardTint: 'linear-gradient(165deg, #385E5A 0%, #294744 60%, #1D312F 100%)',
+    cardTint: 'linear-gradient(165deg, #4A4D5C 0%, #363844 60%, #25262E 100%)',
     iconKind: 'wave',
   },
   {
@@ -1823,11 +1832,15 @@ export const KiboApp: React.FC = () => {
       } else if (stored.kibo_voice_name) {
         const revMap: Record<string, string> = {
           Sarah: 'voice_sarah',
-          Charlotte: 'voice_charlotte',
+          Alice: 'voice_alice',
+          Lily: 'voice_lily',
+          Jessica: 'voice_jessica',
           George: 'voice_george',
           Daniel: 'voice_daniel',
-          Rachel: 'voice_rachel',
+          Brian: 'voice_brian',
           Adam: 'voice_adam',
+          Charlotte: 'voice_alice',
+          Rachel: 'voice_lily',
           Charon: 'voice_charon',
           Aoede: 'voice_aoede',
           Fenrir: 'voice_fenrir',
@@ -1992,10 +2005,12 @@ export const KiboApp: React.FC = () => {
       : [
           'soul_kibo_mk1',
           'voice_sarah',
-          'voice_charlotte',
+          'voice_alice',
+          'voice_lily',
+          'voice_jessica',
           'voice_george',
           'voice_daniel',
-          'voice_rachel',
+          'voice_brian',
           'voice_adam',
           'voice_charon',
           'pers_true_chad',
@@ -2007,14 +2022,18 @@ export const KiboApp: React.FC = () => {
     const defaultVoiceCard =
       savedVoice === 'Sarah'
         ? 'voice_sarah'
-        : savedVoice === 'Charlotte'
-        ? 'voice_charlotte'
+        : savedVoice === 'Alice' || savedVoice === 'Charlotte'
+        ? 'voice_alice'
+        : savedVoice === 'Lily' || savedVoice === 'Rachel'
+        ? 'voice_lily'
+        : savedVoice === 'Jessica'
+        ? 'voice_jessica'
         : savedVoice === 'George'
         ? 'voice_george'
         : savedVoice === 'Daniel'
         ? 'voice_daniel'
-        : savedVoice === 'Rachel'
-        ? 'voice_rachel'
+        : savedVoice === 'Brian'
+        ? 'voice_brian'
         : savedVoice === 'Adam'
         ? 'voice_adam'
         : savedVoice === 'Aoede'
@@ -11080,11 +11099,15 @@ export const KiboApp: React.FC = () => {
                                     const val = e.target.value;
                                     const voiceNameMap: Record<string, KiboVoiceName> = {
                                       voice_sarah: 'Sarah',
-                                      voice_charlotte: 'Charlotte',
+                                      voice_alice: 'Alice',
+                                      voice_lily: 'Lily',
+                                      voice_jessica: 'Jessica',
                                       voice_george: 'George',
                                       voice_daniel: 'Daniel',
-                                      voice_rachel: 'Rachel',
+                                      voice_brian: 'Brian',
                                       voice_adam: 'Adam',
+                                      voice_charlotte: 'Alice',
+                                      voice_rachel: 'Lily',
                                       voice_charon: 'Charon',
                                       voice_aoede: 'Aoede',
                                       voice_fenrir: 'Fenrir',
@@ -11119,10 +11142,12 @@ export const KiboApp: React.FC = () => {
                                 >
                                   <optgroup label="ElevenLabs AI Voices">
                                     <option value="voice_sarah">Sarah (Natural Soft)</option>
-                                    <option value="voice_charlotte">Charlotte (Conversational)</option>
+                                    <option value="voice_alice">Alice (Clear & Articulate)</option>
+                                    <option value="voice_lily">Lily (Velvety Expressive)</option>
+                                    <option value="voice_jessica">Jessica (Playful & Bright)</option>
                                     <option value="voice_george">George (Narrative British)</option>
                                     <option value="voice_daniel">Daniel (Deep & Crisp)</option>
-                                    <option value="voice_rachel">Rachel (Composed & Calm)</option>
+                                    <option value="voice_brian">Brian (Deep & Resonant)</option>
                                     <option value="voice_adam">Adam (Smooth American)</option>
                                   </optgroup>
                                   <optgroup label="Google Neural Voices">
