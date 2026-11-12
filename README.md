@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./public/icon-256.png" alt="Kibo Logo" width="96" height="96" style="border-radius: 24px;" />
+  <img src="./public/icon-256.png" alt="Kibo Logo" width="96" height="96" style="border-radius: 22px;" />
 </p>
 
 <h1 align="center">Kibo</h1>

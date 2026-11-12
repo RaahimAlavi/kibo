@@ -1793,7 +1793,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
     .brand-icon {
       width: 22px;
       height: 22px;
-      border-radius: 6px;
+      border-radius: 5px;
       object-fit: contain;
     }
     .brand-name {

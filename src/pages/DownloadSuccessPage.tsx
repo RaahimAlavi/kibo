@@ -5,7 +5,7 @@ import { WebFooter } from '../components/WebFooter';
 
 const INSTALLER_DOWNLOAD_URL =
   (import.meta as any).env?.VITE_INSTALLER_DOWNLOAD_URL ||
-  'https://www.dropbox.com/scl/fi/k9ygliszmhj4w1os646xq/Kibo-Setup-1.0.2.exe?rlkey=f2a5hdr1fmwt82z8f8mekf74h&st=w7p47c6j&dl=1';
+  'https://www.dropbox.com/scl/fi/cruvg28yv6yt5w8sxt8rn/Kibo-Setup-1.0.2.exe?rlkey=02j9fv2xn6mns69r8wclwmzkr&st=91to1wat&dl=1';
 
 interface DownloadSuccessPageProps {
   onNavigate: (route: string, anchor?: string) => void;
