@@ -5,12 +5,22 @@ class KiboSoundEngine {
   private enabled: boolean = true;
   private lastHoverTime: number = 0;
   private lastSliderTickValue: number = -1;
+  private suspendTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('kibo_sfx_enabled');
       this.enabled = saved !== null ? saved === 'true' : true;
     }
+  }
+
+  private scheduleAutoSuspend() {
+    if (this.suspendTimer) clearTimeout(this.suspendTimer);
+    this.suspendTimer = setTimeout(() => {
+      if (this.ctx && this.ctx.state === 'running') {
+        this.ctx.suspend().catch(() => {});
+      }
+    }, 3500);
   }
 
   private getContext(): AudioContext | null {
@@ -21,6 +31,9 @@ class KiboSoundEngine {
     }
     if (this.ctx && this.ctx.state === 'suspended') {
       this.ctx.resume().catch(() => {});
+    }
+    if (this.ctx) {
+      this.scheduleAutoSuspend();
     }
     return this.ctx;
   }

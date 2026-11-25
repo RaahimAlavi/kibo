@@ -67,6 +67,9 @@ export function initTauriBridge(): void {
           : { active: Boolean(active), isHovered: Boolean(isHovered) };
       invoke('set_agent_dock_active', payload).catch(() => {});
     },
+    setOverlaySurface: (fullscreen: boolean, lowMemory: boolean) => {
+      invoke('set_overlay_surface', { fullscreen, lowMemory }).catch(() => {});
+    },
     setExpanded: (_expanded: boolean, _height?: number) => {},
     minimize: () => {
       invoke('minimize_main_window').catch(() => {

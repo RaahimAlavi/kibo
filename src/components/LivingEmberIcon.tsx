@@ -18,16 +18,23 @@ export const LivingEmberIcon: React.FC<LivingEmberIconProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = size * dpr;
     canvas.height = size * dpr;
     ctx.scale(dpr, dpr);
 
     let animId: number;
     let angle = 0;
+    let lastFrame = performance.now();
 
-    const render = () => {
-      angle += isDull ? 0.02 : 0.055;
+    const render = (now: number) => {
+      if (document.hidden || now - lastFrame < 42) {
+        animId = requestAnimationFrame(render);
+        return;
+      }
+      const dtScale = Math.min(3, (now - lastFrame) / 16.67);
+      lastFrame = now;
+      angle += (isDull ? 0.02 : 0.055) * dtScale;
       ctx.clearRect(0, 0, size, size);
 
       const cx = size / 2;

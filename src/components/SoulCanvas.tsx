@@ -27,6 +27,7 @@ export interface SoulCanvasProps {
   isHit?: boolean;
   isBreathingRelief?: boolean;
   isDull?: boolean;
+  paused?: boolean;
   onClick?: (e?: any) => void;
   className?: string;
   style?: React.CSSProperties;
@@ -81,6 +82,7 @@ export const SoulCanvas: React.FC<SoulCanvasProps> = ({
   isHit = false,
   isBreathingRelief = false,
   isDull = false,
+  paused = false,
   onClick,
   className = '',
   style,
@@ -153,12 +155,13 @@ export const SoulCanvas: React.FC<SoulCanvasProps> = ({
   }, [interactive]);
 
   useEffect(() => {
+    if (paused) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = width * dpr;
     canvas.height = height * dpr;
     ctx.scale(dpr, dpr);
@@ -181,9 +184,20 @@ export const SoulCanvas: React.FC<SoulCanvasProps> = ({
     let blinkTimer = 50;
     let isBlinking = false;
     let lastFrame = performance.now();
+    // Cap canvas repaints to ~30 FPS so high-refresh (144Hz/240Hz) monitors don't burn GPU 3D
+    const MIN_FRAME_MS = 32;
 
     const render = (now: number) => {
-      const dt = Math.min(0.05, Math.max(0.008, (now - lastFrame) / 1000));
+      if (document.hidden) {
+        lastFrame = now;
+        animId = requestAnimationFrame(render);
+        return;
+      }
+      if (now - lastFrame < MIN_FRAME_MS) {
+        animId = requestAnimationFrame(render);
+        return;
+      }
+      const dt = Math.min(0.06, Math.max(0.016, (now - lastFrame) / 1000));
       lastFrame = now;
       const dtScale = dt * 60;
 
@@ -845,7 +859,7 @@ export const SoulCanvas: React.FC<SoulCanvasProps> = ({
 
     animId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animId);
-  }, [soul, width, height, scale, mode]);
+  }, [soul, width, height, scale, mode, paused]);
 
   return (
     <canvas

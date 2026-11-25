@@ -16,8 +16,8 @@
         "label": "main",
         "title": "Kibo",
         "url": "index.html",
-        "width": 1920,
-        "height": 1078,
+        "width": 960,
+        "height": 580,
         "x": 0,
         "y": 0,
         "resizable": false,
@@ -29,7 +29,8 @@
         "skipTaskbar": true,
         "shadow": false,
         "focus": false,
-        "visible": true
+        "visible": true,
+        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,MediaRouter,OptimizationHints,Translate --disable-background-networking --disable-component-update --disable-default-apps"
       }
     ],
     "security": {

@@ -203,9 +203,7 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingProps> = ({
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(8, 9, 12, 0.56)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
+        background: 'rgba(8, 9, 12, 0.58)',
         zIndex: 99999,
         display: 'flex',
         alignItems: 'center',

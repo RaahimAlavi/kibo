@@ -99,8 +99,54 @@ static HITBOX: Lazy<Mutex<HitboxState>> = Lazy::new(|| {
     })
 });
 
+const WEBVIEW_BROWSER_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,MediaRouter,OptimizationHints,Translate --disable-background-networking --disable-component-update --disable-default-apps";
+
 static SHORTCUTS: Lazy<Mutex<ShortcutsConfig>> =
     Lazy::new(|| Mutex::new(ShortcutsConfig::default()));
+
+static OVERLAY_SURFACE: Lazy<Mutex<(Option<bool>, Option<bool>)>> =
+    Lazy::new(|| Mutex::new((None, None)));
+
+fn set_webview_memory_low(win: &tauri::WebviewWindow, low: bool) {
+    #[cfg(windows)]
+    {
+        use webview2_com::Microsoft::Web::WebView2::Win32::{
+            ICoreWebView2_19, COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW,
+            COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL,
+        };
+        use windows_core::Interface;
+
+        let level = if low {
+            COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW
+        } else {
+            COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL
+        };
+        let _ = win.with_webview(move |wv| unsafe {
+            if let Ok(core) = wv.controller().CoreWebView2() {
+                if let Ok(core19) = core.cast::<ICoreWebView2_19>() {
+                    let _ = core19.SetMemoryUsageTargetLevel(level);
+                }
+            }
+        });
+    }
+}
+
+fn apply_overlay_geometry(win: &tauri::WebviewWindow, fullscreen: bool) {
+    let (sw, sh) = win32::get_primary_screen_size();
+    let scale = win.scale_factor().unwrap_or(1.0);
+    if fullscreen {
+        let _ = win.set_position(tauri::PhysicalPosition::new(0, 0));
+        let _ = win.set_size(tauri::PhysicalSize::new(sw as u32, (sh - 2).max(600) as u32));
+    } else {
+        // Compact centered top-notch window (960x580 logical px) avoids allocating a full-screen
+        // 1080p/1440p/4K transparent DirectComposition GPU swap chain during normal notch usage.
+        let target_w = ((960.0 * scale).round() as i32).min(sw).max(480);
+        let target_h = ((580.0 * scale).round() as i32).min((sh - 2).max(320)).max(320);
+        let pos_x = ((sw - target_w) / 2).max(0);
+        let _ = win.set_position(tauri::PhysicalPosition::new(pos_x, 0));
+        let _ = win.set_size(tauri::PhysicalSize::new(target_w as u32, target_h as u32));
+    }
+}
 
 fn auto_grant_webview_permissions(win: &tauri::WebviewWindow) {
     #[cfg(windows)]
@@ -177,6 +223,7 @@ fn open_or_focus_settings_window(app: &AppHandle, section: &str) {
         .inner_size(860.0, 600.0)
         .min_inner_size(740.0, 500.0)
         .center()
+        .additional_browser_args(WEBVIEW_BROWSER_ARGS)
         .background_color(tauri::window::Color(18, 18, 20, 255))
         .initialization_script(&init_js)
         .decorations(true)
@@ -254,6 +301,27 @@ fn set_agent_dock_active(active: bool, is_hovered: Option<bool>) {
     if let Ok(mut hb) = HITBOX.lock() {
         hb.agent_dock_active = active;
         hb.agent_dock_hovered = is_hovered.unwrap_or(false);
+    }
+}
+
+#[tauri::command]
+fn set_overlay_surface(app: AppHandle, fullscreen: bool, low_memory: bool) {
+    let (size_changed, mem_changed) = if let Ok(mut st) = OVERLAY_SURFACE.lock() {
+        let sc = st.0 != Some(fullscreen);
+        let mc = st.1 != Some(low_memory);
+        st.0 = Some(fullscreen);
+        st.1 = Some(low_memory);
+        (sc, mc)
+    } else {
+        (true, true)
+    };
+    if let Some(win) = app.get_webview_window("main") {
+        if size_changed {
+            apply_overlay_geometry(&win, fullscreen);
+        }
+        if mem_changed {
+            set_webview_memory_low(&win, low_memory);
+        }
     }
 }
 
@@ -1223,17 +1291,29 @@ pub fn run() {
         .setup(|app| {
             let handle = app.handle().clone();
 
-            // Size transparent overlay window to primary monitor (height - 2 avoids DWM fullscreen blackout)
+            // Read saved settings up front so already-onboarded users boot directly into the compact
+            // top-notch window (instead of allocating a full-screen 1080p/1440p/4K GPU surface).
+            let saved_settings = services::read_settings();
+            let already_onboarded = saved_settings
+                .get("kibo_onboarded_v1")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
             if let Some(win) = app.get_webview_window("main") {
-                let (sw, sh) = win32::get_primary_screen_size();
-                let _ = win.set_position(tauri::PhysicalPosition::new(0, 0));
-                let _ = win.set_size(tauri::PhysicalSize::new(sw as u32, (sh - 2).max(600) as u32));
+                let start_fullscreen = !already_onboarded;
+                apply_overlay_geometry(&win, start_fullscreen);
+                if let Ok(mut st) = OVERLAY_SURFACE.lock() {
+                    *st = (Some(start_fullscreen), Some(already_onboarded));
+                }
                 let _ = win.set_always_on_top(true);
                 if let Ok(hwnd) = win.hwnd() {
                     win32::force_window_topmost(hwnd.0 as isize, true);
                 }
                 let _ = win.set_ignore_cursor_events(true);
                 auto_grant_webview_permissions(&win);
+                if already_onboarded {
+                    set_webview_memory_low(&win, true);
+                }
 
                 // Emit desktop-clicked-outside on focus loss AND forward native Windows OLE DragDrop events with real file paths
                 let win_handle = handle.clone();
@@ -1334,7 +1414,6 @@ pub fn run() {
             }
 
             // Hydrate saved shortcuts & Gaming Focus Shield settings from disk
-            let saved_settings = services::read_settings();
             if let Some(sc_val) = saved_settings.get("kibo_shortcuts_config") {
                 if let Ok(parsed) = serde_json::from_value::<ShortcutsConfig>(sc_val.clone()) {
                     if let Ok(mut s) = SHORTCUTS.lock() {
@@ -1423,6 +1502,7 @@ pub fn run() {
             set_roaming_target_rect,
             set_lasso_active,
             set_agent_dock_active,
+            set_overlay_surface,
             set_show_taskbar,
             set_always_on_top,
             open_settings_window,

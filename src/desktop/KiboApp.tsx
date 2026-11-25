@@ -62,6 +62,8 @@ declare global {
         url?: string;
         autoClicked?: boolean;
       }>;
+      setAgentDockActive?: (active: boolean | { active: boolean; isHovered?: boolean }, isHovered?: boolean) => void;
+      setOverlaySurface?: (fullscreen: boolean, lowMemory: boolean) => void;
       setExpanded: (expanded: boolean, height?: number) => void;
       minimize: () => void;
       close: () => void;
@@ -3070,9 +3072,14 @@ export const KiboApp: React.FC<KiboAppProps> = ({
     } catch (_) {}
   }, []);
 
+  // Only enumerate media devices when the legacy in-overlay voice settings UI is actually opened
+  // (avoids spawning Chromium's 16MB "WebView2 Utility: Video Capture" process on startup).
   useEffect(() => {
+    if (!showCompanionWindow || companionDockTab !== 'settings' || settingsCategory !== 'Voice') {
+      return;
+    }
     refreshAudioDevices();
-  }, [refreshAudioDevices]);
+  }, [showCompanionWindow, companionDockTab, settingsCategory, refreshAudioDevices]);
 
   const toggleMicTest = useCallback(async () => {
     if (isTestingMic) {
@@ -4181,14 +4188,16 @@ export const KiboApp: React.FC<KiboAppProps> = ({
     return () => clearInterval(timer);
   }, [isPlayingMedia, isDraggingMediaScrub, totalMediaDuration]);
 
+  // Cleanup Lo-Fi audio stream cleanly on unmount (created lazily ONLY if user starts Lo-Fi radio,
+  // avoiding a permanent 0.3 Mbps background audio stream & Audio Service process at startup).
   useEffect(() => {
-    const audio = new Audio('https://stream.nightride.fm/chillsynth.mp3');
-    audio.loop = true;
-    audio.volume = 0.5;
-    audioRef.current = audio;
     return () => {
-      audio.pause();
-      audioRef.current = null;
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.removeAttribute('src');
+        audioRef.current.load();
+        audioRef.current = null;
+      }
     };
   }, []);
 
@@ -4303,9 +4312,22 @@ export const KiboApp: React.FC<KiboAppProps> = ({
     }
     setIsPlayingLofi((prev) => {
       const next = !prev;
-      if (audioRef.current) {
-        if (next) audioRef.current.play().catch(() => {});
-        else audioRef.current.pause();
+      if (next) {
+        if (!audioRef.current) {
+          const audio = new Audio();
+          audio.preload = 'none';
+          audio.loop = true;
+          audio.volume = Math.min(1, Math.max(0, mediaAppVolumeRef.current / 100));
+          audioRef.current = audio;
+        }
+        if (!audioRef.current.src) {
+          audioRef.current.src = 'https://stream.nightride.fm/chillsynth.mp3';
+        }
+        audioRef.current.play().catch(() => {});
+      } else if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.removeAttribute('src');
+        audioRef.current.load();
       }
       return next;
     });
@@ -8669,6 +8691,36 @@ export const KiboApp: React.FC<KiboAppProps> = ({
     </>
   );
 
+  // Dynamically keep the native WebView2 window compact (960x580 top-center) during normal notch usage
+  // and only expand to full-screen when a full-screen feature is active, plus hint WebView2 LOW memory when tucked.
+  const needsFullscreenOverlay =
+    onboardingStep !== null ||
+    lassoActive ||
+    showCompanionWindow ||
+    roamingStage !== 'IDLE' ||
+    (isWallpaperRippling && Boolean(ripplingWallpaperUrl)) ||
+    agentTasks.length > 0 ||
+    (shouldPollGameStats && gameHudConfig.layout === 'corner') ||
+    dictationState !== 'idle' ||
+    askNotchPhase === 'thinking' ||
+    Boolean(contextCard) ||
+    Boolean(kiboReply) ||
+    Boolean(userBubbleText);
+
+  const isIdleLowMemSurface =
+    !needsFullscreenOverlay &&
+    !isExpanded &&
+    !showMediaNotch &&
+    !isFileDraggingOverNotch &&
+    !showProactiveBanner &&
+    !showNotchNotification &&
+    (isTucked || bootPhase === 'sleeping' || isCinemaMode);
+
+  useEffect(() => {
+    if (isSettingsOnlyWindow) return;
+    window.kiboAPI?.setOverlaySurface?.(needsFullscreenOverlay, isIdleLowMemSurface);
+  }, [isSettingsOnlyWindow, needsFullscreenOverlay, isIdleLowMemSurface]);
+
   return (
     <div
       className={`kibo-companion-root ${isSettingsOnlyWindow ? 'kibo-standalone-settings' : ''}`}
@@ -8711,14 +8763,8 @@ export const KiboApp: React.FC<KiboAppProps> = ({
       )}
 
       {/* Glowing Blue Desktop Border ONLY when Kibo is actively working / controlling the PC */}
-      {!isSettingsOnlyWindow && (
-        <div
-          className={`kibo-screen-edge-glow ${
-            askNotchPhase === 'thinking' || Boolean(contextCard) || Boolean(kiboReply)
-              ? 'is-active'
-              : ''
-          }`}
-        />
+      {!isSettingsOnlyWindow && (askNotchPhase === 'thinking' || Boolean(contextCard) || Boolean(kiboReply)) && (
+        <div className="kibo-screen-edge-glow is-active" />
       )}
 
       {/* =====================================================================
@@ -9572,6 +9618,13 @@ export const KiboApp: React.FC<KiboAppProps> = ({
                   mode={soulMode}
                   expression={isBooting ? bootExpression : undefined}
                   isDull={isSoulDull}
+                  paused={
+                    isTucked ||
+                    bootPhase === 'sleeping' ||
+                    bootPhase === 'tucking' ||
+                    (isCinemaMode && !isCinemaPeek) ||
+                    onboardingStep !== null
+                  }
                   interactive={true}
                   annoyance={soulAnnoyance}
                   isHit={soulIsHit}
