@@ -6,8 +6,8 @@ use std::io::Cursor;
 use std::os::windows::ffi::OsStrExt;
 use std::path::Path;
 
-use windows::core::{PCWSTR, PWSTR};
-use windows::Win32::Foundation::{CloseHandle, BOOL, HWND, POINT, RECT};
+use windows::core::{Interface, PCWSTR, PWSTR};
+use windows::Win32::Foundation::{CloseHandle, BOOL, HWND, POINT, RECT, S_OK};
 use windows::Win32::Graphics::Dwm::{DwmGetCompositionTimingInfo, DWM_TIMING_INFO};
 use windows::Win32::Graphics::Gdi::{
     BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC, GetDIBits,
@@ -15,7 +15,10 @@ use windows::Win32::Graphics::Gdi::{
     BI_RGB, DIB_RGB_COLORS, MONITORINFO, MONITOR_DEFAULTTONEAREST, SRCCOPY,
 };
 use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
-use windows::Win32::Media::Audio::{eMultimedia, eRender, IMMDeviceEnumerator, MMDeviceEnumerator};
+use windows::Win32::Media::Audio::{
+    eMultimedia, eRender, AudioSessionStateActive, IAudioSessionControl2, IAudioSessionManager2,
+    IMMDeviceEnumerator, ISimpleAudioVolume, MMDeviceEnumerator,
+};
 use windows::Win32::System::Com::{
     CoCreateInstance, CoInitializeEx, CLSCTX_ALL, COINIT_MULTITHREADED,
 };
@@ -39,9 +42,10 @@ use windows::Win32::UI::Shell::{
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     GetClassNameW, GetCursorPos, GetForegroundWindow, GetSystemMetrics, GetWindowLongW,
-    GetWindowRect, GetWindowTextW, GetWindowThreadProcessId, SetCursorPos,
-    SystemParametersInfoW, GWL_STYLE, SM_CXSCREEN, SM_CYSCREEN, SPIF_SENDCHANGE,
-    SPIF_UPDATEINIFILE, SPI_SETDESKWALLPAPER, WS_CAPTION,
+    GetWindowRect, GetWindowTextW, GetWindowThreadProcessId, SetCursorPos, SetWindowPos,
+    SystemParametersInfoW, GWL_STYLE, HWND_NOTOPMOST, HWND_TOPMOST, SM_CXSCREEN, SM_CYSCREEN,
+    SPIF_SENDCHANGE, SPIF_UPDATEINIFILE, SPI_SETDESKWALLPAPER, SWP_NOACTIVATE, SWP_NOMOVE,
+    SWP_NOSIZE, WS_CAPTION,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -473,6 +477,262 @@ pub fn set_system_mute(mute: bool) -> Result<bool, String> {
             .map_err(|e| e.to_string())?;
         Ok(mute)
     })
+}
+
+/// Reliably elevates or demotes a Windows HWND via Win32 SetWindowPos(HWND_TOPMOST / HWND_NOTOPMOST).
+pub fn force_window_topmost(hwnd_raw: isize, topmost: bool) {
+    if hwnd_raw == 0 {
+        return;
+    }
+    unsafe {
+        let hwnd = HWND(hwnd_raw as *mut std::ffi::c_void);
+        let z_after = if topmost { HWND_TOPMOST } else { HWND_NOTOPMOST };
+        let _ = SetWindowPos(
+            hwnd,
+            z_after,
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+        );
+    }
+}
+
+fn process_name_for_pid(pid: u32) -> String {
+    if pid == 0 {
+        return String::new();
+    }
+    unsafe {
+        if let Ok(hproc) = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid) {
+            let mut path_buf = [0u16; 512];
+            let mut path_len = path_buf.len() as u32;
+            let name = if QueryFullProcessImageNameW(
+                hproc,
+                PROCESS_NAME_WIN32,
+                PWSTR(path_buf.as_mut_ptr()),
+                &mut path_len,
+            )
+            .is_ok()
+            {
+                let full = String::from_utf16_lossy(&path_buf[..path_len as usize]);
+                Path::new(&full)
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("")
+                    .to_lowercase()
+            } else {
+                String::new()
+            };
+            let _ = CloseHandle(hproc);
+            name
+        } else {
+            String::new()
+        }
+    }
+}
+
+fn build_media_app_tokens(source_hint: &str) -> Vec<String> {
+    let low = source_hint.trim().to_lowercase();
+    let mut tokens: Vec<String> = Vec::new();
+    if low.contains("spotify") {
+        tokens.push("spotify".into());
+    } else if low.contains("chrome") {
+        tokens.push("chrome".into());
+    } else if low.contains("msedge") || low.contains("edge") {
+        tokens.push("msedge".into());
+        tokens.push("edge".into());
+    } else if low.contains("brave") {
+        tokens.push("brave".into());
+    } else if low.contains("firefox") {
+        tokens.push("firefox".into());
+    } else if low.contains("opera") {
+        tokens.push("opera".into());
+    } else if low.contains("vivaldi") {
+        tokens.push("vivaldi".into());
+    } else if low.contains("arc") {
+        tokens.push("arc".into());
+    } else if low.contains("vlc") {
+        tokens.push("vlc".into());
+    } else if low.contains("mpv") {
+        tokens.push("mpv".into());
+    } else if low.contains("zune") || low.contains("media.player") || low.contains("wmplayer") {
+        tokens.push("microsoft.media.player".into());
+        tokens.push("music.ui".into());
+        tokens.push("wmplayer".into());
+    } else if low.contains("apple") || low.contains("itunes") {
+        tokens.push("applemusic".into());
+        tokens.push("itunes".into());
+    } else if low.contains("tidal") {
+        tokens.push("tidal".into());
+    } else if low.contains("foobar") {
+        tokens.push("foobar2000".into());
+    } else if low.contains("musicbee") {
+        tokens.push("musicbee".into());
+    } else if low.contains("netflix") {
+        tokens.push("netflix".into());
+        tokens.push("wwahost".into());
+        tokens.push("msedge".into());
+        tokens.push("chrome".into());
+    } else if !low.is_empty() && low != "media player" {
+        let stem = low
+            .split(|c: char| c == '!' || c == '\\' || c == '/' || c == ' ' || c == '.')
+            .find(|seg| seg.len() >= 3 && *seg != "exe" && *seg != "com")
+            .unwrap_or(&low);
+        tokens.push(stem.to_string());
+    }
+    tokens
+}
+
+fn pretty_app_label(proc_low: &str) -> String {
+    match proc_low {
+        "spotify" => "Spotify".into(),
+        "chrome" => "Chrome".into(),
+        "msedge" => "Edge".into(),
+        "brave" => "Brave".into(),
+        "firefox" => "Firefox".into(),
+        "opera" => "Opera".into(),
+        "vivaldi" => "Vivaldi".into(),
+        "arc" => "Arc".into(),
+        "vlc" => "VLC".into(),
+        "applemusic" => "Apple Music".into(),
+        "itunes" => "iTunes".into(),
+        "tidal" => "TIDAL".into(),
+        other if !other.is_empty() => {
+            let mut c = other.chars();
+            match c.next() {
+                None => "Media".into(),
+                Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+            }
+        }
+        _ => "Media".into(),
+    }
+}
+
+fn find_matching_media_sessions(source_hint: &str) -> Vec<(ISimpleAudioVolume, String, bool)> {
+    let tokens = build_media_app_tokens(source_hint);
+    let mut name_matches: Vec<(ISimpleAudioVolume, String, bool)> = Vec::new();
+    let mut active_fallback: Vec<(ISimpleAudioVolume, String, String)> = Vec::new();
+
+    unsafe {
+        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+        let Ok(enumerator): Result<IMMDeviceEnumerator, _> =
+            CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)
+        else {
+            return Vec::new();
+        };
+        let Ok(device) = enumerator.GetDefaultAudioEndpoint(eRender, eMultimedia) else {
+            return Vec::new();
+        };
+        let Ok(mgr): Result<IAudioSessionManager2, _> = device.Activate(CLSCTX_ALL, None) else {
+            return Vec::new();
+        };
+        let Ok(session_enum) = mgr.GetSessionEnumerator() else {
+            return Vec::new();
+        };
+        let Ok(count) = session_enum.GetCount() else {
+            return Vec::new();
+        };
+
+        for idx in 0..count {
+            let Ok(ctrl) = session_enum.GetSession(idx) else {
+                continue;
+            };
+            let Ok(ctrl2) = ctrl.cast::<IAudioSessionControl2>() else {
+                continue;
+            };
+            if ctrl2.IsSystemSoundsSession() == S_OK {
+                continue;
+            }
+            let pid = ctrl2.GetProcessId().unwrap_or(0);
+            if pid == 0 {
+                continue;
+            }
+            let proc_name = process_name_for_pid(pid);
+            if proc_name.is_empty() || proc_name == "kibo" {
+                continue;
+            }
+            let is_active = ctrl.GetState().map(|s| s == AudioSessionStateActive).unwrap_or(false);
+            let Ok(vol) = ctrl.cast::<ISimpleAudioVolume>() else {
+                continue;
+            };
+
+            let matched_hint = !tokens.is_empty()
+                && tokens.iter().any(|tok| proc_name.contains(tok.as_str()));
+
+            if matched_hint {
+                name_matches.push((vol, pretty_app_label(&proc_name), is_active));
+            } else if is_active
+                && !matches!(
+                    proc_name.as_str(),
+                    "discord" | "teams" | "ms-teams" | "zoom" | "slack" | "obs64"
+                )
+            {
+                active_fallback.push((vol, pretty_app_label(&proc_name), proc_name));
+            }
+        }
+    }
+
+    if !name_matches.is_empty() {
+        name_matches
+    } else if let Some((_, _, first_proc)) = active_fallback.first() {
+        let target_proc = first_proc.clone();
+        active_fallback
+            .into_iter()
+            .filter(|(_, _, p)| *p == target_proc)
+            .map(|(vol, label, _)| (vol, label, true))
+            .collect()
+    } else {
+        Vec::new()
+    }
+}
+
+/// Reads the per-application volume & mute state for the currently playing media app (Spotify, Chrome, Edge, etc.).
+pub fn get_app_media_volume(source_hint: &str) -> Option<(i32, bool, String)> {
+    let sessions = find_matching_media_sessions(source_hint);
+    let chosen = sessions
+        .iter()
+        .find(|(_, _, active)| *active)
+        .or_else(|| sessions.first())?;
+    unsafe {
+        let scalar = chosen.0.GetMasterVolume().ok()?;
+        let muted = chosen.0.GetMute().ok()?.as_bool();
+        Some(((scalar * 100.0).round() as i32, muted, chosen.1.clone()))
+    }
+}
+
+/// Sets per-application volume ONLY on the playing media app (leaves games, Discord, and system volume untouched).
+pub fn set_app_media_volume(source_hint: &str, level: i32) -> Result<(i32, String), String> {
+    let clamped = level.clamp(0, 100);
+    let sessions = find_matching_media_sessions(source_hint);
+    if sessions.is_empty() {
+        return Err("No active media audio session found".into());
+    }
+    let label = sessions[0].1.clone();
+    unsafe {
+        for (vol, _, _) in &sessions {
+            let _ = vol.SetMasterVolume(clamped as f32 / 100.0, std::ptr::null());
+            if clamped > 0 {
+                let _ = vol.SetMute(BOOL(0), std::ptr::null());
+            }
+        }
+    }
+    Ok((clamped, label))
+}
+
+/// Sets per-application mute ONLY on the playing media app.
+pub fn set_app_media_mute(source_hint: &str, mute: bool) -> Result<(bool, String), String> {
+    let sessions = find_matching_media_sessions(source_hint);
+    if sessions.is_empty() {
+        return Err("No active media audio session found".into());
+    }
+    let label = sessions[0].1.clone();
+    unsafe {
+        for (vol, _, _) in &sessions {
+            let _ = vol.SetMute(BOOL(if mute { 1 } else { 0 }), std::ptr::null());
+        }
+    }
+    Ok((mute, label))
 }
 
 fn send_vk_tap(vk: VIRTUAL_KEY) {

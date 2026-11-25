@@ -45,7 +45,7 @@
         {
           "tag": "Core",
           "title": "Native Rust + Tauri v2 Architecture",
-          "detail": "Compact 5 MB installer, instant startup, native Windows Core Audio & SMTC media integration, and zero WebView2 microphone permission popups."
+          "detail": "Compact 2.6 MB installer, minimal 3-step onboarding, reliable always-on-top launch, per-app Windows media volume control, and zero WebView2 microphone permission popups."
         },
         {
           "tag": "Appearance",

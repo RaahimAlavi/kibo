@@ -268,7 +268,14 @@ fn set_show_taskbar(app: AppHandle, show: bool) -> bool {
 #[tauri::command]
 fn set_always_on_top(app: AppHandle, flag: bool) -> bool {
     if let Some(win) = app.get_webview_window("main") {
+        if flag {
+            let _ = win.unminimize();
+            let _ = win.show();
+        }
         let _ = win.set_always_on_top(flag);
+        if let Ok(hwnd) = win.hwnd() {
+            win32::force_window_topmost(hwnd.0 as isize, flag);
+        }
     }
     flag
 }
@@ -290,6 +297,9 @@ fn minimize_main_window(app: AppHandle) -> Value {
     }
     if let Some(win) = app.get_webview_window("main") {
         let _ = win.set_always_on_top(false);
+        if let Ok(hwnd) = win.hwnd() {
+            win32::force_window_topmost(hwnd.0 as isize, false);
+        }
         let _ = win.set_skip_taskbar(false);
         let _ = win.set_ignore_cursor_events(true);
         let _ = win.minimize();
@@ -394,6 +404,65 @@ fn set_mute(mute: bool) -> Value {
     match win32::set_system_mute(mute) {
         Ok(m) => json!({ "success": true, "muted": m }),
         Err(e) => json!({ "success": false, "error": e }),
+    }
+}
+
+#[tauri::command]
+fn get_media_app_volume(source_hint: Option<String>) -> Value {
+    let hint = source_hint.unwrap_or_default();
+    if let Some((vol, muted, app_name)) = win32::get_app_media_volume(&hint) {
+        json!({
+            "found": true,
+            "volume": vol,
+            "muted": muted,
+            "appName": app_name,
+        })
+    } else {
+        json!({ "found": false })
+    }
+}
+
+#[tauri::command]
+fn set_media_app_volume(source_hint: Option<String>, level: i32) -> Value {
+    let hint = source_hint.unwrap_or_default();
+    match win32::set_app_media_volume(&hint, level) {
+        Ok((v, app_name)) => json!({
+            "success": true,
+            "volume": v,
+            "appName": app_name,
+            "isPerApp": true,
+        }),
+        Err(_) => match win32::set_system_volume(level) {
+            Ok(v) => json!({
+                "success": true,
+                "volume": v,
+                "appName": "System",
+                "isPerApp": false,
+            }),
+            Err(e) => json!({ "success": false, "error": e }),
+        },
+    }
+}
+
+#[tauri::command]
+fn set_media_app_mute(source_hint: Option<String>, mute: bool) -> Value {
+    let hint = source_hint.unwrap_or_default();
+    match win32::set_app_media_mute(&hint, mute) {
+        Ok((m, app_name)) => json!({
+            "success": true,
+            "muted": m,
+            "appName": app_name,
+            "isPerApp": true,
+        }),
+        Err(_) => match win32::set_system_mute(mute) {
+            Ok(m) => json!({
+                "success": true,
+                "muted": m,
+                "appName": "System",
+                "isPerApp": false,
+            }),
+            Err(e) => json!({ "success": false, "error": e }),
+        },
     }
 }
 
@@ -1162,12 +1231,25 @@ pub fn run() {
                 let _ = win.set_position(tauri::PhysicalPosition::new(0, 0));
                 let _ = win.set_size(tauri::PhysicalSize::new(sw as u32, (sh - 2).max(600) as u32));
                 let _ = win.set_always_on_top(true);
+                if let Ok(hwnd) = win.hwnd() {
+                    win32::force_window_topmost(hwnd.0 as isize, true);
+                }
                 let _ = win.set_ignore_cursor_events(true);
                 auto_grant_webview_permissions(&win);
 
                 // Emit desktop-clicked-outside on focus loss AND forward native Windows OLE DragDrop events with real file paths
                 let win_handle = handle.clone();
                 win.on_window_event(move |event| match event {
+                    tauri::WindowEvent::Focused(true) => {
+                        if let Some(main_win) = win_handle.get_webview_window("main") {
+                            if !main_win.is_minimized().unwrap_or(false) {
+                                let _ = main_win.set_always_on_top(true);
+                                if let Ok(hwnd) = main_win.hwnd() {
+                                    win32::force_window_topmost(hwnd.0 as isize, true);
+                                }
+                            }
+                        }
+                    }
                     tauri::WindowEvent::Focused(false) => {
                         let _ = win_handle.emit("desktop-clicked-outside", ());
                     }
@@ -1286,6 +1368,9 @@ pub fn run() {
                             let _ = win.unminimize();
                             let _ = win.show();
                             let _ = win.set_always_on_top(true);
+                            if let Ok(hwnd) = win.hwnd() {
+                                win32::force_window_topmost(hwnd.0 as isize, true);
+                            }
                         }
                         let _ = app.emit("open-companion-tab", "Chat");
                     }
@@ -1319,6 +1404,9 @@ pub fn run() {
                             let _ = win.unminimize();
                             let _ = win.show();
                             let _ = win.set_always_on_top(true);
+                            if let Ok(hwnd) = win.hwnd() {
+                                win32::force_window_topmost(hwnd.0 as isize, true);
+                            }
                         }
                         let _ = tray.app_handle().emit("open-companion-tab", "Chat");
                     }
@@ -1353,6 +1441,9 @@ pub fn run() {
             get_controls_state,
             set_volume,
             set_mute,
+            get_media_app_volume,
+            set_media_app_volume,
+            set_media_app_mute,
             toggle_system_dark_mode,
             get_system_stats,
             get_game_stats,

@@ -103,6 +103,12 @@ export function initTauriBridge(): void {
     getControlsState: () => invoke('get_controls_state'),
     setVolume: (level: number) => invoke('set_volume', { level: Math.round(level) }),
     setMute: (mute: boolean) => invoke('set_mute', { mute: Boolean(mute) }),
+    getMediaAppVolume: (sourceHint?: string) =>
+      invoke('get_media_app_volume', { sourceHint: sourceHint || '' }),
+    setMediaAppVolume: (sourceHint: string, level: number) =>
+      invoke('set_media_app_volume', { sourceHint: sourceHint || '', level: Math.round(level) }),
+    setMediaAppMute: (sourceHint: string, mute: boolean) =>
+      invoke('set_media_app_mute', { sourceHint: sourceHint || '', mute: Boolean(mute) }),
     toggleSystemDarkMode: (targetDark: boolean) => invoke('toggle_system_dark_mode', { targetDark: Boolean(targetDark) }),
     toggleWifi: async () => ({ success: false }),
     getWifiNetworks: async () => [],

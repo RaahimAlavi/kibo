@@ -82,6 +82,17 @@ declare global {
       }>;
       setVolume?: (level: number) => Promise<{ success: boolean }>;
       setMute?: (mute: boolean) => Promise<{ success: boolean }>;
+      getMediaAppVolume?: (
+        sourceHint?: string
+      ) => Promise<{ hasApp: boolean; volume: number; muted: boolean; appName: string }>;
+      setMediaAppVolume?: (
+        sourceHint: string,
+        level: number
+      ) => Promise<{ success: boolean; volume: number; appName?: string; perApp?: boolean }>;
+      setMediaAppMute?: (
+        sourceHint: string,
+        mute: boolean
+      ) => Promise<{ success: boolean; muted: boolean; appName?: string; perApp?: boolean }>;
       readClipboardText?: () => string;
       readClipboardImage?: () => { dataUrl: string; width: number; height: number; mb: string } | null;
       writeClipboardText?: (text: string) => boolean;
@@ -99,6 +110,7 @@ declare global {
         title: string;
         artist: string;
         source?: string;
+        sourceAppId?: string;
         thumbnail?: string;
         durationSec?: number;
         positionSec?: number;
@@ -2027,6 +2039,7 @@ export const KiboApp: React.FC<KiboAppProps> = ({
     localStorage.setItem('kibo_onboarded_v1', 'true');
     api?.saveStoredSettings?.({ kibo_onboarded_v1: true });
     api?.setAlwaysOnTop?.(true);
+    setTimeout(() => api?.setAlwaysOnTop?.(true), 250);
     setOnboardingStep(null);
     api?.setShowTaskbar?.(showInTaskbar);
   }, [geminiDraftKey, tavilyDraftKey, showInTaskbar]);
@@ -2293,12 +2306,25 @@ export const KiboApp: React.FC<KiboAppProps> = ({
     const api = (window as any).kiboAPI;
     if (onboardingStep !== null) {
       api?.setShowTaskbar?.(true);
-      api?.setAlwaysOnTop?.(false);
+      api?.setAlwaysOnTop?.(true);
     } else {
       api?.setShowTaskbar?.(showInTaskbar);
       api?.setAlwaysOnTop?.(true);
     }
   }, [onboardingStep, showInTaskbar]);
+
+  useEffect(() => {
+    if (isSettingsOnlyWindow) return;
+    const ensureTopmost = () => {
+      (window as any).kiboAPI?.setAlwaysOnTop?.(true);
+    };
+    const bootTimer = setTimeout(ensureTopmost, 450);
+    window.addEventListener('focus', ensureTopmost);
+    return () => {
+      clearTimeout(bootTimer);
+      window.removeEventListener('focus', ensureTopmost);
+    };
+  }, [isSettingsOnlyWindow]);
 
   useEffect(() => {
     window.kiboAPI?.getStartupSetting?.().then((enabled: boolean) => {
@@ -3617,6 +3643,7 @@ export const KiboApp: React.FC<KiboAppProps> = ({
     title: string;
     artist: string;
     source?: string;
+    sourceAppId?: string;
     thumbnail?: string;
     durationSec?: number;
   }>({
@@ -3624,9 +3651,17 @@ export const KiboApp: React.FC<KiboAppProps> = ({
     playing: false,
     title: '',
     artist: '',
+    sourceAppId: '',
     thumbnail: '',
     durationSec: 210,
   });
+  const [mediaAppVolume, setMediaAppVolume] = useState<number>(80);
+  const [mediaAppMuted, setMediaAppMuted] = useState<boolean>(false);
+  const [mediaAppLabel, setMediaAppLabel] = useState<string>('Media');
+  const mediaAppVolumeRef = useRef<number>(80);
+  useEffect(() => {
+    mediaAppVolumeRef.current = mediaAppVolume;
+  }, [mediaAppVolume]);
   const [mediaArtPalette, setMediaArtPalette] = useState<{
     accent: string;
     rgb: string;
@@ -4094,9 +4129,29 @@ export const KiboApp: React.FC<KiboAppProps> = ({
             title: info.title || '',
             artist: info.artist || '',
             source: info.source,
+            sourceAppId: info.sourceAppId || '',
             thumbnail: info.thumbnail || '',
             durationSec: info.durationSec || 210,
           });
+          if (Boolean(info.hasSession ?? info.playing) && !isDraggingVolumeRef.current && window.kiboAPI?.getMediaAppVolume) {
+            const hint = info.sourceAppId || info.source || '';
+            window.kiboAPI
+              .getMediaAppVolume(hint)
+              .then((appVol) => {
+                if (!appVol || isDraggingVolumeRef.current) return;
+                if (typeof appVol.volume === 'number') {
+                  setMediaAppVolume(appVol.volume);
+                  mediaAppVolumeRef.current = appVol.volume;
+                }
+                if (typeof appVol.muted === 'boolean') {
+                  setMediaAppMuted(appVol.muted);
+                }
+                if (appVol.appName) {
+                  setMediaAppLabel(appVol.appName);
+                }
+              })
+              .catch(() => {});
+          }
           if (typeof info.positionSec === 'number' && info.positionSec >= 0 && !isDraggingMediaScrubRef.current) {
             setMediaProgress((prev) => {
               if (trackChanged || !info.playing) return info.positionSec;
@@ -4140,11 +4195,85 @@ export const KiboApp: React.FC<KiboAppProps> = ({
     const clamped = Math.min(100, Math.max(0, Math.round(nextVol)));
     setVolumeLevel(clamped);
     if (clamped > 0) setIsMuted(false);
-    if (audioRef.current) {
-      audioRef.current.volume = clamped / 100;
-    }
     window.kiboAPI?.setVolume?.(clamped);
   }, []);
+
+  // Per-app media volume control: adjusts ONLY the playing media app (Spotify, Chrome/YouTube, Edge, VLC, etc.)
+  // or built-in Lo-Fi radio without lowering master Windows system volume or games/Discord.
+  const applyMediaAppVolumeChange = useCallback(
+    (nextVol: number) => {
+      const clamped = Math.min(100, Math.max(0, Math.round(nextVol)));
+      setMediaAppVolume(clamped);
+      mediaAppVolumeRef.current = clamped;
+      if (clamped > 0) setMediaAppMuted(false);
+
+      if (osMedia.hasSession && window.kiboAPI?.setMediaAppVolume) {
+        const hint = osMedia.sourceAppId || osMedia.source || '';
+        window.kiboAPI
+          .setMediaAppVolume(hint, clamped)
+          .then((res) => {
+            if (res?.appName) setMediaAppLabel(res.appName);
+          })
+          .catch(() => {});
+        return;
+      }
+
+      if (isPlayingLofi && audioRef.current) {
+        audioRef.current.volume = clamped / 100;
+        if (clamped > 0) audioRef.current.muted = false;
+        setMediaAppLabel('Lo-Fi Radio');
+        return;
+      }
+
+      if (window.kiboAPI?.setMediaAppVolume) {
+        window.kiboAPI
+          .setMediaAppVolume('', clamped)
+          .then((res) => {
+            if (res?.appName) setMediaAppLabel(res.appName);
+          })
+          .catch(() => {});
+        return;
+      }
+
+      applyUserVolumeChange(clamped);
+    },
+    [osMedia.hasSession, osMedia.sourceAppId, osMedia.source, isPlayingLofi, applyUserVolumeChange]
+  );
+
+  const toggleMediaAppMute = useCallback(() => {
+    const nextMute = !mediaAppMuted;
+    setMediaAppMuted(nextMute);
+
+    if (osMedia.hasSession && window.kiboAPI?.setMediaAppMute) {
+      const hint = osMedia.sourceAppId || osMedia.source || '';
+      window.kiboAPI
+        .setMediaAppMute(hint, nextMute)
+        .then((res) => {
+          if (res?.appName) setMediaAppLabel(res.appName);
+        })
+        .catch(() => {});
+      return;
+    }
+
+    if (isPlayingLofi && audioRef.current) {
+      audioRef.current.muted = nextMute;
+      setMediaAppLabel('Lo-Fi Radio');
+      return;
+    }
+
+    if (window.kiboAPI?.setMediaAppMute) {
+      window.kiboAPI
+        .setMediaAppMute('', nextMute)
+        .then((res) => {
+          if (res?.appName) setMediaAppLabel(res.appName);
+        })
+        .catch(() => {});
+      return;
+    }
+
+    setIsMuted(nextMute);
+    window.kiboAPI?.setMute?.(nextMute).catch(() => {});
+  }, [mediaAppMuted, osMedia.hasSession, osMedia.sourceAppId, osMedia.source, isPlayingLofi]);
 
   const toggleMediaPlayback = useCallback(async () => {
     if (window.kiboAPI?.mediaControl) {
@@ -4161,6 +4290,7 @@ export const KiboApp: React.FC<KiboAppProps> = ({
           title: check.title || '',
           artist: check.artist || '',
           source: check.source,
+          sourceAppId: check.sourceAppId || '',
           thumbnail: check.thumbnail || '',
           durationSec: check.durationSec || 210,
         });
@@ -6687,9 +6817,9 @@ export const KiboApp: React.FC<KiboAppProps> = ({
       if (!volumeTrackRef.current) return;
       const rect = volumeTrackRef.current.getBoundingClientRect();
       const pct = Math.round(((clientX - rect.left) / rect.width) * 100);
-      applyUserVolumeChange(pct);
+      applyMediaAppVolumeChange(pct);
     },
-    [applyUserVolumeChange]
+    [applyMediaAppVolumeChange]
   );
 
   useEffect(() => {
@@ -9582,15 +9712,17 @@ export const KiboApp: React.FC<KiboAppProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    const nextMute = !isMuted;
-                    setIsMuted(nextMute);
-                    window.kiboAPI?.setMute?.(nextMute).catch(() => {});
+                    toggleMediaAppMute();
                   }}
-                  title={isMuted ? 'Unmute' : 'Mute'}
+                  title={
+                    mediaAppMuted
+                      ? `Unmute ${osMedia.source || mediaAppLabel}`
+                      : `Mute ${osMedia.source || mediaAppLabel}`
+                  }
                   className="companion-media-btn"
                   style={{ opacity: 0.72 }}
                 >
-                  <SvgIcon name={isMuted ? 'mute' : 'speaker'} size={13} color="#FFFFFF" />
+                  <SvgIcon name={mediaAppMuted ? 'mute' : 'speaker'} size={13} color="#FFFFFF" />
                 </button>
               </div>
             </div>
@@ -11785,7 +11917,7 @@ export const KiboApp: React.FC<KiboAppProps> = ({
                         <span className="companion-mono-tiny">{formatTime(totalMediaDuration)}</span>
                       </div>
 
-                      {/* Single-line inline smooth volume adjuster */}
+                      {/* Single-line inline smooth per-app media volume adjuster */}
                       <div
                         style={{
                           display: 'flex',
@@ -11794,18 +11926,17 @@ export const KiboApp: React.FC<KiboAppProps> = ({
                           width: '148px',
                           flexShrink: 0,
                         }}
+                        title={`${osMedia.source || mediaAppLabel} volume (app only)`}
                         onWheel={(e) => {
                           const delta = e.deltaY < 0 ? 4 : -4;
-                          applyUserVolumeChange(volumeLevel + delta);
+                          applyMediaAppVolumeChange(mediaAppVolumeRef.current + delta);
                         }}
                       >
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            const nextMute = !isMuted;
-                            setIsMuted(nextMute);
-                            window.kiboAPI?.setMute?.(nextMute);
+                            toggleMediaAppMute();
                           }}
                           style={{
                             background: 'transparent',
@@ -11815,11 +11946,15 @@ export const KiboApp: React.FC<KiboAppProps> = ({
                             alignItems: 'center',
                             justifyContent: 'center',
                             cursor: 'pointer',
-                            color: isMuted ? '#71717A' : '#E4E4E7',
+                            color: mediaAppMuted ? '#71717A' : '#E4E4E7',
                           }}
-                          title={isMuted ? 'Unmute' : `Volume ${volumeLevel}%`}
+                          title={
+                            mediaAppMuted
+                              ? `Unmute ${osMedia.source || mediaAppLabel}`
+                              : `${osMedia.source || mediaAppLabel} volume ${mediaAppVolume}%`
+                          }
                         >
-                          <SvgIcon name={isMuted ? 'mute' : 'speaker'} size={14} color={isMuted ? '#71717A' : '#E4E4E7'} />
+                          <SvgIcon name={mediaAppMuted ? 'mute' : 'speaker'} size={14} color={mediaAppMuted ? '#71717A' : '#E4E4E7'} />
                         </button>
 
                         <div
@@ -11844,7 +11979,7 @@ export const KiboApp: React.FC<KiboAppProps> = ({
                         >
                           <div
                             style={{
-                              width: `${isMuted ? 0 : Math.max(0, Math.min(100, volumeLevel))}%`,
+                              width: `${mediaAppMuted ? 0 : Math.max(0, Math.min(100, mediaAppVolume))}%`,
                               height: '100%',
                               borderRadius: '999px',
                               background: mediaArtPalette.accent || '#FFFFFF',
@@ -11869,7 +12004,7 @@ export const KiboApp: React.FC<KiboAppProps> = ({
                         </div>
 
                         <span className="companion-mono-tiny" style={{ minWidth: '28px', textAlign: 'right' }}>
-                          {isMuted ? '0%' : `${volumeLevel}%`}
+                          {mediaAppMuted ? '0%' : `${mediaAppVolume}%`}
                         </span>
                       </div>
                     </div>

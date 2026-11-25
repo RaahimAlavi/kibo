@@ -1,73 +1,72 @@
 // src/components/KiboOnboardingExperience.tsx
-import React, { useState, useEffect } from 'react';
+// Minimal 3-Step First-Launch Setup (Polar License -> Gemini Key -> Style & Ready)
+import React, { useState } from 'react';
 import { SoulConfig } from '../lib/soulMath';
-import { SoulCanvas } from './SoulCanvas';
 import { KiboLogoIcon } from './KiboLogoIcon';
 import { soundFX } from '../lib/soundFX';
 
-export interface KiboOnboardingExperienceProps {
+export interface KiboOnboardingProps {
   soul: SoulConfig;
-  customShortcuts: { ask: string; circle: string; dictate: string };
-  lastTriggeredHotkey?: string | null;
-  liveSpeechText?: string;
-  isIslandExpanded?: boolean;
+  customShortcuts: { ask: string; dictate: string; lasso: string };
+  lastTriggeredHotkey: string | null;
+  liveSpeechText: string;
+  isIslandExpanded: boolean;
   geminiDraftKey: string;
   tavilyDraftKey: string;
   onChangeGeminiKey: (val: string) => void;
   onChangeTavilyKey: (val: string) => void;
   onAwardEmbers: (amount: number) => void;
-  onSpeak: (text: string) => void;
+  onSpeak?: (text: string) => void;
   onPreviewExpandIsland: (expand: boolean) => void;
-  onComplete: (key?: string) => void;
+  onComplete: (overrideGeminiKey?: string) => void;
 }
 
-export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> = ({
-  soul,
+export const KiboOnboardingExperience: React.FC<KiboOnboardingProps> = ({
+  customShortcuts,
   geminiDraftKey,
   onChangeGeminiKey,
   onComplete,
 }) => {
-  const [currentStep, setCurrentStep] = useState<number>(0);
-  const [licenseEmail, setLicenseEmail] = useState<string>(() => {
-    return localStorage.getItem('kibo_customer_email') || '';
-  });
-  const [licenseCode, setLicenseCode] = useState<string>(() => {
-    return localStorage.getItem('kibo_license_key') || '';
-  });
-  const [isVerifyingLicense, setIsVerifyingLicense] = useState(false);
-  const [licenseVerified, setLicenseVerified] = useState<boolean>(() => {
-    return Boolean(localStorage.getItem('kibo_customer_email') && localStorage.getItem('kibo_license_key'));
-  });
+  const alreadyVerified =
+    typeof window !== 'undefined' &&
+    Boolean(localStorage.getItem('kibo_customer_email')) &&
+    Boolean(localStorage.getItem('kibo_license_key'));
+
+  const [step, setStep] = useState<number>(() => (alreadyVerified ? 1 : 0));
+  const [licenseEmail, setLicenseEmail] = useState<string>(() =>
+    typeof window !== 'undefined' ? localStorage.getItem('kibo_customer_email') || '' : ''
+  );
+  const [licenseCode, setLicenseCode] = useState<string>(() =>
+    typeof window !== 'undefined' ? localStorage.getItem('kibo_license_key') || '' : ''
+  );
+  const [licenseVerified, setLicenseVerified] = useState<boolean>(alreadyVerified);
+  const [isVerifying, setIsVerifying] = useState<boolean>(false);
   const [licenseError, setLicenseError] = useState<string>('');
-  const [localGeminiKey, setLocalGeminiKey] = useState<string>(geminiDraftKey || '');
-  const [keySaved, setKeySaved] = useState<boolean>(Boolean(geminiDraftKey));
 
-  useEffect(() => {
-    const api = (window as any).kiboAPI;
+  const [localGeminiKey, setLocalGeminiKey] = useState<string>(() => geminiDraftKey || '');
+  const [notchStyle, setNotchStyle] = useState<'classic' | 'floating'>(() =>
+    typeof window !== 'undefined' && localStorage.getItem('kibo_notch_style') === 'floating'
+      ? 'floating'
+      : 'classic'
+  );
+  const [glassEnabled, setGlassEnabled] = useState<boolean>(() =>
+    typeof window !== 'undefined' ? localStorage.getItem('kibo_glass_enabled') !== 'false' : true
+  );
+
+  const api = typeof window !== 'undefined' ? (window as any).kiboAPI : null;
+
+  const handleMinimize = () => {
     api?.setShowTaskbar?.(true);
-  }, []);
+    api?.minimize?.();
+  };
 
-  const openGoogleAiStudio = () => {
-    const url = 'https://aistudio.google.com/app/apikey';
-    const api = (window as any).kiboAPI;
-    if (api?.setAlwaysOnTop) {
-      api.setAlwaysOnTop(false);
-    }
+  const openExternalAndMinimize = (url: string) => {
     if (api?.openUrl) {
       api.openUrl(url);
     } else {
       window.open(url, '_blank');
     }
-    // Minimize Kibo to the taskbar so Chrome opens unobstructed and the user can copy their key
     handleMinimize();
-  };
-
-  const handleMinimize = () => {
-    const api = (window as any).kiboAPI;
-    api?.setShowTaskbar?.(true);
-    if (api?.minimize) {
-      api.minimize();
-    }
   };
 
   const handleVerifyLicense = async () => {
@@ -75,19 +74,18 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
     const cleanCode = licenseCode.trim().toUpperCase().replace(/^#/, '');
     setLicenseError('');
 
-    if (!cleanEmail || !cleanEmail.includes('@') || cleanEmail.length < 5) {
-      setLicenseError('Please enter a valid purchase email address.');
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      setLicenseError('Enter the email address used at checkout.');
       soundFX.playErrorChime();
       return;
     }
-
     if (!cleanCode) {
-      setLicenseError('Please enter your Order # or License Key from your receipt.');
+      setLicenseError('Enter your KIBO-... license key from your Polar receipt.');
       soundFX.playErrorChime();
       return;
     }
 
-    setIsVerifyingLicense(true);
+    setIsVerifying(true);
     try {
       const res = await fetch('https://kiboai.vercel.app/api/verify-email', {
         method: 'POST',
@@ -101,65 +99,113 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
         setLicenseVerified(true);
         setLicenseError('');
         soundFX.playSuccessChime();
-        // Auto-advance to Step 2 smoothly
-        setTimeout(() => {
-          setCurrentStep(2);
-        }, 750);
+        setTimeout(() => setStep(1), 420);
       } else {
         setLicenseVerified(false);
         setLicenseError(
-          data?.error || 'This license key is not eligible or was not recognized. Please check your purchase confirmation receipt or enter a valid key.'
+          data?.error || 'License key not recognized. Check your Polar confirmation email.'
         );
         soundFX.playErrorChime();
       }
     } catch {
       setLicenseVerified(false);
-      setLicenseError('This license key is not eligible or was not recognized. Please check your purchase confirmation receipt or enter a valid key.');
+      setLicenseError('Could not reach license server. Check your internet connection.');
       soundFX.playErrorChime();
     } finally {
-      setIsVerifyingLicense(false);
+      setIsVerifying(false);
     }
   };
 
-  const handleSaveGeminiKey = () => {
-    const trimmed = localGeminiKey.trim();
-    if (!trimmed) return;
-    onChangeGeminiKey(trimmed);
-    localStorage.setItem('kibo_gemini_key', trimmed);
-    const api = (window as any).kiboAPI;
-    if (api?.saveStoredSettings) {
-      api.saveStoredSettings({ kibo_gemini_key: trimmed });
+  const handleSaveGeminiAndNext = () => {
+    const clean = localGeminiKey.trim();
+    if (clean) {
+      onChangeGeminiKey(clean);
+      localStorage.setItem('kibo_gemini_key', clean);
+      api?.saveStoredSettings?.({ kibo_gemini_key: clean });
+      soundFX.playSuccessChime();
     }
-    setKeySaved(true);
-    soundFX.playSuccessChime();
+    setStep(2);
+  };
+
+  const handleSelectStyle = (next: 'classic' | 'floating') => {
+    setNotchStyle(next);
+    localStorage.setItem('kibo_notch_style', next);
+    api?.saveStoredSettings?.({ kibo_notch_style: next });
+    soundFX.playClick();
+  };
+
+  const handleToggleGlass = () => {
+    const next = !glassEnabled;
+    setGlassEnabled(next);
+    localStorage.setItem('kibo_glass_enabled', String(next));
+    api?.saveStoredSettings?.({ kibo_glass_enabled: next });
+    soundFX.playToggle(next);
   };
 
   const handleFinish = () => {
-    const trimmed = localGeminiKey.trim();
-    if (trimmed) {
-      handleSaveGeminiKey();
-    }
-    const api = (window as any).kiboAPI;
-    if (api?.setAlwaysOnTop) {
-      api.setAlwaysOnTop(true);
+    const clean = localGeminiKey.trim();
+    if (clean) {
+      onChangeGeminiKey(clean);
+      localStorage.setItem('kibo_gemini_key', clean);
+      api?.saveStoredSettings?.({ kibo_gemini_key: clean });
     }
     soundFX.playSuccessChime();
-    onComplete(trimmed);
+    onComplete(clean);
   };
 
-  const canContinue = currentStep !== 1 || licenseVerified;
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    height: 38,
+    borderRadius: 10,
+    border: '1px solid rgba(255, 255, 255, 0.12)',
+    background: '#141418',
+    color: '#F4F4F5',
+    padding: '0 12px',
+    fontSize: 13,
+    outline: 'none',
+    boxSizing: 'border-box',
+  };
+
+  const primaryBtn: React.CSSProperties = {
+    height: 38,
+    padding: '0 18px',
+    borderRadius: 10,
+    border: 'none',
+    background: '#F4F4F5',
+    color: '#111114',
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  };
+
+  const secondaryBtn: React.CSSProperties = {
+    height: 38,
+    padding: '0 14px',
+    borderRadius: 10,
+    border: '1px solid rgba(255, 255, 255, 0.12)',
+    background: 'rgba(255, 255, 255, 0.05)',
+    color: '#E4E4E7',
+    fontSize: 12.5,
+    fontWeight: 600,
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  };
 
   return (
     <div
       style={{
         position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        background: 'rgba(5, 7, 10, 0.72)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
+        inset: 0,
+        background: 'rgba(8, 9, 12, 0.56)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
         zIndex: 99999,
         display: 'flex',
         alignItems: 'center',
@@ -167,93 +213,84 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
         padding: 20,
         boxSizing: 'border-box',
         userSelect: 'none',
+        fontFamily: 'Figtree, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
       }}
     >
       <div
         style={{
           width: '100%',
-          maxWidth: 540,
-          background: '#0D1117',
-          border: '1px solid rgba(56, 189, 248, 0.25)',
+          maxWidth: 468,
+          background: '#1A1A1F',
+          border: '1px solid rgba(255, 255, 255, 0.11)',
           borderRadius: 20,
-          boxShadow: '0 24px 64px rgba(0, 0, 0, 0.6), 0 0 32px rgba(56, 189, 248, 0.1)',
+          boxShadow: '0 28px 72px rgba(0, 0, 0, 0.68)',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          position: 'relative',
+          color: '#F4F4F5',
         }}
       >
-        {/* Top Header & Step Progress Bar */}
+        {/* Minimal Header */}
         <div
           style={{
-            padding: '22px 28px 16px',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+            padding: '18px 22px 14px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.07)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <KiboLogoIcon size={30} />
+            <KiboLogoIcon size={28} />
             <div>
-              <div style={{ fontSize: 15, fontWeight: 800, color: '#F8FAFC', letterSpacing: '-0.02em' }}>
-                Kibo Setup Guide
+              <div style={{ fontSize: 14.5, fontWeight: 700, color: '#FFFFFF', letterSpacing: '-0.015em' }}>
+                Kibo Setup
               </div>
-              <div style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>
-                Step {currentStep + 1} of 4
+              <div style={{ fontSize: 11, color: '#8E8E93', fontWeight: 500 }}>
+                Step {step + 1} of 3
               </div>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            {/* Step Dots */}
-            <div style={{ display: 'flex', gap: 6 }}>
-              {[0, 1, 2, 3].map((step) => (
-                <div
-                  key={step}
-                  onClick={() => {
-                    if (step === 0 || licenseVerified || currentStep === 0) {
-                      setCurrentStep(step);
-                    }
-                  }}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ display: 'flex', gap: 5 }}>
+              {[0, 1, 2].map((idx) => (
+                <span
+                  key={idx}
                   style={{
-                    width: step === currentStep ? 24 : 8,
-                    height: 6,
+                    width: idx === step ? 20 : 6,
+                    height: 5,
                     borderRadius: 999,
                     background:
-                      step === currentStep
-                        ? '#38BDF8'
-                        : step < currentStep
-                        ? 'rgba(56, 189, 248, 0.4)'
-                        : 'rgba(255, 255, 255, 0.1)',
-                    transition: 'all 0.25s ease',
-                    cursor: 'pointer',
+                      idx === step
+                        ? '#F4F4F5'
+                        : idx < step
+                        ? 'rgba(244, 244, 245, 0.42)'
+                        : 'rgba(255, 255, 255, 0.12)',
+                    transition: 'width 0.2s ease, background 0.2s ease',
                   }}
                 />
               ))}
             </div>
 
-            {/* Minimize Window Button */}
             <button
               type="button"
               onClick={handleMinimize}
               title="Minimize Kibo to taskbar"
               style={{
-                background: 'rgba(255, 255, 255, 0.06)',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
-                borderRadius: 8,
-                color: '#94A3B8',
+                width: 26,
+                height: 26,
+                borderRadius: 7,
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                background: 'rgba(255, 255, 255, 0.05)',
+                color: '#A1A1AA',
                 cursor: 'pointer',
-                width: 28,
-                height: 28,
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 16,
-                fontWeight: 700,
+                fontSize: 15,
                 lineHeight: 1,
                 padding: 0,
-                transition: 'all 0.15s ease',
               }}
             >
               &#x2212;
@@ -262,641 +299,330 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
         </div>
 
         {/* Step Body */}
-        <div
-          style={{
-            padding: '28px',
-            minHeight: 330,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-          }}
-        >
-          {/* STEP 0: WELCOME */}
-          {currentStep === 0 && (
-            <div>
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '4px 10px',
-                  borderRadius: 999,
-                  background: 'rgba(56, 189, 248, 0.12)',
-                  color: '#38BDF8',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: '0.04em',
-                  marginBottom: 14,
-                }}
-              >
-                <span>FOUNDERS EDITION</span>
+        <div style={{ padding: '22px 24px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {step === 0 && (
+            <>
+              <div>
+                <h2 style={{ margin: '0 0 6px', fontSize: 19, fontWeight: 700, letterSpacing: '-0.02em' }}>
+                  Activate your license
+                </h2>
+                <p style={{ margin: 0, fontSize: 13, color: '#A1A1AA', lineHeight: 1.5 }}>
+                  Enter your checkout email and Polar license key to unlock Kibo Founders Edition.
+                </p>
               </div>
-              <h2
-                style={{
-                  fontSize: 22,
-                  fontWeight: 800,
-                  color: '#F8FAFC',
-                  margin: '0 0 10px',
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                Meet Your Ambient Companion
-              </h2>
-              <p style={{ fontSize: 13.5, lineHeight: 1.6, color: '#94A3B8', margin: '0 0 20px' }}>
-                Kibo rests seamlessly inside your screen's top bezel. Control your PC with your voice, circle on-screen content to ask questions, and dictate clean formatted text anywhere.
-              </p>
 
-              <div
-                style={{
-                  background: '#141822',
-                  border: '1px solid rgba(255, 255, 255, 0.06)',
-                  borderRadius: 14,
-                  padding: '16px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 12,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#38BDF8', flexShrink: 0 }} />
-                  <div style={{ fontSize: 13, color: '#E2E8F0' }}>
-                    <strong>Top-Bezel Workspace:</strong> Slides down smoothly when needed and auto-tucks away.
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#38BDF8', flexShrink: 0 }} />
-                  <div style={{ fontSize: 13, color: '#E2E8F0' }}>
-                    <strong>Global Shortcuts:</strong> Works universally over games, code editors, and browsers.
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#38BDF8', flexShrink: 0 }} />
-                  <div style={{ fontSize: 13, color: '#E2E8F0' }}>
-                    <strong>Local &amp; Private:</strong> Operates directly on your personal Gemini key with zero monthly subscriptions.
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 1: LICENSE VERIFICATION WITH CODE */}
-          {currentStep === 1 && (
-            <div>
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '4px 10px',
-                  borderRadius: 999,
-                  background: licenseVerified ? 'rgba(34, 197, 94, 0.12)' : 'rgba(56, 189, 248, 0.12)',
-                  color: licenseVerified ? '#22C55E' : '#38BDF8',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: '0.04em',
-                  marginBottom: 14,
-                }}
-              >
-                <span>{licenseVerified ? 'ORDER VERIFIED' : 'PURCHASE VERIFICATION'}</span>
-              </div>
-              <h2
-                style={{
-                  fontSize: 22,
-                  fontWeight: 800,
-                  color: '#F8FAFC',
-                  margin: '0 0 10px',
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                Activate Founders License
-              </h2>
-              <p style={{ fontSize: 13.5, lineHeight: 1.6, color: '#94A3B8', margin: '0 0 18px' }}>
-                Enter the email address and Order # or License Key from your purchase confirmation receipt.
-              </p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <input
                   type="email"
                   value={licenseEmail}
-                  onChange={(e) => {
-                    setLicenseEmail(e.target.value);
-                    setLicenseVerified(false);
-                    setLicenseError('');
-                  }}
-                  placeholder="Purchase email (e.g. name@example.com)"
-                  style={{
-                    height: 42,
-                    background: '#141822',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                    borderRadius: 10,
-                    padding: '0 14px',
-                    color: '#F8FAFC',
-                    fontSize: 13.5,
-                    outline: 'none',
-                  }}
+                  onChange={(e) => setLicenseEmail(e.target.value)}
+                  placeholder="Purchase email (e.g. you@gmail.com)"
+                  style={inputStyle}
                 />
-
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <input
-                    type="text"
-                    value={licenseCode}
-                    onChange={(e) => {
-                      setLicenseCode(e.target.value);
-                      setLicenseVerified(false);
-                      setLicenseError('');
-                    }}
-                    placeholder="Order # (e.g. 104829) or License Key"
-                    style={{
-                      flex: 1,
-                      height: 42,
-                      background: '#141822',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
-                      borderRadius: 10,
-                      padding: '0 14px',
-                      color: '#F8FAFC',
-                      fontSize: 13,
-                      fontFamily: 'var(--kibo-font-mono, monospace)',
-                      outline: 'none',
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleVerifyLicense}
-                    disabled={isVerifyingLicense}
-                    style={{
-                      height: 42,
-                      padding: '0 20px',
-                      borderRadius: 10,
-                      background: licenseVerified ? '#22C55E' : '#38BDF8',
-                      color: '#0A0E17',
-                      fontWeight: 700,
-                      fontSize: 13,
-                      border: 'none',
-                      cursor: isVerifyingLicense ? 'wait' : 'pointer',
-                      transition: 'all 0.2s',
-                      flexShrink: 0,
-                    }}
-                  >
-                    {isVerifyingLicense ? 'Verifying...' : licenseVerified ? 'Verified' : 'Verify'}
-                  </button>
-                </div>
-              </div>
-
-              {licenseVerified && (
-                <div
-                  style={{
-                    padding: '10px 14px',
-                    borderRadius: 8,
-                    background: 'rgba(34, 197, 94, 0.12)',
-                    border: '1px solid rgba(34, 197, 94, 0.3)',
-                    color: '#22C55E',
-                    fontSize: 12.5,
-                    fontWeight: 600,
+                <input
+                  type="text"
+                  value={licenseCode}
+                  onChange={(e) => setLicenseCode(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleVerifyLicense();
                   }}
-                >
-                  Founders license unlocked for {licenseEmail}. You may proceed to step 3.
-                </div>
-              )}
+                  placeholder="License Key (e.g. KIBO-XXXX-XXXX)"
+                  style={{ ...inputStyle, fontFamily: 'JetBrains Mono, monospace', fontSize: 12.5 }}
+                />
+              </div>
 
               {licenseError && (
                 <div
                   style={{
-                    padding: '10px 14px',
-                    borderRadius: 8,
-                    background: 'rgba(239, 68, 68, 0.12)',
-                    border: '1px solid rgba(239, 68, 68, 0.3)',
-                    color: '#F87171',
-                    fontSize: 12.5,
-                    lineHeight: 1.5,
+                    fontSize: 12,
+                    color: '#FCA5A5',
+                    background: 'rgba(239, 68, 68, 0.10)',
+                    border: '1px solid rgba(239, 68, 68, 0.25)',
+                    borderRadius: 9,
+                    padding: '8px 11px',
+                    lineHeight: 1.45,
                   }}
                 >
                   {licenseError}
                 </div>
               )}
 
-              {!licenseVerified && !licenseError && (
-                <div style={{ fontSize: 12, color: '#64748B', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span>Don't have a license?</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const api = (window as any).kiboAPI;
-                      if (api?.openUrl) {
-                        api.openUrl('https://kiboai.vercel.app/buy');
-                      } else {
-                        window.open('https://kiboai.vercel.app/buy', '_blank');
-                      }
-                    }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#38BDF8',
-                      fontSize: 12,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      padding: 0,
-                      textDecoration: 'underline',
-                    }}
-                  >
-                    Get Founders Edition ($8)
-                  </button>
+              {licenseVerified && (
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: '#6EE7B7',
+                    background: 'rgba(16, 185, 129, 0.12)',
+                    border: '1px solid rgba(16, 185, 129, 0.28)',
+                    borderRadius: 9,
+                    padding: '8px 11px',
+                  }}
+                >
+                  License verified. Continuing...
                 </div>
               )}
-            </div>
-          )}
 
-          {/* STEP 2: GOOGLE GEMINI API KEY */}
-          {currentStep === 2 && (
-            <div>
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '4px 10px',
-                  borderRadius: 999,
-                  background: keySaved ? 'rgba(34, 197, 94, 0.12)' : 'rgba(56, 189, 248, 0.12)',
-                  color: keySaved ? '#22C55E' : '#38BDF8',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: '0.04em',
-                  marginBottom: 14,
-                }}
-              >
-                <span>{keySaved ? 'ENGINE CONNECTED' : 'INTELLIGENCE ENGINE'}</span>
-              </div>
-              <h2
-                style={{
-                  fontSize: 22,
-                  fontWeight: 800,
-                  color: '#F8FAFC',
-                  margin: '0 0 10px',
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                Connect Google Gemini Key
-              </h2>
-              <p style={{ fontSize: 13.5, lineHeight: 1.6, color: '#94A3B8', margin: '0 0 16px' }}>
-                Kibo communicates directly with Google's Gemini models using your personal key. Google provides a generous free tier with zero subscription cost.
-              </p>
-
-              {/* Action Buttons: Open & Minimize to Foreground */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingTop: 4 }}>
                 <button
                   type="button"
-                  onClick={openGoogleAiStudio}
+                  onClick={() => openExternalAndMinimize('https://kiboai.vercel.app/buy')}
                   style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    background: 'rgba(56, 189, 248, 0.12)',
-                    border: '1px solid rgba(56, 189, 248, 0.35)',
-                    color: '#38BDF8',
-                    padding: '9px 16px',
-                    borderRadius: 10,
-                    fontSize: 13,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  <span>Get Free Key on Google AI Studio</span>
-                  <span style={{ fontSize: 14 }}>&#x2197;</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    openGoogleAiStudio();
-                    handleMinimize();
-                  }}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                    color: '#CBD5E1',
-                    padding: '9px 14px',
-                    borderRadius: 10,
-                    fontSize: 12.5,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                  title="Opens browser and minimizes Kibo to taskbar so you can copy your key"
-                >
-                  <span>Open &amp; Minimize Kibo to Copy</span>
-                </button>
-              </div>
-
-              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                <input
-                  type="password"
-                  value={localGeminiKey}
-                  onChange={(e) => setLocalGeminiKey(e.target.value)}
-                  placeholder="Paste key here (AIzaSy...)"
-                  style={{
-                    flex: 1,
-                    height: 42,
-                    background: '#141822',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                    borderRadius: 10,
-                    padding: '0 14px',
-                    color: '#F8FAFC',
-                    fontSize: 13,
-                    fontFamily: 'var(--kibo-font-mono, monospace)',
-                    outline: 'none',
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={handleSaveGeminiKey}
-                  style={{
-                    height: 42,
-                    padding: '0 18px',
-                    borderRadius: 10,
-                    background: keySaved ? '#22C55E' : '#38BDF8',
-                    color: '#0A0E17',
-                    fontWeight: 700,
-                    fontSize: 13,
+                    background: 'none',
                     border: 'none',
+                    color: '#A1A1AA',
+                    fontSize: 12,
                     cursor: 'pointer',
+                    padding: 0,
+                    textDecoration: 'underline',
                   }}
                 >
-                  {keySaved ? 'Saved' : 'Save'}
+                  Need a key? Get Kibo ($8)
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isVerifying}
+                  onClick={handleVerifyLicense}
+                  style={{ ...primaryBtn, opacity: isVerifying ? 0.65 : 1 }}
+                >
+                  {isVerifying ? 'Verifying...' : 'Verify & Continue'}
+                </button>
+              </div>
+            </>
+          )}
+
+          {step === 1 && (
+            <>
+              <div>
+                <h2 style={{ margin: '0 0 6px', fontSize: 19, fontWeight: 700, letterSpacing: '-0.02em' }}>
+                  Connect your Gemini API key
+                </h2>
+                <p style={{ margin: 0, fontSize: 13, color: '#A1A1AA', lineHeight: 1.5 }}>
+                  Kibo runs local-first with your personal free Google AI Studio key. Stored strictly on your PC.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => openExternalAndMinimize('https://aistudio.google.com/app/apikey')}
+                style={{ ...secondaryBtn, width: '100%', justifyContent: 'space-between', padding: '0 14px' }}
+              >
+                <span>Open Google AI Studio to copy key</span>
+                <span style={{ color: '#8E8E93', fontSize: 12 }}>Minimizes Kibo &#x2197;</span>
+              </button>
+
+              <input
+                type="password"
+                value={localGeminiKey}
+                onChange={(e) => setLocalGeminiKey(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveGeminiAndNext();
+                }}
+                placeholder="Paste key (AIzaSy...)"
+                style={{ ...inputStyle, fontFamily: 'JetBrains Mono, monospace', fontSize: 12.5 }}
+              />
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingTop: 4 }}>
+                <button
+                  type="button"
+                  onClick={() => setStep(2)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#8E8E93',
+                    fontSize: 12.5,
+                    cursor: 'pointer',
+                    padding: 0,
+                  }}
+                >
+                  Skip for now
+                </button>
+                <button type="button" onClick={handleSaveGeminiAndNext} style={primaryBtn}>
+                  {localGeminiKey.trim() ? 'Save & Continue' : 'Continue'}
+                </button>
+              </div>
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+              <div>
+                <h2 style={{ margin: '0 0 6px', fontSize: 19, fontWeight: 700, letterSpacing: '-0.02em' }}>
+                  Pick your notch style
+                </h2>
+                <p style={{ margin: 0, fontSize: 13, color: '#A1A1AA', lineHeight: 1.5 }}>
+                  You can switch styles, frosted glass, and shortcuts anytime in Settings.
+                </p>
+              </div>
+
+              {/* 2-Card Minimal Style Picker */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                {(
+                  [
+                    { id: 'classic', title: 'Classic Bezel', sub: 'Docked flush to top edge' },
+                    { id: 'floating', title: 'Floating Island', sub: 'Detached frosted capsule' },
+                  ] as const
+                ).map((item) => {
+                  const selected = notchStyle === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => handleSelectStyle(item.id)}
+                      style={{
+                        background: selected ? 'rgba(255, 255, 255, 0.08)' : '#232329',
+                        border: selected ? '1.5px solid #F4F4F5' : '1px solid rgba(255, 255, 255, 0.08)',
+                        borderRadius: 12,
+                        padding: 10,
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 8,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '100%',
+                          height: 46,
+                          borderRadius: 8,
+                          background: 'linear-gradient(180deg, #1F2028 0%, #14151B 100%)',
+                          border: '1px solid rgba(255, 255, 255, 0.07)',
+                          display: 'flex',
+                          justifyContent: 'center',
+                          alignItems: 'flex-start',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {item.id === 'classic' ? (
+                          <div
+                            style={{
+                              width: 84,
+                              height: 15,
+                              background: '#0A0A0D',
+                              borderBottomLeftRadius: 8,
+                              borderBottomRightRadius: 8,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <span style={{ width: 24, height: 3, borderRadius: 999, background: 'rgba(255,255,255,0.22)' }} />
+                          </div>
+                        ) : (
+                          <div
+                            style={{
+                              width: 84,
+                              height: 16,
+                              marginTop: 7,
+                              background: '#0B0C10',
+                              borderRadius: 999,
+                              border: '1px solid rgba(255, 255, 255, 0.16)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <span style={{ width: 24, height: 3, borderRadius: 999, background: 'rgba(255,255,255,0.22)' }} />
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 12.5, fontWeight: 700, color: '#FFFFFF' }}>{item.title}</div>
+                        <div style={{ fontSize: 11, color: '#8E8E93', marginTop: 1 }}>{item.sub}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Frosted Glass Toggle Row */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '10px 12px',
+                  borderRadius: 11,
+                  background: '#232329',
+                  border: '1px solid rgba(255, 255, 255, 0.07)',
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, color: '#F4F4F5' }}>Real-Time Frosted Glass</div>
+                  <div style={{ fontSize: 11, color: '#8E8E93' }}>Soft Gaussian backdrop blur behind the notch</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleToggleGlass}
+                  style={{
+                    width: 38,
+                    height: 22,
+                    borderRadius: 999,
+                    border: 'none',
+                    background: glassEnabled ? '#30D158' : '#3A3A40',
+                    position: 'relative',
+                    cursor: 'pointer',
+                    padding: 0,
+                    flexShrink: 0,
+                  }}
+                >
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: 2,
+                      left: glassEnabled ? 18 : 2,
+                      width: 18,
+                      height: 18,
+                      borderRadius: '50%',
+                      background: '#FFFFFF',
+                      transition: 'left 0.16s ease',
+                    }}
+                  />
                 </button>
               </div>
 
-              <div style={{ fontSize: 12, color: '#64748B' }}>
-                Your browser will open in front. Create or copy your key, then click Kibo in your taskbar to paste it above.
-              </div>
-            </div>
-          )}
-
-          {/* STEP 3: HARDWARE SHORTCUTS */}
-          {currentStep === 3 && (
-            <div>
+              {/* Compact 3-Shortcut Cheat Sheet */}
               <div
                 style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
                   gap: 6,
-                  padding: '4px 10px',
-                  borderRadius: 999,
-                  background: 'rgba(56, 189, 248, 0.12)',
-                  color: '#38BDF8',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: '0.04em',
-                  marginBottom: 14,
                 }}
               >
-                <span>GLOBAL HOTKEYS</span>
+                {[
+                  { keys: customShortcuts.ask || 'Win + Alt', label: 'Ask Kibo' },
+                  { keys: customShortcuts.dictate || 'Ctrl + Win', label: 'Dictate' },
+                  { keys: customShortcuts.lasso || 'Ctrl + Shift', label: 'Circle to Ask' },
+                ].map((sc) => (
+                  <div
+                    key={sc.label}
+                    style={{
+                      padding: '8px 8px',
+                      borderRadius: 9,
+                      background: 'rgba(255, 255, 255, 0.035)',
+                      border: '1px solid rgba(255, 255, 255, 0.07)',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#F4F4F5', fontFamily: 'JetBrains Mono, monospace' }}>
+                      {sc.keys}
+                    </div>
+                    <div style={{ fontSize: 10.5, color: '#8E8E93', marginTop: 2 }}>{sc.label}</div>
+                  </div>
+                ))}
               </div>
-              <h2
-                style={{
-                  fontSize: 22,
-                  fontWeight: 800,
-                  color: '#F8FAFC',
-                  margin: '0 0 10px',
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                How to Summon Kibo
-              </h2>
-              <p style={{ fontSize: 13.5, lineHeight: 1.6, color: '#94A3B8', margin: '0 0 16px' }}>
-                Use these three shortcuts from anywhere in Windows to interact with Kibo:
-              </p>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {/* Shortcut 1 */}
-                <div
-                  style={{
-                    background: '#141822',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: 12,
-                    padding: '12px 16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#F8FAFC' }}>Ask &amp; Voice Control</div>
-                    <div style={{ fontSize: 11.5, color: '#64748B' }}>Hold, speak your command, and release</div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <kbd
-                      style={{
-                        background: '#0D1117',
-                        border: '1px solid rgba(255,255,255,0.15)',
-                        borderRadius: 6,
-                        padding: '4px 8px',
-                        fontSize: 12,
-                        color: '#F8FAFC',
-                        fontWeight: 700,
-                      }}
-                    >
-                      Win
-                    </kbd>
-                    <span style={{ color: '#64748B', fontSize: 12 }}>+</span>
-                    <kbd
-                      style={{
-                        background: '#0D1117',
-                        border: '1px solid rgba(255,255,255,0.15)',
-                        borderRadius: 6,
-                        padding: '4px 8px',
-                        fontSize: 12,
-                        color: '#F8FAFC',
-                        fontWeight: 700,
-                      }}
-                    >
-                      Alt
-                    </kbd>
-                  </div>
-                </div>
-
-                {/* Shortcut 2 */}
-                <div
-                  style={{
-                    background: '#141822',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: 12,
-                    padding: '12px 16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#F8FAFC' }}>Circle to Ask (Screen Vision)</div>
-                    <div style={{ fontSize: 11.5, color: '#64748B' }}>Draw a lasso around any screen region to inspect</div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <kbd
-                      style={{
-                        background: '#0D1117',
-                        border: '1px solid rgba(255,255,255,0.15)',
-                        borderRadius: 6,
-                        padding: '4px 8px',
-                        fontSize: 12,
-                        color: '#F8FAFC',
-                        fontWeight: 700,
-                      }}
-                    >
-                      Ctrl
-                    </kbd>
-                    <span style={{ color: '#64748B', fontSize: 12 }}>+</span>
-                    <kbd
-                      style={{
-                        background: '#0D1117',
-                        border: '1px solid rgba(255,255,255,0.15)',
-                        borderRadius: 6,
-                        padding: '4px 8px',
-                        fontSize: 12,
-                        color: '#F8FAFC',
-                        fontWeight: 700,
-                      }}
-                    >
-                      Shift
-                    </kbd>
-                  </div>
-                </div>
-
-                {/* Shortcut 3 */}
-                <div
-                  style={{
-                    background: '#141822',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: 12,
-                    padding: '12px 16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#F8FAFC' }}>Clean Dictation</div>
-                    <div style={{ fontSize: 11.5, color: '#64748B' }}>Hold to dictate, types polished text at your cursor</div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <kbd
-                      style={{
-                        background: '#0D1117',
-                        border: '1px solid rgba(255,255,255,0.15)',
-                        borderRadius: 6,
-                        padding: '4px 8px',
-                        fontSize: 12,
-                        color: '#F8FAFC',
-                        fontWeight: 700,
-                      }}
-                    >
-                      Ctrl
-                    </kbd>
-                    <span style={{ color: '#64748B', fontSize: 12 }}>+</span>
-                    <kbd
-                      style={{
-                        background: '#0D1117',
-                        border: '1px solid rgba(255,255,255,0.15)',
-                        borderRadius: 6,
-                        padding: '4px 8px',
-                        fontSize: 12,
-                        color: '#F8FAFC',
-                        fontWeight: 700,
-                      }}
-                    >
-                      Win
-                    </kbd>
-                  </div>
-                </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4 }}>
+                <button type="button" onClick={() => setStep(1)} style={secondaryBtn}>
+                  Back
+                </button>
+                <button type="button" onClick={handleFinish} style={primaryBtn}>
+                  Start Kibo
+                </button>
               </div>
-            </div>
+            </>
           )}
-
-          {/* Navigation Action Buttons */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginTop: 24,
-              paddingTop: 18,
-              borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-            }}
-          >
-            {currentStep > 0 ? (
-              <button
-                type="button"
-                onClick={() => setCurrentStep((prev) => Math.max(0, prev - 1))}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#94A3B8',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  padding: '8px 12px',
-                }}
-              >
-                Back
-              </button>
-            ) : (
-              <div />
-            )}
-
-            {currentStep < 3 ? (
-              <button
-                type="button"
-                onClick={() => {
-                  if (currentStep === 1 && !licenseVerified) {
-                    setLicenseError('Please enter your purchase details and click Verify first.');
-                    soundFX.playErrorChime();
-                    return;
-                  }
-                  setCurrentStep((prev) => Math.min(3, prev + 1));
-                }}
-                disabled={currentStep === 1 && !licenseVerified}
-                style={{
-                  background: (currentStep === 1 && !licenseVerified) ? 'rgba(56, 189, 248, 0.15)' : '#38BDF8',
-                  color: (currentStep === 1 && !licenseVerified) ? '#64748B' : '#0A0E17',
-                  border: 'none',
-                  borderRadius: 10,
-                  padding: '10px 22px',
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor: (currentStep === 1 && !licenseVerified) ? 'not-allowed' : 'pointer',
-                  boxShadow: (currentStep === 1 && !licenseVerified) ? 'none' : '0 2px 10px rgba(56, 189, 248, 0.25)',
-                  transition: 'all 0.2s',
-                  opacity: (currentStep === 1 && !licenseVerified) ? 0.6 : 1,
-                }}
-              >
-                {currentStep === 0
-                  ? 'Get Started'
-                  : currentStep === 1 && !licenseVerified
-                  ? 'Verify License to Continue'
-                  : 'Continue'}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleFinish}
-                style={{
-                  background: '#22C55E',
-                  color: '#0A0E17',
-                  border: 'none',
-                  borderRadius: 10,
-                  padding: '10px 24px',
-                  fontSize: 13,
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 12px rgba(34, 197, 94, 0.3)',
-                  transition: 'opacity 0.2s',
-                }}
-              >
-                Launch Kibo
-              </button>
-            )}
-          </div>
         </div>
       </div>
     </div>

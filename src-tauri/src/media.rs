@@ -17,6 +17,7 @@ pub struct NowPlayingMedia {
     pub title: String,
     pub artist: String,
     pub source: String,
+    pub source_app_id: String,
     pub thumbnail: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub position_sec: Option<i64>,
@@ -31,6 +32,7 @@ impl Default for NowPlayingMedia {
             title: String::new(),
             artist: String::new(),
             source: String::new(),
+            source_app_id: String::new(),
             thumbnail: String::new(),
             position_sec: None,
             duration_sec: 210,
@@ -64,6 +66,22 @@ fn clean_source_name(src_app: &str) -> String {
         "Brave".into()
     } else if low.contains("firefox") {
         "Firefox".into()
+    } else if low.contains("opera") {
+        "Opera".into()
+    } else if low.contains("vivaldi") {
+        "Vivaldi".into()
+    } else if low.contains("arc") {
+        "Arc".into()
+    } else if low.contains("vlc") {
+        "VLC".into()
+    } else if low.contains("applemusic") || low.contains("itunes") {
+        "Apple Music".into()
+    } else if low.contains("tidal") {
+        "TIDAL".into()
+    } else if low.contains("foobar") {
+        "foobar2000".into()
+    } else if low.contains("musicbee") {
+        "MusicBee".into()
     } else {
         "Media Player".into()
     }
@@ -210,6 +228,7 @@ pub fn get_now_playing_sync() -> NowPlayingMedia {
         title,
         artist,
         source,
+        source_app_id: src_app,
         thumbnail,
         position_sec,
         duration_sec,
