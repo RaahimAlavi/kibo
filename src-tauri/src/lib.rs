@@ -646,9 +646,7 @@ fn filter_existing_files(file_paths: Vec<String>) -> Vec<String> {
 
 #[tauri::command]
 async fn convert_file(payload: Value) -> Value {
-    tokio::task::spawn_blocking(move || services::convert_file(payload))
-        .await
-        .unwrap_or_else(|_| json!({ "success": false, "error": "Conversion task failed" }))
+    services::convert_file(payload).await
 }
 
 #[tauri::command]

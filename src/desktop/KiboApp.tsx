@@ -155,6 +155,7 @@ declare global {
         filePath?: string;
         fileNameQuery?: string;
         targetFormat: string;
+        apiKey?: string;
       }) => Promise<{
         success: boolean;
         sourcePath?: string;
@@ -5256,7 +5257,11 @@ export const KiboApp: React.FC<KiboAppProps> = ({
         text: `Converting to .${opts.targetFormat.toUpperCase()} (original file will not be deleted)...`,
       });
       try {
-        const res = await window.kiboAPI.convertFile(opts);
+        const activeKey = (apiKey || localStorage.getItem('kibo_gemini_key') || '').trim();
+        const res = await window.kiboAPI.convertFile({
+          ...opts,
+          apiKey: activeKey || undefined,
+        });
         setIsConvertingFile(false);
         if (res?.success && res.outputPath) {
           const srcName = (res.sourcePath || opts.filePath || opts.fileNameQuery || 'File').split(/[\\/]/).pop() || 'File';
@@ -5301,7 +5306,7 @@ export const KiboApp: React.FC<KiboAppProps> = ({
         return null;
       }
     },
-    [addEmbers]
+    [addEmbers, apiKey]
   );
 
   const handleRunBatchConversion = useCallback(
@@ -5352,9 +5357,11 @@ export const KiboApp: React.FC<KiboAppProps> = ({
         );
 
         try {
+          const activeKey = (apiKey || localStorage.getItem('kibo_gemini_key') || '').trim();
           const res = await window.kiboAPI.convertFile({
             filePath: item.filePath,
             targetFormat,
+            apiKey: activeKey || undefined,
           });
           if (res?.success && res.outputPath) {
             okCount += 1;
@@ -5427,7 +5434,7 @@ export const KiboApp: React.FC<KiboAppProps> = ({
         });
       }
     },
-    [addEmbers, handleRunFileConversion]
+    [addEmbers, apiKey, handleRunFileConversion]
   );
 
   const showProactiveBanner = !isExpanded && !showCompanionWindow && Boolean(detectedAppId);

@@ -2,7 +2,7 @@
   "version": "1.0.2",
   "minVersion": "1.0.0",
   "installerFileName": "Kibo_1.0.2_x64-setup.exe",
-  "installerSize": "2.6 MB",
+  "installerSize": "3.1 MB",
   "downloadUrl": "https://kiboai.vercel.app/downloads/Kibo_1.0.2_x64-setup.exe",
   "whatsNewUrl": "https://kiboai.vercel.app/whats-new",
   "releaseDate": "2026-11-25",
@@ -45,7 +45,7 @@
         {
           "tag": "Core",
           "title": "Native Rust + Tauri v2 Architecture",
-          "detail": "Compact 2.6 MB installer, minimal 3-step onboarding, reliable always-on-top launch, per-app Windows media volume control, and zero WebView2 microphone permission popups."
+          "detail": "Compact 3.1 MB installer, minimal 3-step onboarding, reliable always-on-top launch, per-app Windows media volume control, full PDF/OCR-to-Word conversion with Arabic RTL support, and zero WebView2 microphone permission popups."
         },
         {
           "tag": "Appearance",

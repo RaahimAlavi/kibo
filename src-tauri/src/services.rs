@@ -676,11 +676,87 @@ fn build_store_zip(entries: &[(&str, &[u8])]) -> Vec<u8> {
 }
 
 fn escape_xml(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-        .replace('\'', "&apos;")
+    let mut out = String::with_capacity(s.len() + 16);
+    for ch in s.chars() {
+        // Strip invalid XML 1.0 control characters so Microsoft Word never flags corrupt XML
+        let code = ch as u32;
+        if code < 0x20 && ch != '\t' && ch != '\n' && ch != '\r' {
+            continue;
+        }
+        match ch {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            '\'' => out.push_str("&apos;"),
+            _ => out.push(ch),
+        }
+    }
+    out
+}
+
+fn is_rtl_char(ch: char) -> bool {
+    let c = ch as u32;
+    (0x0590..=0x05FF).contains(&c)
+        || (0x0600..=0x06FF).contains(&c)
+        || (0x0750..=0x077F).contains(&c)
+        || (0x08A0..=0x08FF).contains(&c)
+        || (0xFB50..=0xFDFF).contains(&c)
+        || (0xFE70..=0xFEFF).contains(&c)
+}
+
+fn is_rtl_paragraph(line: &str) -> bool {
+    let mut rtl = 0usize;
+    let mut ltr = 0usize;
+    for ch in line.chars() {
+        if is_rtl_char(ch) {
+            rtl += 1;
+        } else if ch.is_ascii_alphabetic() {
+            ltr += 1;
+        }
+    }
+    rtl > 0 && rtl >= ltr
+}
+
+fn render_docx_runs(line: &str, rtl: bool, is_heading: bool, font_half_pts: u32) -> String {
+    let mut xml = String::new();
+    let segments: Vec<(&str, bool)> = if line.contains("**") {
+        let mut res = Vec::new();
+        let mut bold = false;
+        for part in line.split("**") {
+            if !part.is_empty() {
+                res.push((part, bold));
+            }
+            bold = !bold;
+        }
+        res
+    } else {
+        vec![(line, false)]
+    };
+
+    for (seg, seg_bold) in segments {
+        let bold_tag = if is_heading || seg_bold {
+            "<w:b/><w:bCs/>"
+        } else {
+            ""
+        };
+        let rtl_tag = if rtl { "<w:rtl/>" } else { "" };
+        let fonts = if rtl {
+            r#"<w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>"#
+        } else {
+            r#"<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Arial"/>"#
+        };
+        xml.push_str(&format!(
+            "<w:r><w:rPr>{}{}{}<w:sz w:val=\"{}\"/><w:szCs w:val=\"{}\"/></w:rPr><w:t xml:space=\"preserve\">{}</w:t></w:r>",
+            fonts,
+            bold_tag,
+            rtl_tag,
+            font_half_pts,
+            font_half_pts,
+            escape_xml(seg)
+        ));
+    }
+    xml
 }
 
 fn write_text_docx(out_path: &Path, text: &str) -> Result<(), String> {
@@ -699,17 +775,55 @@ fn write_text_docx(out_path: &Path, text: &str) -> Result<(), String> {
     let doc_rels = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>"#;
 
+    let normalized = text.replace("\r\n", "\n").replace('\r', "\n");
+    let doc_is_rtl = is_rtl_paragraph(&normalized);
+
     let mut body = String::new();
-    for line in text.replace("\r\n", "\n").replace('\r', "\n").split('\n') {
-        body.push_str("<w:p><w:r><w:t xml:space=\"preserve\">");
-        body.push_str(&escape_xml(line));
-        body.push_str("</w:t></w:r></w:p>");
+    for raw_line in normalized.split('\n') {
+        let trimmed = raw_line.trim();
+        if trimmed == "---" || trimmed == "___" {
+            body.push_str("<w:p><w:r><w:br w:type=\"page\"/></w:r></w:p>");
+            continue;
+        }
+        let (clean_line, is_heading, font_sz) = if let Some(rest) = trimmed.strip_prefix("### ") {
+            (rest, true, 24u32)
+        } else if let Some(rest) = trimmed.strip_prefix("## ") {
+            (rest, true, 26u32)
+        } else if let Some(rest) = trimmed.strip_prefix("# ") {
+            (rest, true, 30u32)
+        } else {
+            (raw_line, false, 22u32)
+        };
+
+        let para_rtl = if clean_line.trim().is_empty() {
+            doc_is_rtl
+        } else {
+            is_rtl_paragraph(clean_line)
+        };
+        let ppr = if para_rtl {
+            "<w:pPr><w:bidi/><w:jc w:val=\"right\"/><w:spacing w:after=\"120\" w:line=\"276\" w:lineRule=\"auto\"/></w:pPr>"
+        } else {
+            "<w:pPr><w:spacing w:after=\"120\" w:line=\"276\" w:lineRule=\"auto\"/></w:pPr>"
+        };
+
+        body.push_str("<w:p>");
+        body.push_str(ppr);
+        if !clean_line.is_empty() {
+            body.push_str(&render_docx_runs(clean_line, para_rtl, is_heading, font_sz));
+        }
+        body.push_str("</w:p>");
     }
+
+    let sect_pr = if doc_is_rtl {
+        "<w:sectPr><w:bidi/><w:pgSz w:w=\"12240\" w:h=\"15840\"/><w:pgMar w:top=\"1080\" w:right=\"1080\" w:bottom=\"1080\" w:left=\"1080\"/></w:sectPr>"
+    } else {
+        "<w:sectPr><w:pgSz w:w=\"12240\" w:h=\"15840\"/><w:pgMar w:top=\"1080\" w:right=\"1080\" w:bottom=\"1080\" w:left=\"1080\"/></w:sectPr>"
+    };
 
     let document_xml = format!(
         r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>{}<w:sectPr/></w:body></w:document>"#,
-        body
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>{}{}</w:body></w:document>"#,
+        body, sect_pr
     );
 
     let zip_bytes = build_store_zip(&[
@@ -718,6 +832,82 @@ fn write_text_docx(out_path: &Path, text: &str) -> Result<(), String> {
         ("word/_rels/document.xml.rels", doc_rels.as_bytes()),
         ("word/document.xml", document_xml.as_bytes()),
     ]);
+    fs::write(out_path, zip_bytes).map_err(|e| e.to_string())
+}
+
+fn write_image_pages_docx(out_path: &Path, pages: &[(Vec<u8>, u32, u32)]) -> Result<(), String> {
+    if pages.is_empty() {
+        return Err("No pages to embed into Word document.".into());
+    }
+
+    let content_types = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Default Extension="jpg" ContentType="image/jpeg"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>"#;
+
+    let rels = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>"#;
+
+    let mut doc_rels = String::from(
+        r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">"#,
+    );
+    let mut body = String::new();
+
+    // Fit cleanly inside standard 7.5in x 9.8in printable page area (1 inch = 914400 EMU)
+    let max_cx: f64 = 6_858_000.0;
+    let max_cy: f64 = 8_961_120.0;
+
+    for (idx, (_, w, h)) in pages.iter().enumerate() {
+        let num = idx + 1;
+        let rid = format!("rId{}", num);
+        doc_rels.push_str(&format!(
+            r#"<Relationship Id="{}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/page_{}.jpg"/>"#,
+            rid, num
+        ));
+
+        let iw = (*w).max(1) as f64;
+        let ih = (*h).max(1) as f64;
+        let scale = (max_cx / iw).min(max_cy / ih);
+        let cx = (iw * scale).round() as u64;
+        let cy = (ih * scale).round() as u64;
+
+        body.push_str(&format!(
+            r#"<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="{cx}" cy="{cy}"/><wp:docPr id="{num}" name="Page {num}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="{num}" name="page_{num}.jpg"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="{rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="{cx}" cy="{cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>"#
+        ));
+
+        if num < pages.len() {
+            body.push_str("<w:p><w:r><w:br w:type=\"page\"/></w:r></w:p>");
+        }
+    }
+    doc_rels.push_str("</Relationships>");
+
+    let document_xml = format!(
+        r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><w:body>{}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="540" w:right="540" w:bottom="540" w:left="540"/></w:sectPr></w:body></w:document>"#,
+        body
+    );
+
+    let mut owned_names: Vec<String> = Vec::with_capacity(pages.len());
+    for idx in 0..pages.len() {
+        owned_names.push(format!("word/media/page_{}.jpg", idx + 1));
+    }
+
+    let mut zip_entries: Vec<(&str, &[u8])> = vec![
+        ("[Content_Types].xml", content_types.as_bytes()),
+        ("_rels/.rels", rels.as_bytes()),
+        ("word/_rels/document.xml.rels", doc_rels.as_bytes()),
+        ("word/document.xml", document_xml.as_bytes()),
+    ];
+    for (idx, (jpg, _, _)) in pages.iter().enumerate() {
+        zip_entries.push((owned_names[idx].as_str(), jpg.as_slice()));
+    }
+
+    let zip_bytes = build_store_zip(&zip_entries);
     fs::write(out_path, zip_bytes).map_err(|e| e.to_string())
 }
 
@@ -763,60 +953,362 @@ fn extract_docx_text(src: &Path) -> Option<String> {
     None
 }
 
-fn extract_pdf_text(src: &Path) -> Option<String> {
-    let bytes = fs::read(src).ok()?;
-    let raw = String::from_utf8_lossy(&bytes);
-    let mut out = String::new();
-    let chars: Vec<char> = raw.chars().collect();
-    let mut i = 0usize;
-    while i < chars.len() {
-        if chars[i] == '(' {
-            let mut depth = 1i32;
-            let mut buf = String::new();
-            i += 1;
-            while i < chars.len() && depth > 0 {
-                let c = chars[i];
-                if c == '\\' && i + 1 < chars.len() {
-                    i += 1;
-                    match chars[i] {
-                        'n' => buf.push('\n'),
-                        'r' => buf.push('\r'),
-                        't' => buf.push('\t'),
-                        other => buf.push(other),
-                    }
-                } else if c == '(' {
-                    depth += 1;
-                    buf.push(c);
-                } else if c == ')' {
-                    depth -= 1;
-                    if depth > 0 {
-                        buf.push(c);
-                    }
-                } else if c.is_ascii_graphic() || c == ' ' {
-                    buf.push(c);
-                }
-                i += 1;
-            }
-            // Keep literal strings followed closely by Tj/TJ operators
-            let lookahead: String = chars[i..chars.len().min(i + 12)].iter().collect();
-            if lookahead.contains("Tj") || lookahead.contains("TJ") || lookahead.contains("'") {
-                if !buf.trim().is_empty() {
-                    out.push_str(&buf);
-                    out.push('\n');
-                }
-            }
-        } else {
-            i += 1;
+fn is_meaningful_document_text(text: &str) -> bool {
+    let mut alnum = 0usize;
+    let mut bad = 0usize;
+    for ch in text.chars() {
+        let code = ch as u32;
+        if ch == '\u{FFFD}' || (0xE000..=0xF8FF).contains(&code) {
+            bad += 1;
+        } else if ch.is_alphabetic() || ch.is_numeric() {
+            alnum += 1;
         }
     }
-    let trimmed = out.trim().to_string();
-    if !trimmed.is_empty() {
-        Some(trimmed)
+    if alnum < 20 {
+        return false;
+    }
+    // Reject PDFs with broken/unmapped custom glyph tables (common in scanned or legacy Arabic PDFs)
+    bad * 8 <= alnum
+}
+
+fn clean_extracted_text(raw: &str) -> String {
+    let mut lines: Vec<String> = Vec::new();
+    let mut prev_blank = false;
+    for line in raw.replace("\r\n", "\n").replace('\r', "\n").split('\n') {
+        let trimmed_end = line.trim_end();
+        if trimmed_end.trim().is_empty() {
+            if !prev_blank && !lines.is_empty() {
+                lines.push(String::new());
+                prev_blank = true;
+            }
+        } else {
+            lines.push(trimmed_end.to_string());
+            prev_blank = false;
+        }
+    }
+    let out = lines.join("\n").trim().to_string();
+    // Strip accidental markdown code fences if an OCR model wraps output
+    if out.starts_with("```") {
+        let mut inner = out.lines().skip(1).collect::<Vec<_>>();
+        if inner.last().map(|l| l.trim() == "```").unwrap_or(false) {
+            inner.pop();
+        }
+        return inner.join("\n").trim().to_string();
+    }
+    out
+}
+
+fn extract_pdf_text_native(src: &Path) -> Option<String> {
+    let path_owned = src.to_path_buf();
+    let extracted = std::panic::catch_unwind(move || pdf_extract::extract_text(&path_owned))
+        .ok()
+        .and_then(|res| res.ok())?;
+    let cleaned = clean_extracted_text(&extracted);
+    if is_meaningful_document_text(&cleaned) {
+        Some(cleaned)
     } else {
-        Some(format!(
-            "[Converted from PDF: {}]\n\nNote: This PDF uses compressed or scanned streams; open in a PDF reader for full visual layout.",
-            src.file_name().and_then(|n| n.to_str()).unwrap_or("document.pdf")
-        ))
+        None
+    }
+}
+
+fn resolve_gemini_api_key(payload: &Value) -> Option<String> {
+    if let Some(k) = payload
+        .get("apiKey")
+        .and_then(|v| v.as_str())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+    {
+        return Some(k);
+    }
+    let settings = read_settings();
+    if let Some(k) = settings
+        .get("kibo_gemini_key")
+        .and_then(|v| v.as_str())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+    {
+        return Some(k);
+    }
+    for env_name in ["GEMINI_API_KEY", "VITE_GEMINI_API_KEY"] {
+        let e = get_env_var(env_name);
+        if !e.trim().is_empty() {
+            return Some(e.trim().to_string());
+        }
+    }
+    None
+}
+
+async fn gemini_ocr_parts(api_key: &str, inline_parts: Vec<(&str, Vec<u8>)>) -> Option<String> {
+    if api_key.trim().is_empty() || inline_parts.is_empty() {
+        return None;
+    }
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(60))
+        .build()
+        .ok()?;
+
+    let mut parts: Vec<Value> = Vec::with_capacity(inline_parts.len() + 1);
+    parts.push(json!({
+        "text": "Transcribe ALL visible text from this document verbatim, page by page, in the exact original language (keep Arabic in Arabic, Urdu in Urdu, English in English, etc. Do NOT translate, summarize, or add any explanation). Preserve titles, headings, numbered clauses, bullet lists, and line breaks cleanly. Separate distinct pages with a line containing only ---. Output ONLY the extracted text with no markdown code fences."
+    }));
+    for (mime, bytes) in inline_parts {
+        parts.push(json!({
+            "inlineData": {
+                "mimeType": mime,
+                "data": BASE64.encode(bytes)
+            }
+        }));
+    }
+
+    let body = json!({
+        "contents": [{
+            "role": "user",
+            "parts": parts
+        }],
+        "generationConfig": {
+            "temperature": 0.0,
+            "maxOutputTokens": 8192
+        }
+    });
+
+    for model in ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash"] {
+        let url = format!(
+            "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
+            model, api_key
+        );
+        let Ok(resp) = client.post(&url).json(&body).send().await else {
+            continue;
+        };
+        if !resp.status().is_success() {
+            continue;
+        }
+        let Ok(val) = resp.json::<Value>().await else {
+            continue;
+        };
+        let text = val
+            .pointer("/candidates/0/content/parts")
+            .and_then(|p| p.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|part| part.get("text").and_then(|t| t.as_str()))
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            })
+            .unwrap_or_default();
+        let cleaned = clean_extracted_text(&text);
+        if is_meaningful_document_text(&cleaned) {
+            return Some(cleaned);
+        }
+    }
+    None
+}
+
+fn normalize_winrt_path(src: &Path) -> String {
+    let abs = fs::canonicalize(src).unwrap_or_else(|_| src.to_path_buf());
+    let s = abs.to_string_lossy().to_string();
+    s.strip_prefix(r"\\?\").unwrap_or(&s).replace('/', "\\")
+}
+
+#[cfg(windows)]
+fn read_winrt_stream_bytes(
+    stream: &windows::Storage::Streams::InMemoryRandomAccessStream,
+) -> Option<Vec<u8>> {
+    use windows::Storage::Streams::DataReader;
+
+    let size = stream.Size().ok()? as usize;
+    if size == 0 || size > 64 * 1024 * 1024 {
+        return None;
+    }
+    stream.Seek(0).ok()?;
+    let input = stream.GetInputStreamAt(0).ok()?;
+    let reader = DataReader::CreateDataReader(&input).ok()?;
+    let loaded = reader.LoadAsync(size as u32).ok()?.get().ok()? as usize;
+    let mut buf = vec![0u8; loaded];
+    reader.ReadBytes(&mut buf).ok()?;
+    Some(buf)
+}
+
+#[cfg(windows)]
+fn run_winrt_ocr_on_bitmap(bitmap: &windows::Graphics::Imaging::SoftwareBitmap) -> Option<String> {
+    use windows::Media::Ocr::OcrEngine;
+
+    let mut engines: Vec<OcrEngine> = Vec::new();
+    if let Ok(eng) = OcrEngine::TryCreateFromUserProfileLanguages() {
+        engines.push(eng);
+    }
+    if let Ok(langs) = OcrEngine::AvailableRecognizerLanguages() {
+        let count = langs.Size().unwrap_or(0);
+        for i in 0..count {
+            if let Ok(lang) = langs.GetAt(i) {
+                let tag = lang
+                    .LanguageTag()
+                    .map(|t| t.to_string().to_lowercase())
+                    .unwrap_or_default();
+                if tag.starts_with("ar") || tag.starts_with("en") {
+                    if let Ok(eng) = OcrEngine::TryCreateFromLanguage(&lang) {
+                        engines.push(eng);
+                    }
+                }
+            }
+        }
+    }
+
+    let mut best_text = String::new();
+    let mut best_score = 0usize;
+    for engine in engines {
+        if let Ok(op) = engine.RecognizeAsync(bitmap) {
+            if let Ok(res) = op.get() {
+                let mut page_lines = Vec::new();
+                if let Ok(lines) = res.Lines() {
+                    let lc = lines.Size().unwrap_or(0);
+                    for j in 0..lc {
+                        if let Ok(line) = lines.GetAt(j) {
+                            if let Ok(txt) = line.Text() {
+                                let s = txt.to_string();
+                                if !s.trim().is_empty() {
+                                    page_lines.push(s);
+                                }
+                            }
+                        }
+                    }
+                }
+                let joined = page_lines.join("\n");
+                let score = joined.chars().filter(|c| c.is_alphabetic() || c.is_numeric()).count();
+                if score > best_score {
+                    best_score = score;
+                    best_text = joined;
+                }
+            }
+        }
+    }
+
+    if best_score >= 8 {
+        Some(best_text)
+    } else {
+        None
+    }
+}
+
+/// Uses Windows 10/11 built-in Direct2D PdfDocument + OcrEngine to render PDF pages cleanly
+/// (0 extra installer MB!) returning crisp JPEG page buffers and optional offline OCR text.
+#[cfg(windows)]
+fn render_and_ocr_pdf_winrt(
+    src: &Path,
+    max_pages: u32,
+    run_ocr: bool,
+) -> (Vec<(Vec<u8>, u32, u32)>, Option<String>) {
+    use windows::core::HSTRING;
+    use windows::Data::Pdf::{PdfDocument, PdfPageRenderOptions};
+    use windows::Graphics::Imaging::BitmapDecoder;
+    use windows::Storage::StorageFile;
+    use windows::Storage::Streams::InMemoryRandomAccessStream;
+
+    let mut rendered_pages: Vec<(Vec<u8>, u32, u32)> = Vec::new();
+    let mut ocr_pages: Vec<String> = Vec::new();
+
+    let win_path = normalize_winrt_path(src);
+    let Ok(file_op) = StorageFile::GetFileFromPathAsync(&HSTRING::from(win_path)) else {
+        return (rendered_pages, None);
+    };
+    let Ok(file) = file_op.get() else {
+        return (rendered_pages, None);
+    };
+    let Ok(doc_op) = PdfDocument::LoadFromFileAsync(&file) else {
+        return (rendered_pages, None);
+    };
+    let Ok(doc) = doc_op.get() else {
+        return (rendered_pages, None);
+    };
+
+    let page_count = doc.PageCount().unwrap_or(0).min(max_pages);
+    for idx in 0..page_count {
+        let Ok(page) = doc.GetPage(idx) else {
+            continue;
+        };
+        let Ok(size) = page.Size() else {
+            continue;
+        };
+        let Ok(stream) = InMemoryRandomAccessStream::new() else {
+            continue;
+        };
+        let Ok(opts) = PdfPageRenderOptions::new() else {
+            continue;
+        };
+        let base_w = (size.Width as f64).max(1.0);
+        let base_h = (size.Height as f64).max(1.0);
+        let scale = (1500.0 / base_w).clamp(1.25, 2.5);
+        let out_w = (base_w * scale).round().clamp(400.0, 2200.0) as u32;
+        let out_h = (base_h * scale).round().clamp(400.0, 3200.0) as u32;
+        let _ = opts.SetDestinationWidth(out_w);
+        let _ = opts.SetDestinationHeight(out_h);
+
+        let Ok(render_op) = page.RenderWithOptionsToStreamAsync(&stream, &opts) else {
+            continue;
+        };
+        if render_op.get().is_err() {
+            continue;
+        }
+
+        if run_ocr {
+            let _ = stream.Seek(0);
+            if let Ok(dec_op) = BitmapDecoder::CreateAsync(&stream) {
+                if let Ok(dec) = dec_op.get() {
+                    if let Ok(bmp_op) = dec.GetSoftwareBitmapAsync() {
+                        if let Ok(bmp) = bmp_op.get() {
+                            if let Some(txt) = run_winrt_ocr_on_bitmap(&bmp) {
+                                ocr_pages.push(txt);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if let Some(png_bytes) = read_winrt_stream_bytes(&stream) {
+            if let Ok(dyn_img) = image::load_from_memory(&png_bytes) {
+                let rgb = dyn_img.to_rgb8();
+                let (w, h) = (rgb.width(), rgb.height());
+                let mut jpg = Vec::new();
+                let mut enc = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut jpg, 88);
+                if enc
+                    .encode(rgb.as_raw(), w, h, image::ExtendedColorType::Rgb8)
+                    .is_ok()
+                {
+                    rendered_pages.push((jpg, w, h));
+                }
+            }
+        }
+    }
+
+    let combined_ocr = clean_extracted_text(&ocr_pages.join("\n\n---\n\n"));
+    let ocr_opt = if is_meaningful_document_text(&combined_ocr) {
+        Some(combined_ocr)
+    } else {
+        None
+    };
+    (rendered_pages, ocr_opt)
+}
+
+#[cfg(windows)]
+fn ocr_image_winrt(src: &Path) -> Option<String> {
+    use windows::core::HSTRING;
+    use windows::Graphics::Imaging::BitmapDecoder;
+    use windows::Storage::{FileAccessMode, StorageFile};
+
+    let win_path = normalize_winrt_path(src);
+    let file = StorageFile::GetFileFromPathAsync(&HSTRING::from(win_path))
+        .ok()?
+        .get()
+        .ok()?;
+    let stream = file.OpenAsync(FileAccessMode::Read).ok()?.get().ok()?;
+    let dec = BitmapDecoder::CreateAsync(&stream).ok()?.get().ok()?;
+    let bmp = dec.GetSoftwareBitmapAsync().ok()?.get().ok()?;
+    let text = run_winrt_ocr_on_bitmap(&bmp)?;
+    let cleaned = clean_extracted_text(&text);
+    if is_meaningful_document_text(&cleaned) {
+        Some(cleaned)
+    } else {
+        None
     }
 }
 
@@ -898,7 +1390,7 @@ fn json_to_csv_string(raw: &str) -> String {
     out
 }
 
-pub fn convert_file(payload: Value) -> Value {
+pub async fn convert_file(payload: Value) -> Value {
     let target_fmt = payload
         .get("targetFormat")
         .and_then(|v| v.as_str())
@@ -929,7 +1421,8 @@ pub fn convert_file(payload: Value) -> Value {
     let stem = src
         .file_stem()
         .and_then(|s| s.to_str())
-        .unwrap_or("converted");
+        .unwrap_or("converted")
+        .to_string();
     let src_ext = src
         .extension()
         .and_then(|s| s.to_str())
@@ -942,6 +1435,8 @@ pub fn convert_file(payload: Value) -> Value {
         parent.join(format!("{}.{}", stem, target_fmt))
     };
 
+    let gemini_key = resolve_gemini_api_key(&payload);
+
     let ok_json = |p: &Path| {
         json!({
             "success": true,
@@ -952,101 +1447,344 @@ pub fn convert_file(payload: Value) -> Value {
         })
     };
 
-    // 1. Image -> Image or Image -> PDF
+    // 1. Image -> Image, Image -> PDF, or Image -> Word/Text (via OCR + embedded image fallback)
     let img_exts = ["png", "jpg", "jpeg", "webp", "bmp"];
     if img_exts.contains(&src_ext.as_str()) {
         if target_fmt == "pdf" {
-            match image::open(&src) {
-                Ok(img) => match write_image_pdf(&out_path, &img) {
-                    Ok(_) => return ok_json(&out_path),
-                    Err(e) => return json!({ "success": false, "error": e }),
-                },
-                Err(e) => return json!({ "success": false, "error": e.to_string() }),
-            }
+            let src_c = src.clone();
+            let out_c = out_path.clone();
+            let res = tokio::task::spawn_blocking(move || {
+                let img = image::open(&src_c).map_err(|e| e.to_string())?;
+                write_image_pdf(&out_c, &img)
+            })
+            .await
+            .unwrap_or_else(|e| Err(e.to_string()));
+            return match res {
+                Ok(_) => ok_json(&out_path),
+                Err(e) => json!({ "success": false, "error": e }),
+            };
         }
         if img_exts.contains(&target_fmt.as_str()) {
-            match image::open(&src) {
-                Ok(img) => {
-                    let res = if target_fmt == "jpg" || target_fmt == "jpeg" {
-                        img.to_rgb8().save(&out_path)
-                    } else {
-                        img.save(&out_path)
-                    };
-                    return match res {
-                        Ok(_) => ok_json(&out_path),
-                        Err(e) => json!({ "success": false, "error": e.to_string() }),
-                    };
+            let src_c = src.clone();
+            let out_c = out_path.clone();
+            let fmt_c = target_fmt.clone();
+            let res = tokio::task::spawn_blocking(move || {
+                let img = image::open(&src_c).map_err(|e| e.to_string())?;
+                if fmt_c == "jpg" || fmt_c == "jpeg" {
+                    img.to_rgb8().save(&out_c).map_err(|e| e.to_string())
+                } else {
+                    img.save(&out_c).map_err(|e| e.to_string())
                 }
-                Err(e) => return json!({ "success": false, "error": e.to_string() }),
+            })
+            .await
+            .unwrap_or_else(|e| Err(e.to_string()));
+            return match res {
+                Ok(_) => ok_json(&out_path),
+                Err(e) => json!({ "success": false, "error": e }),
+            };
+        }
+
+        // Image -> DOCX / TXT / MD / HTML (OCR first so screenshots become editable Word text!)
+        let mut ocr_text: Option<String> = None;
+        if let Some(ref key) = gemini_key {
+            if let Ok(bytes) = fs::read(&src) {
+                let mime = match src_ext.as_str() {
+                    "png" => "image/png",
+                    "webp" => "image/webp",
+                    "bmp" => "image/bmp",
+                    _ => "image/jpeg",
+                };
+                ocr_text = gemini_ocr_parts(key, vec![(mime, bytes)]).await;
             }
         }
-    }
+        #[cfg(windows)]
+        if ocr_text.is_none() {
+            let src_c = src.clone();
+            ocr_text = tokio::task::spawn_blocking(move || ocr_image_winrt(&src_c))
+                .await
+                .ok()
+                .flatten();
+        }
 
-    // 2. Universal Document / Text / Data Conversion (txt, md, html, json, csv, docx, pdf -> pdf, docx, txt, md, html, json, csv)
-    let extracted_text: Option<String> = match src_ext.as_str() {
-        "docx" => extract_docx_text(&src),
-        "pdf" => extract_pdf_text(&src),
-        "html" | "htm" => fs::read(&src)
-            .ok()
-            .map(|b| strip_html_tags(&String::from_utf8_lossy(&b))),
-        _ => fs::read(&src)
-            .ok()
-            .map(|b| String::from_utf8_lossy(&b).to_string()),
-    };
-
-    if let Some(content) = extracted_text {
-        match target_fmt.as_str() {
-            "pdf" => {
-                return match write_text_pdf(&out_path, stem, &content) {
+        if target_fmt == "docx" {
+            if let Some(text) = ocr_text {
+                let out_c = out_path.clone();
+                let res = tokio::task::spawn_blocking(move || write_text_docx(&out_c, &text))
+                    .await
+                    .unwrap_or_else(|e| Err(e.to_string()));
+                return match res {
                     Ok(_) => ok_json(&out_path),
                     Err(e) => json!({ "success": false, "error": e }),
                 };
             }
-            "docx" => {
-                return match write_text_docx(&out_path, &content) {
-                    Ok(_) => ok_json(&out_path),
-                    Err(e) => json!({ "success": false, "error": e }),
-                };
-            }
-            "html" => {
-                let escaped = content
-                    .replace('&', "&amp;")
-                    .replace('<', "&lt;")
-                    .replace('>', "&gt;");
-                let html_doc = format!(
-                    "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>{}</title><style>body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:780px;margin:40px auto;padding:0 24px;line-height:1.65;color:#111827;}}pre{{white-space:pre-wrap;font-family:inherit;margin:0;}}</style></head><body><h1>{}</h1><pre>{}</pre></body></html>",
-                    escape_xml(stem),
-                    escape_xml(stem),
-                    escaped
-                );
-                return match fs::write(&out_path, html_doc) {
+            // Visual fallback: embed crisp image directly into Word document
+            let src_c = src.clone();
+            let out_c = out_path.clone();
+            let res = tokio::task::spawn_blocking(move || {
+                let img = image::open(&src_c).map_err(|e| e.to_string())?;
+                let rgb = img.to_rgb8();
+                let (w, h) = (rgb.width(), rgb.height());
+                let mut jpg = Vec::new();
+                let mut enc = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut jpg, 90);
+                enc.encode(rgb.as_raw(), w, h, image::ExtendedColorType::Rgb8)
+                    .map_err(|e| e.to_string())?;
+                write_image_pages_docx(&out_c, &[(jpg, w, h)])
+            })
+            .await
+            .unwrap_or_else(|e| Err(e.to_string()));
+            return match res {
+                Ok(_) => ok_json(&out_path),
+                Err(e) => json!({ "success": false, "error": e }),
+            };
+        }
+
+        if let Some(text) = ocr_text {
+            if target_fmt == "txt" || target_fmt == "md" {
+                return match fs::write(&out_path, text) {
                     Ok(_) => ok_json(&out_path),
                     Err(e) => json!({ "success": false, "error": e.to_string() }),
                 };
             }
+        }
+        return json!({
+            "success": false,
+            "error": format!("Conversion from .{} to .{} is not supported.", src_ext, target_fmt)
+        });
+    }
+
+    // 2. PDF -> Image (PNG/JPG/WEBP) OR PDF -> DOCX / TXT / MD / HTML / JSON / CSV
+    if src_ext == "pdf" {
+        #[cfg(windows)]
+        if img_exts.contains(&target_fmt.as_str()) {
+            let src_c = src.clone();
+            let out_c = out_path.clone();
+            let fmt_c = target_fmt.clone();
+            let res = tokio::task::spawn_blocking(move || {
+                let (pages, _) = render_and_ocr_pdf_winrt(&src_c, 1, false);
+                let Some((jpg_bytes, _, _)) = pages.into_iter().next() else {
+                    return Err("Could not render PDF page to image.".to_string());
+                };
+                if fmt_c == "jpg" || fmt_c == "jpeg" {
+                    fs::write(&out_c, jpg_bytes).map_err(|e| e.to_string())
+                } else {
+                    let img = image::load_from_memory(&jpg_bytes).map_err(|e| e.to_string())?;
+                    img.save(&out_c).map_err(|e| e.to_string())
+                }
+            })
+            .await
+            .unwrap_or_else(|e| Err(e.to_string()));
+            return match res {
+                Ok(_) => ok_json(&out_path),
+                Err(e) => json!({ "success": false, "error": e }),
+            };
+        }
+
+        // Stage 1: Fast pure-Rust text extraction (FlateDecode, ToUnicode CMap, UTF-8/Arabic selectable PDFs)
+        let src_c = src.clone();
+        let mut extracted_text = tokio::task::spawn_blocking(move || extract_pdf_text_native(&src_c))
+            .await
+            .ok()
+            .flatten();
+
+        let mut rendered_pages: Vec<(Vec<u8>, u32, u32)> = Vec::new();
+
+        // Stage 2 & 3: Scanned / image-only / broken-encoding PDF -> Gemini native PDF OCR -> WinRT page render + offline OCR
+        if extracted_text.is_none() {
+            if let Some(ref key) = gemini_key {
+                if let Ok(pdf_bytes) = fs::read(&src) {
+                    if pdf_bytes.len() <= 14 * 1024 * 1024 {
+                        extracted_text =
+                            gemini_ocr_parts(key, vec![("application/pdf", pdf_bytes)]).await;
+                    }
+                }
+            }
+
+            #[cfg(windows)]
+            if extracted_text.is_none() {
+                let src_c = src.clone();
+                let need_offline_ocr = gemini_key.is_none();
+                let (pages, winrt_ocr) = tokio::task::spawn_blocking(move || {
+                    render_and_ocr_pdf_winrt(&src_c, 20, need_offline_ocr)
+                })
+                .await
+                .unwrap_or_default();
+                rendered_pages = pages;
+
+                if let Some(ref key) = gemini_key {
+                    if !rendered_pages.is_empty() {
+                        // Send rendered JPEG pages in batches of 4 to Gemini Vision OCR (handles >14MB scanned PDFs)
+                        let mut batch_texts = Vec::new();
+                        for chunk in rendered_pages.chunks(4) {
+                            let parts: Vec<(&str, Vec<u8>)> = chunk
+                                .iter()
+                                .map(|(jpg, _, _)| ("image/jpeg", jpg.clone()))
+                                .collect();
+                            if let Some(t) = gemini_ocr_parts(key, parts).await {
+                                batch_texts.push(t);
+                            }
+                        }
+                        let joined = clean_extracted_text(&batch_texts.join("\n\n---\n\n"));
+                        if is_meaningful_document_text(&joined) {
+                            extracted_text = Some(joined);
+                        }
+                    }
+                }
+
+                if extracted_text.is_none() {
+                    if let Some(t) = winrt_ocr {
+                        extracted_text = Some(t);
+                    } else if !need_offline_ocr {
+                        // Gemini call failed (e.g. offline/rate-limit) - try offline Windows OCR now
+                        let src_c2 = src.clone();
+                        let (_, fallback_ocr) = tokio::task::spawn_blocking(move || {
+                            render_and_ocr_pdf_winrt(&src_c2, 20, true)
+                        })
+                        .await
+                        .unwrap_or_default();
+                        extracted_text = fallback_ocr;
+                    }
+                }
+            }
+        }
+
+        // Stage 4: If target is DOCX and no text could be OCR'd (e.g. pure visual scan offline),
+        // embed the crisp rendered PDF pages directly as full-page images inside the Word document!
+        if extracted_text.is_none() && target_fmt == "docx" {
+            #[cfg(windows)]
+            if rendered_pages.is_empty() {
+                let src_c = src.clone();
+                let (pages, _) =
+                    tokio::task::spawn_blocking(move || render_and_ocr_pdf_winrt(&src_c, 20, false))
+                        .await
+                        .unwrap_or_default();
+                rendered_pages = pages;
+            }
+            if !rendered_pages.is_empty() {
+                let out_c = out_path.clone();
+                let res =
+                    tokio::task::spawn_blocking(move || write_image_pages_docx(&out_c, &rendered_pages))
+                        .await
+                        .unwrap_or_else(|e| Err(e.to_string()));
+                return match res {
+                    Ok(_) => ok_json(&out_path),
+                    Err(e) => json!({ "success": false, "error": e }),
+                };
+            }
+            return json!({
+                "success": false,
+                "error": "Could not extract text or render pages from this scanned PDF. Add a Gemini API key in Settings for AI OCR."
+            });
+        }
+
+        if let Some(content) = extracted_text {
+            let out_c = out_path.clone();
+            let stem_c = stem.clone();
+            let target_c = target_fmt.clone();
+            let res = tokio::task::spawn_blocking(move || match target_c.as_str() {
+                "docx" => write_text_docx(&out_c, &content),
+                "pdf" => write_text_pdf(&out_c, &stem_c, &content),
+                "html" => {
+                    let dir = if is_rtl_paragraph(&content) { "rtl" } else { "ltr" };
+                    let escaped = escape_xml(&content);
+                    let html_doc = format!(
+                        "<!DOCTYPE html><html dir=\"{}\"><head><meta charset=\"utf-8\"><title>{}</title><style>body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;max-width:780px;margin:40px auto;padding:0 24px;line-height:1.75;color:#111827;}}pre{{white-space:pre-wrap;font-family:inherit;margin:0;}}</style></head><body><h1>{}</h1><pre>{}</pre></body></html>",
+                        dir,
+                        escape_xml(&stem_c),
+                        escape_xml(&stem_c),
+                        escaped
+                    );
+                    fs::write(&out_c, html_doc).map_err(|e| e.to_string())
+                }
+                "json" => {
+                    let lines: Vec<&str> = content.lines().collect();
+                    let out_str = serde_json::to_string_pretty(&json!({
+                        "source": stem_c,
+                        "lines": lines,
+                        "content": content,
+                    }))
+                    .unwrap_or(content);
+                    fs::write(&out_c, out_str).map_err(|e| e.to_string())
+                }
+                "csv" => {
+                    let mut buf = String::from("line,content\n");
+                    for (idx, line) in content.replace("\r\n", "\n").split('\n').enumerate() {
+                        buf.push_str(&format!("{},\"{}\"\n", idx + 1, line.replace('"', "\"\"")));
+                    }
+                    fs::write(&out_c, buf).map_err(|e| e.to_string())
+                }
+                "txt" | "md" => fs::write(&out_c, content).map_err(|e| e.to_string()),
+                _ => Err(format!("Conversion from .pdf to .{} is not supported.", target_c)),
+            })
+            .await
+            .unwrap_or_else(|e| Err(e.to_string()));
+            return match res {
+                Ok(_) => ok_json(&out_path),
+                Err(e) => json!({ "success": false, "error": e }),
+            };
+        }
+
+        return json!({
+            "success": false,
+            "error": "This PDF contains scanned images with no selectable text. Add your Gemini API key in Settings to extract editable text."
+        });
+    }
+
+    // 3. Universal Document / Text / Data Conversion (txt, md, html, json, csv, docx -> pdf, docx, txt, md, html, json, csv)
+    let src_c = src.clone();
+    let src_ext_c = src_ext.clone();
+    let extracted_text: Option<String> = tokio::task::spawn_blocking(move || match src_ext_c.as_str() {
+        "docx" => extract_docx_text(&src_c),
+        "html" | "htm" => fs::read(&src_c)
+            .ok()
+            .map(|b| strip_html_tags(&String::from_utf8_lossy(&b))),
+        _ => fs::read(&src_c)
+            .ok()
+            .map(|b| String::from_utf8_lossy(&b).to_string()),
+    })
+    .await
+    .ok()
+    .flatten();
+
+    if let Some(content) = extracted_text {
+        let out_c = out_path.clone();
+        let stem_c = stem.clone();
+        let src_ext_c = src_ext.clone();
+        let target_c = target_fmt.clone();
+        let res = tokio::task::spawn_blocking(move || match target_c.as_str() {
+            "pdf" => write_text_pdf(&out_c, &stem_c, &content),
+            "docx" => write_text_docx(&out_c, &content),
+            "html" => {
+                let dir = if is_rtl_paragraph(&content) { "rtl" } else { "ltr" };
+                let escaped = escape_xml(&content);
+                let html_doc = format!(
+                    "<!DOCTYPE html><html dir=\"{}\"><head><meta charset=\"utf-8\"><title>{}</title><style>body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;max-width:780px;margin:40px auto;padding:0 24px;line-height:1.75;color:#111827;}}pre{{white-space:pre-wrap;font-family:inherit;margin:0;}}</style></head><body><h1>{}</h1><pre>{}</pre></body></html>",
+                    dir,
+                    escape_xml(&stem_c),
+                    escape_xml(&stem_c),
+                    escaped
+                );
+                fs::write(&out_c, html_doc).map_err(|e| e.to_string())
+            }
             "json" => {
-                let out_str = if src_ext == "csv" {
+                let out_str = if src_ext_c == "csv" {
                     csv_to_json_string(&content)
-                } else if src_ext == "json" {
+                } else if src_ext_c == "json" {
                     serde_json::from_str::<Value>(&content)
                         .and_then(|v| serde_json::to_string_pretty(&v))
                         .unwrap_or(content)
                 } else {
                     let lines: Vec<&str> = content.lines().collect();
                     serde_json::to_string_pretty(&json!({
-                        "source": stem,
+                        "source": stem_c,
                         "lines": lines,
                         "content": content,
                     }))
                     .unwrap_or(content)
                 };
-                return match fs::write(&out_path, out_str) {
-                    Ok(_) => ok_json(&out_path),
-                    Err(e) => json!({ "success": false, "error": e.to_string() }),
-                };
+                fs::write(&out_c, out_str).map_err(|e| e.to_string())
             }
             "csv" => {
-                let out_str = if src_ext == "json" {
+                let out_str = if src_ext_c == "json" {
                     json_to_csv_string(&content)
                 } else {
                     let mut buf = String::from("line,content\n");
@@ -1055,19 +1793,20 @@ pub fn convert_file(payload: Value) -> Value {
                     }
                     buf
                 };
-                return match fs::write(&out_path, out_str) {
-                    Ok(_) => ok_json(&out_path),
-                    Err(e) => json!({ "success": false, "error": e.to_string() }),
-                };
+                fs::write(&out_c, out_str).map_err(|e| e.to_string())
             }
-            "txt" | "md" => {
-                return match fs::write(&out_path, content) {
-                    Ok(_) => ok_json(&out_path),
-                    Err(e) => json!({ "success": false, "error": e.to_string() }),
-                };
-            }
-            _ => {}
-        }
+            "txt" | "md" => fs::write(&out_c, content).map_err(|e| e.to_string()),
+            _ => Err(format!(
+                "Conversion from .{} to .{} is not supported.",
+                src_ext_c, target_c
+            )),
+        })
+        .await
+        .unwrap_or_else(|e| Err(e.to_string()));
+        return match res {
+            Ok(_) => ok_json(&out_path),
+            Err(e) => json!({ "success": false, "error": e }),
+        };
     }
 
     json!({
