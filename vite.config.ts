@@ -2,6 +2,8 @@ import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
 import { Readable } from 'stream';
+import fs from 'fs';
+import path from 'path';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -57,9 +59,29 @@ export default defineConfig(({ mode }) => {
           }
         },
       },
+      {
+        name: 'copy-web-downloads-for-vercel',
+        closeBundle() {
+          // Only bundle the direct installer for website/Vercel builds, never recursively inside Tauri kibo.exe
+          if (process.env.TAURI_ENV_PLATFORM) return;
+          const srcDir = path.resolve(process.cwd(), 'downloads');
+          const destDir = path.resolve(process.cwd(), 'dist', 'downloads');
+          if (!fs.existsSync(srcDir)) return;
+          fs.mkdirSync(destDir, { recursive: true });
+          for (const entry of fs.readdirSync(srcDir)) {
+            const from = path.join(srcDir, entry);
+            const to = path.join(destDir, entry);
+            if (fs.statSync(from).isFile()) {
+              fs.copyFileSync(from, to);
+            }
+          }
+        },
+      },
     ],
+    clearScreen: false,
     server: {
       port: 5173,
+      strictPort: true,
       open: false,
     },
     build: {

@@ -110,7 +110,8 @@ export const ELEVENLABS_VOICE_MAP: Record<string, string> = {
 
 export async function synthesizeElevenLabsAudio(
   text: string,
-  voiceIdentifier?: string
+  voiceIdentifier?: string,
+  modelOverride?: string
 ): Promise<ArrayBuffer | null> {
   const clean = String(text || '')
     .replace(/[*_#`~[\]]/g, ' ')
@@ -123,18 +124,31 @@ export async function synthesizeElevenLabsAudio(
     voiceIdentifier ||
     'EXAVITQu4vr4xnSDxMaL';
 
-  // 1. Electron Desktop IPC Bridge
+  const savedModel =
+    modelOverride ||
+    (typeof window !== 'undefined' ? localStorage.getItem('kibo_elevenlabs_model') || '' : '') ||
+    'eleven_turbo_v2_5';
+
+  // 1. Electron Desktop IPC Bridge (supports native Uint8Array zero-copy or base64 fallback)
   if (typeof window !== 'undefined' && (window as any).kiboAPI?.elevenlabsSpeak) {
     try {
       const storedKey = localStorage.getItem('kibo_elevenlabs_key') || '';
-      const base64Audio = await (window as any).kiboAPI.elevenlabsSpeak({
+      const rawAudio = await (window as any).kiboAPI.elevenlabsSpeak({
         text: clean,
         voiceId: targetVoiceId,
-        modelId: 'eleven_flash_v2_5',
+        modelId: savedModel,
         apiKey: storedKey,
       });
-      if (base64Audio && typeof base64Audio === 'string') {
-        const binary = atob(base64Audio);
+      if (rawAudio instanceof Uint8Array && rawAudio.byteLength > 0) {
+        const copy = new Uint8Array(rawAudio.byteLength);
+        copy.set(rawAudio);
+        return copy.buffer;
+      }
+      if (rawAudio instanceof ArrayBuffer && rawAudio.byteLength > 0) {
+        return rawAudio;
+      }
+      if (rawAudio && typeof rawAudio === 'string') {
+        const binary = atob(rawAudio);
         const bytes = new Uint8Array(binary.length);
         for (let i = 0; i < binary.length; i++) {
           bytes[i] = binary.charCodeAt(i);
@@ -155,7 +169,7 @@ export async function synthesizeElevenLabsAudio(
       body: JSON.stringify({
         text: clean,
         voiceId: targetVoiceId,
-        modelId: 'eleven_flash_v2_5',
+        modelId: savedModel,
         apiKey: storedKey,
       }),
     });

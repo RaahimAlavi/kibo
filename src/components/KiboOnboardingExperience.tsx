@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { SoulConfig } from '../lib/soulMath';
 import { SoulCanvas } from './SoulCanvas';
+import { KiboLogoIcon } from './KiboLogoIcon';
 import { soundFX } from '../lib/soundFX';
 
 export interface KiboOnboardingExperienceProps {
@@ -57,6 +58,8 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
     } else {
       window.open(url, '_blank');
     }
+    // Minimize Kibo to the taskbar so Chrome opens unobstructed and the user can copy their key
+    handleMinimize();
   };
 
   const handleMinimize = () => {
@@ -191,7 +194,7 @@ export const KiboOnboardingExperience: React.FC<KiboOnboardingExperienceProps> =
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <SoulCanvas soul={soul} width={30} height={26} scale={0.8} mode="LISTENING" />
+            <KiboLogoIcon size={30} />
             <div>
               <div style={{ fontSize: 15, fontWeight: 800, color: '#F8FAFC', letterSpacing: '-0.02em' }}>
                 Kibo Setup Guide

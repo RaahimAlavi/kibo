@@ -13,7 +13,10 @@
     "app": "vite build --base=./ && electron electron/main.cjs",
     "electron:start": "electron electron/main.cjs",
     "dist": "vite build --base=./ && electron-builder --win",
-    "dist:dir": "vite build --base=./ && electron-builder --dir"
+    "dist:dir": "vite build --base=./ && electron-builder --dir",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
   },
   "build": {
     "appId": "com.raahim.kibo",
@@ -26,7 +29,6 @@
       "dist/**/*",
       "electron/**/*",
       "public/**/*",
-      "!public/kibo-lemon-banner-*",
       "!public/kibo-banner-*",
       "package.json"
     ],
@@ -49,10 +51,12 @@
   "dependencies": {
     "@composio/core": "^0.27.0",
     "@elevenlabs/elevenlabs-js": "^2.77.0",
+    "@tauri-apps/api": "^2.12.5",
     "zod": "^4.6.7"
   },
   "devDependencies": {
     "@designcodeio/threeui": "^1.2.0",
+    "@tauri-apps/cli": "^2.12.6",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",

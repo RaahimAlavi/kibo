@@ -71,7 +71,7 @@ export const RefundPolicyPage: React.FC<RefundPolicyPageProps> = ({ onNavigate }
             4. How to Submit a Refund Request
           </h2>
           <p style={{ margin: 0 }}>
-            To submit an inquiry under the Technical Resolution Guarantee, please email our support address at <strong style={{ color: '#121316' }}>support@kiboai.com</strong> (or submit a message via the Contact &amp; Grievances page) including your purchase email address, order reference number, and Windows version details.
+            To submit an inquiry under the Technical Resolution Guarantee, please email our support address at <strong style={{ color: '#121316' }}>alaviraahim@gmail.com</strong> (or submit a message via the Contact &amp; Grievances page) including your purchase email address, order reference number, and Windows version details.
           </p>
         </div>
       </main>

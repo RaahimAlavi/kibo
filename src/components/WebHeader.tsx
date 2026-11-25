@@ -1,7 +1,6 @@
 // src/components/WebHeader.tsx
 import React from 'react';
-import { SoulCanvas } from './SoulCanvas';
-import { SOUL_SKINS } from '../lib/soulMath';
+import { KiboLogoIcon } from './KiboLogoIcon';
 
 export const WindowsLogoIcon = ({ size = 14 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" style={{ flexShrink: 0 }}>
@@ -36,14 +35,7 @@ export const WebHeader: React.FC<WebHeaderProps> = ({ currentRoute, onNavigate }
     <header className="kibo-web-nav">
       <div className="kibo-web-nav-inner">
         <a href="/" onClick={handleBrandClick} className="kibo-web-brand" title="Kibo Home">
-          <SoulCanvas
-            soul={SOUL_SKINS[0]}
-            width={32}
-            height={28}
-            scale={0.75}
-            mode="LISTENING"
-            interactive={false}
-          />
+          <KiboLogoIcon size={30} />
           <span>Kibo</span>
         </a>
 

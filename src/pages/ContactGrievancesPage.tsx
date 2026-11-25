@@ -59,8 +59,8 @@ export const ContactGrievancesPage: React.FC<ContactGrievancesPageProps> = ({ on
               <div style={{ fontSize: 12, fontWeight: 600, color: '#68707C', textTransform: 'uppercase' }}>
                 Technical &amp; License Support
               </div>
-              <a href="mailto:support@kiboai.com" style={{ fontSize: 15, fontWeight: 700, color: '#121316', textDecoration: 'none' }}>
-                support@kiboai.com
+              <a href="mailto:alaviraahim@gmail.com" style={{ fontSize: 15, fontWeight: 700, color: '#121316', textDecoration: 'none' }}>
+                alaviraahim@gmail.com
               </a>
               <div style={{ fontSize: 12, color: '#68707C', marginTop: 2 }}>
                 Typical response window: 24 to 48 hours (Monday to Friday)

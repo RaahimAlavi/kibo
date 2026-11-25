@@ -9,6 +9,12 @@ const crypto = require('crypto');
 
 let wallpaperDaemon = null;
 let hotkeyDaemon = null;
+let telemetryDaemon = null;
+let telemetryQueue = [];
+let telemetryBuffer = '';
+let nvidiaDaemon = null;
+let nvidiaUnavailable = false;
+let latestNvidiaGpu = null;
 let wallpaperToggleIdx = 0;
 let prevCpuInfo = os.cpus();
 let prevNetStats = { rx: 0, tx: 0, ts: 0 };
@@ -682,6 +688,18 @@ function killSystemDaemon() {
     } catch (_) {}
     hotkeyDaemon = null;
   }
+  if (telemetryDaemon) {
+    try {
+      telemetryDaemon.kill();
+    } catch (_) {}
+    telemetryDaemon = null;
+  }
+  if (nvidiaDaemon) {
+    try {
+      nvidiaDaemon.kill();
+    } catch (_) {}
+    nvidiaDaemon = null;
+  }
 }
 
 async function resolveWallpaperFileFast(imagePath) {
@@ -966,11 +984,15 @@ function seekMediaSession(targetSeconds) {
   return { success: false };
 }
 
-async function getNowPlayingMedia() {
-  const ps = `
+function initTelemetryDaemon() {
+  if (telemetryDaemon && !telemetryDaemon.killed && telemetryDaemon.stdin && telemetryDaemon.stdin.writable) {
+    return;
+  }
+
+  const daemonScript = `
 Add-Type -AssemblyName System.Runtime.WindowsRuntime
-Add-Type -AssemblyName UIAutomationClient
-Add-Type -AssemblyName UIAutomationTypes
+try { Add-Type -AssemblyName UIAutomationClient } catch {}
+try { Add-Type -AssemblyName UIAutomationTypes } catch {}
 
 $asTaskGeneric = ([System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object {
   $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -like 'IAsyncOperation*'
@@ -983,7 +1005,15 @@ function Await-WinRT($WinRtTask, $ResultType) {
   $netTask.Result
 }
 
-# Helper: If Netflix is open in a browser and only reports "Netflix", read the real episode title from the player UI
+[Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager,Windows.Media.Control,ContentType=WindowsRuntime] | Out-Null
+[Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties,Windows.Media.Control,ContentType=WindowsRuntime] | Out-Null
+[Windows.Storage.Streams.DataReader,Windows.Storage.Streams,ContentType=WindowsRuntime] | Out-Null
+
+$script:gsmtcMgr = $null
+$script:lastThumbKey = ""
+$script:lastNetflixCheckKey = ""
+$script:lastNetflixTitle = ""
+
 function Get-NetflixEpisodeTitle {
   try {
     $browsers = @(Get-Process chrome, msedge, brave, opera, firefox -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 })
@@ -998,9 +1028,7 @@ function Get-NetflixEpisodeTitle {
         $names = @()
         foreach ($t in $texts) {
           $n = $t.Current.Name
-          if ($n -and $n.Trim().Length -gt 0) {
-            $names += $n.Trim()
-          }
+          if ($n -and $n.Trim().Length -gt 0) { $names += $n.Trim() }
         }
         for ($i = 0; $i -lt $names.Count; $i++) {
           if ($names[$i] -match '^(S\\d+:)?E\\d+$' -or $names[$i] -match '^Episode\\s+\\d+') {
@@ -1016,17 +1044,27 @@ function Get-NetflixEpisodeTitle {
   return ""
 }
 
-try {
-  [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager,Windows.Media.Control,ContentType=WindowsRuntime] | Out-Null
-  [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties,Windows.Media.Control,ContentType=WindowsRuntime] | Out-Null
-  [Windows.Storage.Streams.DataReader,Windows.Storage.Streams,ContentType=WindowsRuntime] | Out-Null
+while ($true) {
+  $line = [Console]::In.ReadLine()
+  if ($null -eq $line) { break }
+  $cmd = $line.Trim()
+  if (-not $cmd) { continue }
 
-  $mgr = Await-WinRT ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])
-  if ($mgr) {
-    $session = $mgr.GetCurrentSession()
-    if ($session) {
+  try {
+    if ($cmd -eq "MEDIA") {
+      if ($null -eq $script:gsmtcMgr) {
+        try {
+          $script:gsmtcMgr = Await-WinRT ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])
+        } catch { $script:gsmtcMgr = $null }
+      }
+      $session = if ($script:gsmtcMgr) { $script:gsmtcMgr.GetCurrentSession() } else { $null }
+      if (-not $session) {
+        $script:lastThumbKey = ""
+        [Console]::Out.WriteLine('{"hasSession":false,"playing":false}')
+        continue
+      }
+
       $pbInfo = $session.GetPlaybackInfo()
-      # PlaybackStatus 4 === Playing, 5 === Paused
       $isPlaying = ($pbInfo.PlaybackStatus -eq [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionPlaybackStatus]::Playing)
       $props = Await-WinRT ($session.TryGetMediaPropertiesAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties])
       $tl = $session.GetTimelineProperties()
@@ -1035,7 +1073,6 @@ try {
       $artist = if ($props -and $props.Artist) { $props.Artist.Trim() } else { "" }
       $srcApp = $session.SourceAppUserModelId
 
-      # Clean up source app name
       $cleanSource = "Media Player"
       if ($srcApp -match '(?i)Spotify') { $cleanSource = "Spotify" }
       elseif ($srcApp -match '(?i)Netflix') { $cleanSource = "Netflix" }
@@ -1045,9 +1082,13 @@ try {
       elseif ($srcApp -match '(?i)firefox') { $cleanSource = "Firefox" }
 
       if ($title -match '^(?i)Netflix$' -or $artist -match '^(?i)Netflix$') {
-        $epTitle = Get-NetflixEpisodeTitle
-        if ($epTitle) {
-          $title = $epTitle
+        $nfKey = "$srcApp|$isPlaying"
+        if ($script:lastNetflixCheckKey -ne $nfKey -or -not $script:lastNetflixTitle) {
+          $script:lastNetflixTitle = Get-NetflixEpisodeTitle
+          $script:lastNetflixCheckKey = $nfKey
+        }
+        if ($script:lastNetflixTitle) {
+          $title = $script:lastNetflixTitle
           $artist = "Netflix"
         } else {
           $title = "Netflix"
@@ -1055,25 +1096,28 @@ try {
         }
       }
 
-      if (-not $artist) {
-        $artist = $cleanSource
-      }
+      if (-not $artist) { $artist = $cleanSource }
 
-      # Read native GSMTC thumbnail bytes directly from Windows if available
+      $trackKey = "$title|$artist|$cleanSource"
+      $thumbChanged = $false
       $thumbBase64 = ""
-      if ($props -and $props.Thumbnail) {
-        try {
-          $stream = Await-WinRT ($props.Thumbnail.OpenReadAsync()) ([Windows.Storage.Streams.IRandomAccessStreamWithContentType])
-          if ($stream -and $stream.Size -gt 0 -and $stream.Size -lt 2000000) {
-            $reader = New-Object Windows.Storage.Streams.DataReader($stream.GetInputStreamAt(0))
-            [void](Await-WinRT ($reader.LoadAsync([uint32]$stream.Size)) ([uint32]))
-            $bytes = New-Object byte[]($stream.Size)
-            $reader.ReadBytes($bytes)
-            $thumbBase64 = "data:image/jpeg;base64," + [Convert]::ToBase64String($bytes)
-            $reader.Dispose()
-            $stream.Dispose()
-          }
-        } catch {}
+      if ($trackKey -ne $script:lastThumbKey) {
+        $thumbChanged = $true
+        $script:lastThumbKey = $trackKey
+        if ($props -and $props.Thumbnail) {
+          try {
+            $stream = Await-WinRT ($props.Thumbnail.OpenReadAsync()) ([Windows.Storage.Streams.IRandomAccessStreamWithContentType])
+            if ($stream -and $stream.Size -gt 0 -and $stream.Size -lt 2000000) {
+              $reader = New-Object Windows.Storage.Streams.DataReader($stream.GetInputStreamAt(0))
+              [void](Await-WinRT ($reader.LoadAsync([uint32]$stream.Size)) ([uint32]))
+              $bytes = New-Object byte[]($stream.Size)
+              $reader.ReadBytes($bytes)
+              $thumbBase64 = "data:image/jpeg;base64," + [Convert]::ToBase64String($bytes)
+              $reader.Dispose()
+              $stream.Dispose()
+            }
+          } catch {}
+        }
       }
 
       $posSec = -1
@@ -1084,32 +1128,138 @@ try {
       }
 
       if ($title) {
-        @{
+        $payload = @{
           hasSession = $true
           playing = [bool]$isPlaying
           title = $title
           artist = $artist
           source = $cleanSource
+          thumbChanged = $thumbChanged
           thumbnail = $thumbBase64
           positionSec = $posSec
           durationSec = $durSec
         } | ConvertTo-Json -Compress
-        exit
+        [Console]::Out.WriteLine($payload)
+      } else {
+        [Console]::Out.WriteLine('{"hasSession":false,"playing":false}')
       }
     }
+    elseif ($cmd -eq "STATS") {
+      $disk = Get-PSDrive C -ErrorAction SilentlyContinue
+      $procs = @(Get-Process -ErrorAction SilentlyContinue)
+      $topRam = @($procs | Sort-Object WorkingSet64 -Descending | Select-Object -First 4 ProcessName, @{Name='MB';Expression={[math]::Round($_.WorkingSet64 / 1MB)}}, @{Name='CPU';Expression={[math]::Round($_.CPU, 1)}})
+      $netStat = Get-NetAdapterStatistics -ErrorAction SilentlyContinue | Measure-Object -Property ReceivedBytes, SentBytes -Sum
+      $rxBytes = if ($netStat) { ($netStat | Where-Object { $_.Property -eq 'ReceivedBytes' }).Sum } else { 0 }
+      $txBytes = if ($netStat) { ($netStat | Where-Object { $_.Property -eq 'SentBytes' }).Sum } else { 0 }
+      $statsPayload = @{
+        diskUsedGb = if ($disk) { [math]::Round($disk.Used / 1GB) } else { 250 }
+        diskTotalGb = if ($disk) { [math]::Round(($disk.Used + $disk.Free) / 1GB) } else { 512 }
+        procCount = $procs.Count
+        topApps = $topRam
+        rxBytes = [double]$rxBytes
+        txBytes = [double]$txBytes
+      } | ConvertTo-Json -Compress
+      [Console]::Out.WriteLine($statsPayload)
+    }
+    else {
+      [Console]::Out.WriteLine('{"ok":false}')
+    }
+  } catch {
+    [Console]::Out.WriteLine('{"ok":false}')
   }
-} catch {}
-
-Write-Output '{"hasSession":false,"playing":false}'
+}
 `;
 
-  const res = await runPowerShellEncoded(ps, 2600);
-  if (!res.ok || !res.stdout) {
-    return { hasSession: false, playing: false, title: '', artist: '', thumbnail: '', durationSec: 210 };
+  try {
+    telemetryBuffer = '';
+    telemetryDaemon = spawn(
+      'powershell.exe',
+      ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', daemonScript],
+      { stdio: ['pipe', 'pipe', 'ignore'], windowsHide: true }
+    );
+
+    telemetryDaemon.stdout.on('data', (chunk) => {
+      telemetryBuffer += chunk.toString('utf8');
+      let nl;
+      while ((nl = telemetryBuffer.indexOf('\n')) !== -1) {
+        const line = telemetryBuffer.slice(0, nl).trim();
+        telemetryBuffer = telemetryBuffer.slice(nl + 1);
+        if (!line || telemetryQueue.length === 0) continue;
+        const job = telemetryQueue.shift();
+        clearTimeout(job.timer);
+        try {
+          job.resolve({ ok: true, data: JSON.parse(line) });
+        } catch (_) {
+          job.resolve({ ok: false, data: null });
+        }
+      }
+    });
+
+    telemetryDaemon.on('exit', () => {
+      telemetryDaemon = null;
+      while (telemetryQueue.length > 0) {
+        const job = telemetryQueue.shift();
+        clearTimeout(job.timer);
+        job.resolve({ ok: false, data: null });
+      }
+    });
+
+    telemetryDaemon.on('error', () => {
+      telemetryDaemon = null;
+    });
+  } catch (_) {
+    telemetryDaemon = null;
+  }
+}
+
+function queryTelemetryDaemon(cmd, timeoutMs = 2400) {
+  initTelemetryDaemon();
+  if (!telemetryDaemon || !telemetryDaemon.stdin || !telemetryDaemon.stdin.writable) {
+    return Promise.resolve({ ok: false, data: null });
+  }
+  // Prevent unbounded queue pile-up if a command is still in flight
+  if (telemetryQueue.length >= 4) {
+    return Promise.resolve({ ok: false, data: null });
+  }
+  return new Promise((resolve) => {
+    const job = {
+      resolve,
+      timer: setTimeout(() => {
+        const idx = telemetryQueue.indexOf(job);
+        if (idx !== -1) telemetryQueue.splice(idx, 1);
+        resolve({ ok: false, data: null });
+      }, timeoutMs),
+    };
+    telemetryQueue.push(job);
+    try {
+      telemetryDaemon.stdin.write(cmd + '\n');
+    } catch (_) {
+      clearTimeout(job.timer);
+      const idx = telemetryQueue.indexOf(job);
+      if (idx !== -1) telemetryQueue.splice(idx, 1);
+      resolve({ ok: false, data: null });
+    }
+  });
+}
+
+async function getNowPlayingMedia() {
+  const res = await queryTelemetryDaemon('MEDIA', 2400);
+  if (!res.ok || !res.data) {
+    return lastKnownTrack.title
+      ? {
+          hasSession: true,
+          playing: false,
+          title: lastKnownTrack.title,
+          artist: lastKnownTrack.artist,
+          source: lastKnownTrack.source || 'Speakers',
+          thumbnail: lastKnownTrack.thumbnail || '',
+          durationSec: lastKnownTrack.durationSec || 210,
+        }
+      : { hasSession: false, playing: false, title: '', artist: '', thumbnail: '', durationSec: 210 };
   }
 
   try {
-    const parsed = JSON.parse(res.stdout);
+    const parsed = res.data;
     if (!parsed.hasSession || !parsed.title) {
       lastKnownTrack = { title: '', artist: '', source: '', thumbnail: '', durationSec: 210 };
       return { hasSession: false, playing: false, title: '', artist: '', thumbnail: '', durationSec: 210 };
@@ -1118,11 +1268,16 @@ Write-Output '{"hasSession":false,"playing":false}'
     const title = parsed.title;
     const artist = parsed.artist || parsed.source || 'System Audio';
     const playing = Boolean(parsed.playing);
-    let thumbnail = parsed.thumbnail || '';
-    let durationSec = parsed.durationSec > 10 ? parsed.durationSec : 0;
+    const sameTrack = lastKnownTrack.title === title && lastKnownTrack.artist === artist;
+    let thumbnail = parsed.thumbChanged
+      ? parsed.thumbnail || ''
+      : sameTrack
+      ? lastKnownTrack.thumbnail || ''
+      : parsed.thumbnail || '';
+    let durationSec = parsed.durationSec > 10 ? parsed.durationSec : sameTrack ? lastKnownTrack.durationSec : 0;
 
-    // Only query external track artwork if Windows GSMTC didn't provide a thumbnail AND it's not Netflix
-    if (!thumbnail || !durationSec) {
+    // Only query external track artwork when the track changed and Windows GSMTC gave no thumbnail
+    if ((!thumbnail || !durationSec) && (!sameTrack || !lastKnownTrack.thumbnail)) {
       const meta = await resolveTrackMetadata(title, artist);
       if (!thumbnail && meta.thumbnail) thumbnail = meta.thumbnail;
       if (!durationSec) durationSec = meta.durationSec || 210;
@@ -1133,7 +1288,7 @@ Write-Output '{"hasSession":false,"playing":false}'
       artist,
       source: parsed.source || 'Speakers',
       thumbnail,
-      durationSec,
+      durationSec: durationSec || 210,
     };
 
     return {
@@ -1144,7 +1299,7 @@ Write-Output '{"hasSession":false,"playing":false}'
       source: parsed.source || 'Speakers',
       thumbnail,
       positionSec: typeof parsed.positionSec === 'number' && parsed.positionSec >= 0 ? parsed.positionSec : undefined,
-      durationSec,
+      durationSec: durationSec || 210,
     };
   } catch (_) {
     return { hasSession: false, playing: false, title: '', artist: '', thumbnail: '', durationSec: 210 };
@@ -1227,8 +1382,10 @@ async function getSystemClipboardContent() {
           for (let i = 0; i < 512; i++) sample[i] = bmp[(i * step) % bmp.length] || 0;
           const quickHash = `${width}x${height}_${crypto.createHash('md5').update(sample).digest('hex')}`;
           if (quickHash !== lastClipImgHash) {
-            const dataUrl = img.toDataURL();
-            const mb = ((bmp.length * 0.35) / (1024 * 1024)).toFixed(2);
+            const resized = width > 900 ? img.resize({ width: 900, quality: 'good' }) : img;
+            const jpgBuf = resized.toJPEG(72);
+            const dataUrl = `data:image/jpeg;base64,${jpgBuf.toString('base64')}`;
+            const mb = (jpgBuf.length / (1024 * 1024)).toFixed(2);
             imageItem = { hash: quickHash, dataUrl, width, height, mb };
           } else {
             imageItem = { hash: quickHash, unchanged: true };
@@ -1266,7 +1423,17 @@ function loadClipboardStoreFromDisk() {
 function saveClipboardStoreToDisk() {
   try {
     const p = getClipboardStorePath();
-    fs.writeFileSync(p, JSON.stringify(clipboardHistoryStore.slice(0, 50), null, 2), 'utf8');
+    // Keep at most 10 image items to prevent multi-MB JSON stalls
+    let imgCount = 0;
+    const trimmed = clipboardHistoryStore.filter((item) => {
+      if (item && item.category === 'Images') {
+        imgCount++;
+        return imgCount <= 10;
+      }
+      return true;
+    }).slice(0, 40);
+    clipboardHistoryStore = trimmed;
+    fs.promises.writeFile(p, JSON.stringify(trimmed), 'utf8').catch(() => {});
   } catch (_) {}
 }
 
@@ -1344,7 +1511,7 @@ function startClipboardWatcher(getMainWindow) {
   if (clipboardTimer) clearInterval(clipboardTimer);
   clipboardTimer = setInterval(() => {
     pollClipboardOnce(getMainWindow);
-  }, 1200);
+  }, 2500);
 }
 
 async function getClipboardHistory() {
@@ -1381,25 +1548,58 @@ function formatByteRate(bytesPerSec) {
   return `${(kb / 1024).toFixed(1)} MB/s`;
 }
 
-function queryNvidiaSmi() {
-  return new Promise((resolve) => {
-    exec(
-      'nvidia-smi --query-gpu=name,utilization.gpu,memory.used,memory.total --format=csv,noheader,nounits',
-      { timeout: 1500 },
-      (err, stdout) => {
-        if (err || !stdout || !stdout.trim()) return resolve(null);
-        const line = stdout.trim().split(/\r?\n/)[0];
-        const parts = line.split(',').map((s) => s.trim());
-        if (parts.length < 4) return resolve(null);
-        resolve({
-          name: parts[0],
-          percent: Math.min(100, Math.max(1, parseInt(parts[1], 10) || 1)),
-          vramUsed: (parseFloat(parts[2]) / 1024).toFixed(1),
-          vramTotal: (parseFloat(parts[3]) / 1024).toFixed(1),
-        });
-      }
+function ensureNvidiaStream() {
+  if (nvidiaUnavailable || (nvidiaDaemon && !nvidiaDaemon.killed)) return;
+  try {
+    nvidiaDaemon = spawn(
+      'nvidia-smi',
+      [
+        '--query-gpu=name,utilization.gpu,memory.used,memory.total,temperature.gpu',
+        '--format=csv,noheader,nounits',
+        '-l',
+        '3',
+      ],
+      { stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true }
     );
-  });
+
+    let buf = '';
+    nvidiaDaemon.stdout.on('data', (chunk) => {
+      buf += chunk.toString('utf8');
+      let nl;
+      while ((nl = buf.indexOf('\n')) !== -1) {
+        const line = buf.slice(0, nl).trim();
+        buf = buf.slice(nl + 1);
+        if (!line) continue;
+        const parts = line.split(',').map((s) => s.trim());
+        if (parts.length >= 4) {
+          latestNvidiaGpu = {
+            name: parts[0],
+            percent: Math.min(100, Math.max(1, parseInt(parts[1], 10) || 1)),
+            vramUsed: (parseFloat(parts[2]) / 1024).toFixed(1),
+            vramTotal: (parseFloat(parts[3]) / 1024).toFixed(1),
+            tempC: parts[4] ? parseInt(parts[4], 10) || undefined : undefined,
+          };
+        }
+      }
+    });
+
+    nvidiaDaemon.on('error', () => {
+      nvidiaUnavailable = true;
+      nvidiaDaemon = null;
+    });
+
+    nvidiaDaemon.on('exit', () => {
+      nvidiaDaemon = null;
+    });
+  } catch (_) {
+    nvidiaUnavailable = true;
+    nvidiaDaemon = null;
+  }
+}
+
+function queryNvidiaSmi() {
+  ensureNvidiaStream();
+  return Promise.resolve(latestNvidiaGpu);
 }
 
 async function getSystemStats() {
@@ -1416,24 +1616,9 @@ async function getSystemStats() {
   const uptimeMins = Math.floor((os.uptime() % 3600) / 60);
   const cpuPct = getLiveCpuPercent();
 
-  const [nvidiaGpu, psRes] = await Promise.all([
+  const [nvidiaGpu, statsRes] = await Promise.all([
     queryNvidiaSmi(),
-    runPowerShellEncoded(`
-$disk = Get-PSDrive C -ErrorAction SilentlyContinue
-$procCount = (Get-Process).Count
-$topRam = @(Get-Process | Sort-Object WorkingSet64 -Descending | Select-Object -First 4 ProcessName, @{Name='MB';Expression={[math]::Round($_.WorkingSet64 / 1MB)}}, @{Name='CPU';Expression={[math]::Round($_.CPU, 1)}})
-$netStat = Get-NetAdapterStatistics -ErrorAction SilentlyContinue | Measure-Object -Property ReceivedBytes, SentBytes -Sum
-$rxBytes = if ($netStat) { ($netStat | Where-Object { $_.Property -eq 'ReceivedBytes' }).Sum } else { 0 }
-$txBytes = if ($netStat) { ($netStat | Where-Object { $_.Property -eq 'SentBytes' }).Sum } else { 0 }
-@{
-  diskUsedGb = if ($disk) { [math]::Round($disk.Used / 1GB) } else { 250 }
-  diskTotalGb = if ($disk) { [math]::Round(($disk.Used + $disk.Free) / 1GB) } else { 512 }
-  procCount = $procCount
-  topApps = $topRam
-  rxBytes = [double]$rxBytes
-  txBytes = [double]$txBytes
-} | ConvertTo-Json -Compress
-`),
+    queryTelemetryDaemon('STATS', 2400),
   ]);
 
   let hw = {
@@ -1445,10 +1630,8 @@ $txBytes = if ($netStat) { ($netStat | Where-Object { $_.Property -eq 'SentBytes
     txBytes: 0,
   };
 
-  if (psRes.ok && psRes.stdout) {
-    try {
-      hw = { ...hw, ...JSON.parse(psRes.stdout) };
-    } catch (_) {}
+  if (statsRes.ok && statsRes.data) {
+    hw = { ...hw, ...statsRes.data };
   }
 
   const nowMs = Date.now();

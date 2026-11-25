@@ -33,10 +33,11 @@ const LIVE_AUDIO_MODELS = [
   'models/gemini-3-flash-live',
 ];
 
-// Verified Active Google Gemini REST TTS Models from Google AI Studio
+// Verified Active Google Gemini REST TTS Models
 const REST_TTS_MODELS = [
   'gemini-3.8-flash-lite-tts',
   'gemini-3.8-flash-tts',
+  'gemini-2.5-flash-preview-tts',
 ];
 
 const deadTtsModels = new Map<string, number>();
@@ -66,6 +67,8 @@ class KiboVoiceEngine {
   private listeners: Set<(speaking: boolean) => void> = new Set();
   private keepAliveTimer: any = null;
   private activeWs: WebSocket | null = null;
+  private speakSessionId: number = 0;
+  private pcmStreamStarted: boolean = false;
 
   private async getAudioContext(sinkId?: string): Promise<AudioContext> {
     if (!this.audioCtx) {
@@ -133,6 +136,8 @@ class KiboVoiceEngine {
 
   // Stop any currently playing speech immediately (barge-in support)
   public stop() {
+    this.speakSessionId++;
+    this.pcmStreamStarted = false;
     this.cleanupAudioEl();
     if (this.keepAliveTimer) {
       clearInterval(this.keepAliveTimer);
@@ -201,19 +206,22 @@ class KiboVoiceEngine {
     source.buffer = audioBuffer;
 
     const currentTime = ctx.currentTime;
+    const isFreshStart = !this.pcmStreamStarted || this.nextStartTime < currentTime;
     if (this.nextStartTime < currentTime) {
-      // 85ms jitter buffer ensures network packet arrival variations do not cause gap chatter
-      this.nextStartTime = currentTime + 0.085;
+      // 60ms jitter buffer ensures packet arrival jitter does not create playback gaps
+      this.nextStartTime = currentTime + 0.06;
     }
 
     const gainNode = ctx.createGain();
     const startTime = this.nextStartTime;
-    const endTime = startTime + audioBuffer.duration;
-    // Ultra-smooth 8ms envelope completely eliminates DAC step clicks and speaker pops
-    gainNode.gain.setValueAtTime(0.0001, startTime);
-    gainNode.gain.linearRampToValueAtTime(1.0, startTime + 0.008);
-    gainNode.gain.setValueAtTime(1.0, Math.max(startTime + 0.008, endTime - 0.012));
-    gainNode.gain.linearRampToValueAtTime(0.0001, endTime);
+    // Only apply a subtle 4ms fade-in on the start of a stream; never dip gain between contiguous chunks
+    if (isFreshStart) {
+      this.pcmStreamStarted = true;
+      gainNode.gain.setValueAtTime(0.0001, startTime);
+      gainNode.gain.linearRampToValueAtTime(1.0, startTime + 0.004);
+    } else {
+      gainNode.gain.setValueAtTime(1.0, startTime);
+    }
 
     source.connect(gainNode);
     gainNode.connect(ctx.destination);
@@ -232,6 +240,7 @@ class KiboVoiceEngine {
       } catch (_) {}
       if (this.activeSources.length === 0 && !this.activeWs) {
         this.nextStartTime = 0;
+        this.pcmStreamStarted = false;
         this.setSpeaking(false);
         onEnd?.();
       }
@@ -283,13 +292,13 @@ class KiboVoiceEngine {
           if (!receivedAudio && !resolved) {
             resolved = true;
             this.activeWs = null;
-            markModelCooldown(model, 60_000);
+            markModelCooldown(model, 120_000);
             try {
               ws.close();
             } catch (_) {}
             resolve(false);
           }
-        }, 3200);
+        }, 2200);
 
         const totalTimeout = setTimeout(() => {
           if (!resolved) {
@@ -478,7 +487,7 @@ class KiboVoiceEngine {
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            signal: AbortSignal.timeout(18000),
+            signal: AbortSignal.timeout(9000),
             body: JSON.stringify({
               contents: [{ parts: [{ text: cleanText }] }],
               generationConfig: {
@@ -572,13 +581,6 @@ class KiboVoiceEngine {
       (window as any)._kiboSpeechUtterance = null;
     };
 
-    this.keepAliveTimer = setInterval(() => {
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis.speaking) {
-        window.speechSynthesis.pause();
-        window.speechSynthesis.resume();
-      }
-    }, 8000);
-
     const speakNextChunk = () => {
       if (currentIdx >= sentences.length) {
         finish();
@@ -622,7 +624,55 @@ class KiboVoiceEngine {
     speakNextChunk();
   }
 
-  // Tier 0: ElevenLabs AI Studio Voice Synthesis (Pristine studio fidelity, zero glitching, gapless)
+  private playAudioBufferElement(
+    arrayBuffer: ArrayBuffer,
+    outputDeviceId?: string,
+    onFirstStart?: () => void
+  ): Promise<boolean> {
+    return new Promise<boolean>(async (resolve) => {
+      this.cleanupAudioEl();
+      const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
+      const url = URL.createObjectURL(blob);
+      this.activeBlobUrl = url;
+
+      const audio = new Audio(url);
+      this.activeAudioEl = audio;
+
+      const targetSink =
+        outputDeviceId ||
+        (typeof window !== 'undefined' ? localStorage.getItem('kibo_audio_output_device') || 'default' : 'default');
+
+      if (targetSink && targetSink !== 'default' && typeof (audio as any).setSinkId === 'function') {
+        try {
+          await (audio as any).setSinkId(targetSink);
+        } catch (_) {}
+      }
+
+      let settled = false;
+      const finish = (ok: boolean) => {
+        if (settled) return;
+        settled = true;
+        this.cleanupAudioEl();
+        resolve(ok);
+      };
+
+      audio.onplay = () => {
+        this.setSpeaking(true);
+        onFirstStart?.();
+      };
+      audio.onended = () => finish(true);
+      audio.onerror = (e) => {
+        console.warn('[ElevenLabs Audio] Playback error:', e);
+        finish(false);
+      };
+      audio.play().catch((err) => {
+        console.warn('[ElevenLabs Audio] play() rejected:', err);
+        finish(false);
+      });
+    });
+  }
+
+  // Tier 0: ElevenLabs AI Studio Voice Synthesis with sentence pipelining for fast start & smooth audio
   public async speakViaElevenLabs(
     text: string,
     options: SpeakOptions = {}
@@ -639,66 +689,66 @@ class KiboVoiceEngine {
     const savedVoice =
       typeof window !== 'undefined' ? (localStorage.getItem('kibo_voice_name') as KiboVoiceName) : null;
     const voice = options.voice || savedVoice || 'Sarah';
+    const sessionId = this.speakSessionId;
+
+    // Split longer replies into 2-3 natural sentence chunks so sentence 1 starts speaking while sentence 2 synthesizes
+    const rawSentences =
+      cleanText.length > 120
+        ? cleanText
+            .match(/[^.!?]+[.!?]+|[^.!?]+$/g)
+            ?.map((s) => s.trim())
+            .filter(Boolean) || [cleanText]
+        : [cleanText];
+
+    const chunks: string[] = [];
+    for (const s of rawSentences) {
+      if (chunks.length > 0 && (chunks[chunks.length - 1].length < 45 || chunks.length >= 3)) {
+        chunks[chunks.length - 1] = `${chunks[chunks.length - 1]} ${s}`;
+      } else {
+        chunks.push(s);
+      }
+    }
 
     try {
-      const arrayBuffer = await synthesizeElevenLabsAudio(cleanText, voice);
-      if (!arrayBuffer || arrayBuffer.byteLength === 0) {
-        return false;
-      }
+      let nextPromise: Promise<ArrayBuffer | null> | null = synthesizeElevenLabsAudio(chunks[0], voice);
+      let startedNotified = false;
 
-      this.cleanupAudioEl();
+      for (let i = 0; i < chunks.length; i++) {
+        if (this.speakSessionId !== sessionId) return true;
+        const currentBuf = await nextPromise;
+        if (this.speakSessionId !== sessionId) return true;
 
-      const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
-      const url = URL.createObjectURL(blob);
-      this.activeBlobUrl = url;
+        if (!currentBuf || currentBuf.byteLength === 0) {
+          if (i === 0) return false;
+          break;
+        }
 
-      const audio = new Audio(url);
-      this.activeAudioEl = audio;
+        // Pre-fetch next sentence in parallel while current sentence plays
+        nextPromise = i + 1 < chunks.length ? synthesizeElevenLabsAudio(chunks[i + 1], voice) : null;
 
-      const targetSink =
-        options.outputDeviceId ||
-        (typeof window !== 'undefined' ? localStorage.getItem('kibo_audio_output_device') || 'default' : 'default');
-
-      if (targetSink && targetSink !== 'default' && typeof (audio as any).setSinkId === 'function') {
-        try {
-          await (audio as any).setSinkId(targetSink);
-        } catch (_) {}
-      }
-
-      return await new Promise<boolean>((resolve) => {
-        let isDone = false;
-        const done = (ok: boolean) => {
-          if (isDone) return;
-          isDone = true;
-          this.setSpeaking(false);
-          this.cleanupAudioEl();
-          if (ok) {
-            options.onEnd?.();
+        const ok = await this.playAudioBufferElement(currentBuf, options.outputDeviceId, () => {
+          if (!startedNotified) {
+            startedNotified = true;
+            options.onStart?.();
           }
-          resolve(ok);
-        };
-
-        audio.onplay = () => {
-          this.setSpeaking(true);
-          options.onStart?.();
-        };
-
-        audio.onended = () => {
-          done(true);
-        };
-
-        audio.onerror = (e) => {
-          console.warn('[ElevenLabs Audio] Playback error:', e);
-          done(false);
-        };
-
-        audio.play().catch((err) => {
-          console.warn('[ElevenLabs Audio] play() rejected:', err);
-          done(false);
         });
-      });
+        if (!ok) {
+          if (i === 0) {
+            this.setSpeaking(false);
+            return false;
+          }
+          break;
+        }
+      }
+
+      if (this.speakSessionId === sessionId) {
+        this.setSpeaking(false);
+        options.onEnd?.();
+      }
+      return true;
     } catch (err) {
       console.warn('[ElevenLabs Engine] Synthesis/playback failed:', err);
+      this.setSpeaking(false);
       return false;
     }
   }

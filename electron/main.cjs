@@ -88,9 +88,14 @@ app.commandLine.appendSwitch('disable-crash-reporter');
 const KIBO_LOCAL_PORT = 51742;
 
 let mainWindow = null;
+let settingsWindow = null;
 let tray = null;
 let hitTestInterval = null;
 let isIgnoringMouse = false;
+let cachedWinBounds = null;
+let lastHitCursorX = -99999;
+let lastHitCursorY = -99999;
+let lastHitStateKey = '';
 
 let activeNotchBounds = {
   width: 190,
@@ -107,18 +112,22 @@ let isAgentDockHovered = false;
 function setWindowBounds(width, height) {
   activeNotchBounds.width = Math.max(10, Math.round(width || 190));
   activeNotchBounds.height = Math.max(10, Math.round(height || 18));
+  lastHitStateKey = '';
 }
 
 function positionCanvasWindow() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   const primaryDisplay = screen.getPrimaryDisplay();
   const { bounds } = primaryDisplay;
-  mainWindow.setBounds({
+  const nextBounds = {
     x: bounds.x,
     y: bounds.y,
     width: bounds.width,
     height: bounds.height - 2, // Prevents Windows DWM fullscreen promotion blackout
-  });
+  };
+  mainWindow.setBounds(nextBounds);
+  cachedWinBounds = nextBounds;
+  lastHitStateKey = '';
 }
 
 let isTopEdgePeeking = false;
@@ -130,18 +139,30 @@ function startHitTestLoop() {
     if (!mainWindow || mainWindow.isDestroyed()) return;
 
     const cursor = screen.getCursorScreenPoint();
-    const winBounds = mainWindow.getBounds();
+    const stateKey = `${activeNotchBounds.width}x${activeNotchBounds.height}:${lastFullscreenState ? 1 : 0}:${isLassoActive ? 1 : 0}:${isAgentDockActive ? 1 : 0}:${isAgentDockHovered ? 1 : 0}:${activeAppWindowRect ? `${activeAppWindowRect.x},${activeAppWindowRect.y},${activeAppWindowRect.width},${activeAppWindowRect.height}` : ''}:${activeRoamingRects.length}`;
 
-    const notchHalfW = Math.max(activeNotchBounds.width / 2, 75);
-    const notchHitHeight = Math.max(activeNotchBounds.height, 46);
+    // Skip redundant hit-test math when cursor and interactive rects are unchanged
+    if (cursor.x === lastHitCursorX && cursor.y === lastHitCursorY && stateKey === lastHitStateKey) {
+      return;
+    }
+    lastHitCursorX = cursor.x;
+    lastHitCursorY = cursor.y;
+    lastHitStateKey = stateKey;
+
+    const winBounds = cachedWinBounds || mainWindow.getBounds();
+    cachedWinBounds = winBounds;
+
+    // Match hitbox tightly to the visible notch bounds so Chrome tabs / close buttons below the tucked pill stay 100% clickable
+    const notchHalfW = Math.max(activeNotchBounds.width / 2 + 4, 38);
+    const notchHitHeight = Math.max(activeNotchBounds.height + 2, 16);
     const centerX = winBounds.x + winBounds.width / 2;
 
     if (lastFullscreenState) {
-      const nearTopBezel = cursor.y <= winBounds.y + 6 && cursor.x >= centerX - 200 && cursor.x <= centerX + 200;
+      const nearTopBezel = cursor.y <= winBounds.y + 8 && cursor.x >= centerX - 220 && cursor.x <= centerX + 220;
       if (nearTopBezel && !isTopEdgePeeking) {
         isTopEdgePeeking = true;
         mainWindow.webContents.send('cinema-peek', true);
-      } else if (cursor.y > winBounds.y + 65 && isTopEdgePeeking) {
+      } else if (cursor.y > winBounds.y + 68 && isTopEdgePeeking) {
         isTopEdgePeeking = false;
         mainWindow.webContents.send('cinema-peek', false);
       }
@@ -155,12 +176,7 @@ function startHitTestLoop() {
     const insideNotchY =
       cursor.y >= winBounds.y &&
       cursor.y <= winBounds.y + notchHitHeight;
-    const nearTopCenter =
-      cursor.y >= winBounds.y &&
-      cursor.y <= winBounds.y + 54 &&
-      cursor.x >= centerX - 140 &&
-      cursor.x <= centerX + 140;
-    const insideNotch = (insideNotchX && insideNotchY) || nearTopCenter;
+    const insideNotch = insideNotchX && insideNotchY;
 
     let insideAppWin = false;
     if (activeAppWindowRect) {
@@ -217,7 +233,7 @@ function startHitTestLoop() {
         mainWindow.setIgnoreMouseEvents(false);
       }
     }
-  }, 16);
+  }, 25);
 }
 
 let currentTrayColorHex = '#38BDF8';
@@ -343,6 +359,54 @@ function refreshTrayIconAndTooltip() {
   tray.setToolTip('Kibo · Voice Control for Windows');
 }
 
+function openSettingsWindow(section = 'Account') {
+  if (settingsWindow && !settingsWindow.isDestroyed()) {
+    if (settingsWindow.isMinimized()) settingsWindow.restore();
+    settingsWindow.show();
+    settingsWindow.focus();
+    settingsWindow.webContents.send('settings-navigate', section || 'Account');
+    return;
+  }
+
+  settingsWindow = new BrowserWindow({
+    width: 860,
+    height: 600,
+    minWidth: 740,
+    minHeight: 500,
+    center: true,
+    title: 'Kibo Settings',
+    backgroundColor: '#121214',
+    autoHideMenuBar: true,
+    resizable: true,
+    maximizable: true,
+    alwaysOnTop: false,
+    transparent: false,
+    frame: true,
+    icon: path.join(__dirname, '../public/icon-256.png'),
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.cjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
+    },
+  });
+
+  settingsWindow.setMenuBarVisibility(false);
+
+  const querySection = encodeURIComponent(section || 'Account');
+  const settingsUrl = `http://127.0.0.1:${KIBO_LOCAL_PORT}/?mode=settings&section=${querySection}`;
+  settingsWindow.loadURL(settingsUrl).catch(() => {
+    const prodPath = path.join(__dirname, '../dist/index.html');
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+      settingsWindow.loadFile(prodPath, { query: { mode: 'settings', section: section || 'Account' } }).catch(() => {});
+    }
+  });
+
+  settingsWindow.on('closed', () => {
+    settingsWindow = null;
+  });
+}
+
 function updateTrayMenu() {
   if (!tray) return;
 
@@ -350,12 +414,7 @@ function updateTrayMenu() {
     {
       label: 'Open Settings',
       click: () => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.show();
-          mainWindow.focus();
-          mainWindow.setAlwaysOnTop(true, 'screen-saver');
-          mainWindow.webContents.send('open-settings', 'Account');
-        }
+        openSettingsWindow('Account');
       },
     },
     { type: 'separator' },
@@ -1132,8 +1191,41 @@ ipcMain.handle('get-stored-settings', () => {
   return readKiboSettings();
 });
 
+ipcMain.handle('open-settings-window', (_event, section) => {
+  openSettingsWindow(section || 'Account');
+  return { success: true };
+});
+
+ipcMain.handle('close-settings-window', () => {
+  if (settingsWindow && !settingsWindow.isDestroyed()) {
+    settingsWindow.close();
+  }
+  return { success: true };
+});
+
+ipcMain.handle('trigger-replay-onboarding', () => {
+  if (settingsWindow && !settingsWindow.isDestroyed()) {
+    settingsWindow.close();
+  }
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.show();
+    mainWindow.focus();
+    mainWindow.webContents.send('reset-onboarding');
+  }
+  return { success: true };
+});
+
 ipcMain.handle('save-stored-settings', (_event, patch) => {
-  return writeKiboSettings(patch);
+  const saved = writeKiboSettings(patch);
+  if (patch && typeof patch === 'object') {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('settings-synced', patch);
+    }
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+      settingsWindow.webContents.send('settings-synced', patch);
+    }
+  }
+  return saved;
 });
 
 ipcMain.handle('send-notch-notification', (_event, payload) => {
@@ -1586,9 +1678,14 @@ ipcMain.handle('pick-file-for-convert', async () => {
 ipcMain.handle('show-item-in-folder', (_event, filePath) => {
   if (filePath && fs.existsSync(filePath)) {
     shell.showItemInFolder(filePath);
-    return true;
+    return { exists: true, opened: true };
   }
-  return false;
+  return { exists: false, opened: false };
+});
+
+ipcMain.handle('filter-existing-files', (_event, filePaths) => {
+  if (!Array.isArray(filePaths)) return [];
+  return filePaths.filter((fp) => typeof fp === 'string' && fp.length > 0 && fs.existsSync(fp));
 });
 
 ipcMain.handle('convert-file', async (_event, payload) => {
@@ -2431,19 +2528,79 @@ function initNativeUIWorker() {
         public int Bottom;
       }
 
+      [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+      public static extern int GetClassName(IntPtr hWnd, System.Text.StringBuilder lpClassName, int nMaxCount);
+
+      [DllImport("user32.dll")]
+      public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+      [DllImport("user32.dll")]
+      public static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
+
+      [StructLayout(LayoutKind.Sequential)]
+      public struct MONITORINFO {
+        public int cbSize;
+        public RECT rcMonitor;
+        public RECT rcWork;
+        public uint dwFlags;
+      }
+
+      [DllImport("user32.dll")]
+      public static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
+
+      [DllImport("shell32.dll")]
+      public static extern int SHQueryUserNotificationState(out int pquns);
+
       [DllImport("user32.dll")]
       public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
       [DllImport("user32.dll")]
       public static extern int GetSystemMetrics(int nIndex);
 
-      public static bool IsForegroundFullscreen(IntPtr hWnd) {
+      public static bool IsForegroundFullscreen(IntPtr hWnd, string procName) {
         if (hWnd == IntPtr.Zero) return false;
+        string pLower = (procName ?? "").ToLowerInvariant();
+        if (pLower == "explorer" || pLower == "kibo" || pLower == "electron" ||
+            pLower == "searchhost" || pLower == "shellexperiencehost" ||
+            pLower == "startmenuexperiencehost" || pLower == "applicationframehost") {
+          return false;
+        }
+        var clsSb = new System.Text.StringBuilder(128);
+        GetClassName(hWnd, clsSb, 128);
+        string cls = clsSb.ToString();
+        if (cls == "Progman" || cls == "WorkerW" || cls == "Shell_TrayWnd" ||
+            cls == "Shell_SecondaryTrayWnd" || cls == "NotifyIconOverflowWindow" ||
+            cls == "TaskListThumbnailWnd" || cls == "MultitaskingViewFrame" ||
+            cls == "Windows.UI.Core.CoreWindow" || cls == "ForegroundStaging" ||
+            cls == "XamlExplorerHostIslandWindow") {
+          return false;
+        }
+
         RECT rect;
         if (!GetWindowRect(hWnd, out rect)) return false;
-        int screenW = GetSystemMetrics(0);
-        int screenH = GetSystemMetrics(1);
-        return (rect.Left <= 0 && rect.Top <= 0 && rect.Right >= screenW && rect.Bottom >= screenH);
+
+        IntPtr hMon = MonitorFromWindow(hWnd, 2);
+        MONITORINFO mi = new MONITORINFO();
+        mi.cbSize = Marshal.SizeOf(typeof(MONITORINFO));
+        if (!GetMonitorInfo(hMon, ref mi)) return false;
+
+        bool coversMonitor =
+          rect.Left <= mi.rcMonitor.Left &&
+          rect.Top <= mi.rcMonitor.Top &&
+          rect.Right >= mi.rcMonitor.Right &&
+          rect.Bottom >= mi.rcMonitor.Bottom;
+        if (!coversMonitor) return false;
+
+        // Require true borderless/fullscreen style (no WS_CAPTION) or explicit D3D/Presentation state
+        const int GWL_STYLE = -16;
+        const int WS_CAPTION = 0x00C00000;
+        int style = GetWindowLong(hWnd, GWL_STYLE);
+        bool hasCaption = (style & WS_CAPTION) == WS_CAPTION;
+        int quns = 0;
+        SHQueryUserNotificationState(out quns);
+        bool isDirect3dOrPresentation = (quns == 3 || quns == 4);
+
+        return (!hasCaption) || isDirect3dOrPresentation;
       }
 
       public const uint MOUSEEVENTF_LEFTDOWN = 0x0002;
@@ -2561,7 +2718,7 @@ function initNativeUIWorker() {
           if ($pidVal -gt 0) {
             try { $pName = [System.Diagnostics.Process]::GetProcessById($pidVal).ProcessName } catch {}
           }
-          $isFs = [Win32Input]::IsForegroundFullscreen($fg)
+          $isFs = [Win32Input]::IsForegroundFullscreen($fg, $pName)
           [Console]::Out.WriteLine((@{ ok = $true; title = $t; proc = $pName; fullscreen = $isFs } | ConvertTo-Json -Compress))
         }
       } catch {
@@ -2645,6 +2802,15 @@ function startActiveAppWatcher() {
       const info = await sendUIWorkerCommand({ action: 'get_foreground_info' });
       if (!info || !info.ok) return;
 
+      const rawTitle = (info.title || '').trim();
+      const title = rawTitle.toLowerCase();
+      const proc = (info.proc || '').toLowerCase();
+
+      // Ignore Kibo / Electron itself (including Settings window) so focusing Kibo never flips fullscreen state
+      if (proc.includes('electron') || proc === 'kibo' || title.includes('kibo settings')) {
+        return;
+      }
+
       const isFullscreen = Boolean(info.fullscreen);
       if (isFullscreen !== lastFullscreenState) {
         lastFullscreenState = isFullscreen;
@@ -2658,11 +2824,7 @@ function startActiveAppWatcher() {
         mainWindow.setAlwaysOnTop(true, 'screen-saver');
       }
 
-      const rawTitle = (info.title || '').trim();
-      const title = rawTitle.toLowerCase();
-      const proc = (info.proc || '').toLowerCase();
-
-      if (!title || proc.includes('electron') || title.includes('kibo')) return;
+      if (!title || title.includes('kibo')) return;
 
       // 1. NEVER trigger on Google Search, Bing Search, DuckDuckGo, or YouTube search results/videos!
       const isSearchEngineOrVideo =
@@ -3427,44 +3589,59 @@ ipcMain.handle('elevenlabs-speak', async (_event, opts = {}) => {
       console.warn('[Kibo ElevenLabs] No API key available');
       return null;
     }
-    const { ElevenLabsClient } = require('@elevenlabs/elevenlabs-js');
-    const client = new ElevenLabsClient({ apiKey });
+
     const cleanText = String(opts.text || '')
       .replace(/[*_#`~[\]]/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
     if (!cleanText) return null;
 
-    let stream = null;
     const requestedVoice = opts.voiceId || 'EXAVITQu4vr4xnSDxMaL';
-    try {
-      stream = await client.textToSpeech.convert(requestedVoice, {
-        text: cleanText,
-        modelId: opts.modelId || 'eleven_flash_v2_5',
-        outputFormat: 'mp3_44100_128',
+    const selectedModel = opts.modelId || settings.kibo_elevenlabs_model || 'eleven_turbo_v2_5';
+
+    // Direct native fetch() avoids synchronously requiring the heavy @elevenlabs/elevenlabs-js SDK (which blocked main thread ~3.1s)
+    const callElevenLabsRest = async (voiceId, modelId) => {
+      const url = `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'xi-api-key': apiKey,
+          'Content-Type': 'application/json',
+          Accept: 'audio/mpeg',
+        },
+        body: JSON.stringify({
+          text: cleanText,
+          model_id: modelId,
+          voice_settings: {
+            stability: 0.55,
+            similarity_boost: 0.78,
+            style: 0.0,
+            use_speaker_boost: true,
+          },
+        }),
+        signal: AbortSignal.timeout(10000),
       });
+      if (!res.ok) {
+        const errBody = await res.text().catch(() => '');
+        throw new Error(`HTTP ${res.status}: ${errBody.slice(0, 240)}`);
+      }
+      const arrBuf = await res.arrayBuffer();
+      return new Uint8Array(arrBuf);
+    };
+
+    try {
+      return await callElevenLabsRest(requestedVoice, selectedModel);
     } catch (err) {
       if (requestedVoice !== 'EXAVITQu4vr4xnSDxMaL') {
         console.warn(`[Kibo ElevenLabs] Voice ${requestedVoice} unavailable, falling back to Sarah:`, err?.message || err);
-        stream = await client.textToSpeech.convert('EXAVITQu4vr4xnSDxMaL', {
-          text: cleanText,
-          modelId: opts.modelId || 'eleven_flash_v2_5',
-          outputFormat: 'mp3_44100_128',
-        });
-      } else {
-        throw err;
+        return await callElevenLabsRest('EXAVITQu4vr4xnSDxMaL', 'eleven_turbo_v2_5');
       }
+      if (selectedModel !== 'eleven_flash_v2_5') {
+        console.warn(`[Kibo ElevenLabs] Model ${selectedModel} failed, falling back to eleven_flash_v2_5:`, err?.message || err);
+        return await callElevenLabsRest(requestedVoice, 'eleven_flash_v2_5');
+      }
+      throw err;
     }
-
-    const chunks = [];
-    const reader = stream.getReader();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (value) chunks.push(Buffer.from(value));
-    }
-    const fullBuffer = Buffer.concat(chunks);
-    return fullBuffer.toString('base64');
   } catch (err) {
     console.error('[Kibo ElevenLabs] Synthesis error:', err?.message || err);
     return null;

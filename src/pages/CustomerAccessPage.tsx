@@ -5,7 +5,7 @@ import { WebFooter } from '../components/WebFooter';
 
 const INSTALLER_DOWNLOAD_URL =
   (import.meta as any).env?.VITE_INSTALLER_DOWNLOAD_URL ||
-  'https://www.dropbox.com/scl/fi/cruvg28yv6yt5w8sxt8rn/Kibo-Setup-1.0.2.exe?rlkey=02j9fv2xn6mns69r8wclwmzkr&st=91to1wat&dl=1';
+  '/downloads/Kibo_1.0.2_x64-setup.exe';
 
 interface CustomerAccessPageProps {
   onNavigate: (route: string, anchor?: string) => void;
@@ -21,8 +21,32 @@ export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNaviga
   const [errorMsg, setErrorMsg] = useState('');
   const [setupNotice, setSetupNotice] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [releaseInfo, setReleaseInfo] = useState<{ version: string; installerFileName: string; installerSize: string }>({
+    version: '1.0.2',
+    installerFileName: 'Kibo_1.0.2_x64-setup.exe',
+    installerSize: '2.6 MB',
+  });
 
-  // Check URL parameters when arriving from Lemon Squeezy redirect
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/version.json?_t=${Date.now()}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!cancelled && d && d.version) {
+          setReleaseInfo({
+            version: String(d.version),
+            installerFileName: String(d.installerFileName || `Kibo_${d.version}_x64-setup.exe`),
+            installerSize: String(d.installerSize || '2.6 MB'),
+          });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Check URL parameters when arriving from Polar checkout redirect
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
@@ -243,7 +267,7 @@ export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNaviga
 
               <div style={{ textAlign: 'center', marginTop: 10 }}>
                 <span style={{ fontSize: 12, color: '#68707C' }}>
-                  Version 1.0.0 | 109.6 MB | Built for Windows 10 &amp; 11 (64-bit)
+                  Version {releaseInfo.version} | {releaseInfo.installerSize} | Built for Windows 10 &amp; 11 (64-bit)
                 </span>
               </div>
 
@@ -264,7 +288,7 @@ export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNaviga
                   Quick 3-Step Setup:
                 </strong>
                 <ol style={{ margin: 0, paddingLeft: 18 }}>
-                  <li>Run <strong>Kibo Setup 1.0.0.exe</strong> on your PC.</li>
+                  <li>Run <strong>{releaseInfo.installerFileName}</strong> on your PC.</li>
                   <li>In Kibo, enter your purchase email (<code>{verifiedEmail}</code>) to automatically unlock your unlimited Founders license.</li>
                   <li>Add your free Google Gemini API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style={{ color: '#0284C7', textDecoration: 'underline', fontWeight: 600 }}>Google AI Studio &#x2197;</a> under <strong>Preferences &gt; Account &amp; Keys</strong>.</li>
                 </ol>
@@ -363,7 +387,7 @@ export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNaviga
                     }}
                   />
                   <span style={{ fontSize: 11.5, color: '#68707C', marginTop: 4, display: 'block' }}>
-                    Sent to your email in the purchase confirmation from Lemon Squeezy.
+                    Sent to your email in your Polar purchase confirmation and Customer Portal.
                   </span>
                 </div>
 
@@ -401,7 +425,7 @@ export const CustomerAccessPage: React.FC<CustomerAccessPageProps> = ({ onNaviga
                     letterSpacing: '-0.01em',
                   }}
                 >
-                  {isLoading ? 'Verifying with Lemon Squeezy...' : 'Access My Downloads & License'}
+                  {isLoading ? 'Verifying with Polar...' : 'Access My Downloads & License'}
                 </button>
               </form>
 

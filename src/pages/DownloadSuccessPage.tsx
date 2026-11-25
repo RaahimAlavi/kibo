@@ -5,7 +5,7 @@ import { WebFooter } from '../components/WebFooter';
 
 const INSTALLER_DOWNLOAD_URL =
   (import.meta as any).env?.VITE_INSTALLER_DOWNLOAD_URL ||
-  'https://www.dropbox.com/scl/fi/cruvg28yv6yt5w8sxt8rn/Kibo-Setup-1.0.2.exe?rlkey=02j9fv2xn6mns69r8wclwmzkr&st=91to1wat&dl=1';
+  '/downloads/Kibo_1.0.2_x64-setup.exe';
 
 interface DownloadSuccessPageProps {
   onNavigate: (route: string, anchor?: string) => void;
@@ -14,12 +14,32 @@ interface DownloadSuccessPageProps {
 export const DownloadSuccessPage: React.FC<DownloadSuccessPageProps> = ({ onNavigate }) => {
   const [downloadTriggered, setDownloadTriggered] = useState(false);
   const [secondsRemaining, setSecondsRemaining] = useState(2);
+  const [downloadUrl, setDownloadUrl] = useState(INSTALLER_DOWNLOAD_URL);
+  const [installerFileName, setInstallerFileName] = useState('Kibo_1.0.2_x64-setup.exe');
 
-  const triggerDownload = () => {
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/version.json?_t=${Date.now()}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!cancelled && d) {
+          if (d.downloadUrl) setDownloadUrl(String(d.downloadUrl));
+          if (d.installerFileName || d.version) {
+            setInstallerFileName(String(d.installerFileName || `Kibo_${d.version}_x64-setup.exe`));
+          }
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const triggerDownload = (urlOverride?: string) => {
     setDownloadTriggered(true);
     const iframe = document.createElement('iframe');
     iframe.style.display = 'none';
-    iframe.src = INSTALLER_DOWNLOAD_URL;
+    iframe.src = urlOverride || downloadUrl;
     document.body.appendChild(iframe);
     setTimeout(() => {
       try {
@@ -152,7 +172,7 @@ export const DownloadSuccessPage: React.FC<DownloadSuccessPageProps> = ({ onNavi
               <div style={{ fontSize: 13, color: '#68707C' }}>
                 Didn't start?{' '}
                 <a
-                  href={INSTALLER_DOWNLOAD_URL}
+                  href={downloadUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
@@ -173,10 +193,10 @@ export const DownloadSuccessPage: React.FC<DownloadSuccessPageProps> = ({ onNavi
           </div>
 
           <a
-            href={INSTALLER_DOWNLOAD_URL}
+            href={downloadUrl}
             target="_blank"
             rel="noopener noreferrer"
-            download="Kibo-Setup-1.0.2.exe"
+            download={installerFileName}
             onClick={() => setDownloadTriggered(true)}
             style={{
               display: 'inline-flex',
@@ -272,7 +292,7 @@ export const DownloadSuccessPage: React.FC<DownloadSuccessPageProps> = ({ onNavi
                   }}
                 >
                   <img
-                    src="./icon.png"
+                    src="./kibo-icon.svg"
                     alt="Kibo Setup Icon"
                     style={{ width: 72, height: 72, objectFit: 'contain' }}
                   />
@@ -321,7 +341,7 @@ export const DownloadSuccessPage: React.FC<DownloadSuccessPageProps> = ({ onNavi
                     margin: '0 0 10px',
                   }}
                 >
-                  Run Kibo-Setup.exe
+                  Run {installerFileName}
                 </h3>
                 <p style={{ fontSize: 14, lineHeight: 1.6, color: '#68707C', margin: 0 }}>
                   Open your browser downloads bar or PC Downloads folder and double-click the installer. Follow the standard Windows setup wizard to install Kibo.
@@ -367,7 +387,7 @@ export const DownloadSuccessPage: React.FC<DownloadSuccessPageProps> = ({ onNavi
                   }}
                 >
                   <img
-                    src="./icon.png"
+                    src="./kibo-icon.svg"
                     alt="Kibo Activation Icon"
                     style={{ width: 36, height: 36, objectFit: 'contain' }}
                   />
@@ -459,7 +479,7 @@ export const DownloadSuccessPage: React.FC<DownloadSuccessPageProps> = ({ onNavi
                     }}
                   >
                     <img
-                      src="./icon.png"
+                      src="./kibo-icon.svg"
                       alt="Kibo Bezel Companion"
                       style={{ width: 42, height: 42, objectFit: 'contain' }}
                     />

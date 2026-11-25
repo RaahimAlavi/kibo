@@ -403,6 +403,26 @@ class KiboSoundEngine {
     this.playSuccessChime();
   }
 
+  public playErrorChime() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    [320, 240].forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const t = now + idx * 0.085;
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0.001, t);
+      gain.gain.linearRampToValueAtTime(0.04, t + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.15);
+    });
+  }
+
   // 11. Spirit Swoop / Wisp flight SFX
   public playWisp() {
     this.playExpand();
@@ -458,33 +478,87 @@ class KiboSoundEngine {
     });
   }
 
-  // 17. Tactile Sticky Note Paper Flip / Rustle SFX (pure warm harmonics, zero static noise)
-  public playPaperRustle(isOpening = true) {
+  private lastPaperHoverTime: number = 0;
+
+  // 17. Authentic Acoustic Paper Rustle / Sticky-Note Peel & Fold SFX (shaped noise through dual resonant paper filters)
+  public playPaperRustle(isOpening = true, intensity = 1.0) {
     const ctx = this.getContext();
     if (!ctx) return;
     const now = ctx.currentTime;
-    const duration = 0.08;
+    const vol = Math.max(0.12, Math.min(1.2, intensity));
 
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
+    if (vol < 0.45) {
+      const nowMs = performance.now();
+      if (nowMs - this.lastPaperHoverTime < 140) return;
+      this.lastPaperHoverTime = nowMs;
+    }
 
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(isOpening ? 440 : 660, now);
-    osc.frequency.exponentialRampToValueAtTime(isOpening ? 880 : 330, now + duration);
+    const dur = isOpening ? 0.145 : 0.105;
+    const sampleCount = Math.max(256, Math.floor(ctx.sampleRate * dur));
+    const noiseBuffer = ctx.createBuffer(1, sampleCount, ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
 
-    gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(0.03, now + 0.015);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    // Pink-tinted textured noise with subtle fiber crinkle modulation
+    let b0 = 0;
+    let b1 = 0;
+    let b2 = 0;
+    for (let i = 0; i < sampleCount; i++) {
+      const t = i / sampleCount;
+      const white = Math.random() * 2 - 1;
+      b0 = 0.997 * b0 + white * 0.029;
+      b1 = 0.985 * b1 + white * 0.032;
+      b2 = 0.950 * b2 + white * 0.048;
+      const pink = (b0 + b1 + b2 + white * 0.38) * 0.72;
+      // Double micro-crinkle envelope mimicking real sticky-note paper sliding & peeling
+      const env = isOpening
+        ? Math.pow(Math.sin(t * Math.PI), 0.75) * (0.72 + 0.28 * Math.sin(t * Math.PI * 3.2))
+        : Math.pow(1 - t, 1.45) * Math.min(1, t * 14);
+      data[i] = pink * env;
+    }
 
-    osc.connect(gain);
-    gain.connect(ctx.destination);
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuffer;
 
-    osc.start(now);
-    osc.stop(now + duration + 0.005);
-    osc.onended = () => {
+    // High-mid paper fiber scrape filter
+    const crispFilter = ctx.createBiquadFilter();
+    crispFilter.type = 'bandpass';
+    crispFilter.Q.setValueAtTime(1.45, now);
+    crispFilter.frequency.setValueAtTime(isOpening ? 1650 : 2850, now);
+    crispFilter.frequency.exponentialRampToValueAtTime(isOpening ? 3600 : 1150, now + dur);
+
+    const crispGain = ctx.createGain();
+    crispGain.gain.setValueAtTime(0.001, now);
+    crispGain.gain.linearRampToValueAtTime(0.15 * vol, now + 0.018);
+    crispGain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+    // Soft low-mid cotton paper body warmth
+    const bodyFilter = ctx.createBiquadFilter();
+    bodyFilter.type = 'bandpass';
+    bodyFilter.Q.setValueAtTime(1.1, now);
+    bodyFilter.frequency.setValueAtTime(isOpening ? 540 : 440, now);
+
+    const bodyGain = ctx.createGain();
+    bodyGain.gain.setValueAtTime(0.001, now);
+    bodyGain.gain.linearRampToValueAtTime(0.08 * vol, now + 0.014);
+    bodyGain.gain.exponentialRampToValueAtTime(0.0001, now + dur * 0.85);
+
+    src.connect(crispFilter);
+    crispFilter.connect(crispGain);
+    crispGain.connect(ctx.destination);
+
+    src.connect(bodyFilter);
+    bodyFilter.connect(bodyGain);
+    bodyGain.connect(ctx.destination);
+
+    src.start(now);
+    src.stop(now + dur + 0.01);
+    src.onended = () => {
       try {
-        osc.disconnect();
-        gain.disconnect();
+        src.disconnect();
+        crispFilter.disconnect();
+        crispGain.disconnect();
+        bodyFilter.disconnect();
+        bodyGain.disconnect();
       } catch (_) {}
     };
   }

@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="kiboTileBg" x1="64" y1="32" x2="448" y2="492" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#171E2E" />
+      <stop offset="52%" stop-color="#0D111C" />
+      <stop offset="100%" stop-color="#07090F" />
+    </linearGradient>
+    <radialGradient id="kiboHalo" cx="256" cy="272" r="210" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.34" />
+      <stop offset="55%" stop-color="#0284C7" stop-opacity="0.11" />
+      <stop offset="100%" stop-color="#0284C7" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="kiboChassis" cx="218" cy="204" r="196" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="58%" stop-color="#E6EEF8" />
+      <stop offset="100%" stop-color="#B8C8DC" />
+    </radialGradient>
+    <radialGradient id="kiboPaw" cx="0.35" cy="0.3" r="0.72">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="68%" stop-color="#E6EEF8" />
+      <stop offset="100%" stop-color="#BDD0E4" />
+    </radialGradient>
+    <linearGradient id="kiboRim" x1="120" y1="120" x2="392" y2="412" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#7DD3FC" />
+      <stop offset="50%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#0284C7" />
+    </linearGradient>
+    <linearGradient id="kiboVisor" x1="256" y1="196" x2="256" y2="366" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0D1322" />
+      <stop offset="100%" stop-color="#060911" />
+    </linearGradient>
+    <linearGradient id="kiboVisorSheen" x1="256" y1="198" x2="256" y2="262" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.14" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+    </linearGradient>
+    <linearGradient id="kiboTileBorder" x1="256" y1="12" x2="256" y2="500" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.20" />
+      <stop offset="45%" stop-color="#7DD3FC" stop-opacity="0.09" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.05" />
+    </linearGradient>
+    <radialGradient id="kiboEyeGlow" cx="0.5" cy="0.35" r="0.65">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="75%" stop-color="#E0F2FE" />
+      <stop offset="100%" stop-color="#BAE6FD" />
+    </radialGradient>
+    <filter id="kiboSoftShadow" x="-15%" y="-15%" width="130%" height="135%">
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#000000" flood-opacity="0.52" />
+    </filter>
+    <filter id="kiboBlueGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="0" stdDeviation="10" flood-color="#38BDF8" flood-opacity="0.45" />
+    </filter>
+  </defs>
+
+  <!-- Sleek Obsidian Squircle App Tile -->
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="url(#kiboTileBg)" />
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="url(#kiboHalo)" />
+  <rect x="18" y="18" width="476" height="476" rx="110" stroke="url(#kiboTileBorder)" stroke-width="3.5" />
+
+  <!-- Floating Cute Paws (Left & Right) -->
+  <g filter="url(#kiboSoftShadow)">
+    <circle cx="68" cy="306" r="24" fill="url(#kiboPaw)" stroke="url(#kiboRim)" stroke-width="8.5" />
+    <circle cx="444" cy="306" r="24" fill="url(#kiboPaw)" stroke="url(#kiboRim)" stroke-width="8.5" />
+  </g>
+
+  <!-- Cute Tilted Rounded Bunny-Droid Ears -->
+  <g filter="url(#kiboSoftShadow)">
+    <g transform="translate(174 166) rotate(-14)">
+      <rect x="-28" y="-66" width="56" height="82" rx="28" fill="url(#kiboPaw)" stroke="url(#kiboRim)" stroke-width="10" />
+      <rect x="-12" y="-48" width="24" height="44" rx="12" fill="#38BDF8" opacity="0.72" />
+    </g>
+    <g transform="translate(338 166) rotate(14)">
+      <rect x="-28" y="-66" width="56" height="82" rx="28" fill="url(#kiboPaw)" stroke="url(#kiboRim)" stroke-width="10" />
+      <rect x="-12" y="-48" width="24" height="44" rx="12" fill="#38BDF8" opacity="0.72" />
+    </g>
+  </g>
+
+  <!-- Plush Squircle Droid Head -->
+  <g filter="url(#kiboSoftShadow)">
+    <rect x="114" y="156" width="284" height="248" rx="118" fill="url(#kiboChassis)" stroke="url(#kiboRim)" stroke-width="12" />
+  </g>
+
+  <!-- Glossy Curved Visor Screen -->
+  <rect x="144" y="196" width="224" height="168" rx="76" fill="url(#kiboVisor)" stroke="#38BDF8" stroke-opacity="0.55" stroke-width="6" />
+  <!-- Subtle Top Visor Glass Reflection -->
+  <path d="M 184 210 C 216 200 296 200 328 210 C 314 236 198 236 184 210 Z" fill="url(#kiboVisorSheen)" />
+
+  <!-- Soft Rosy Blush Cheeks -->
+  <ellipse cx="182" cy="300" rx="17" ry="10" fill="#F472B6" opacity="0.54" />
+  <ellipse cx="330" cy="300" rx="17" ry="10" fill="#F472B6" opacity="0.54" />
+
+  <!-- Luminous Expressive Eyes -->
+  <g filter="url(#kiboBlueGlow)">
+    <rect x="188" y="242" width="38" height="50" rx="19" fill="url(#kiboEyeGlow)" />
+    <rect x="286" y="242" width="38" height="50" rx="19" fill="url(#kiboEyeGlow)" />
+  </g>
+  <!-- Crisp Eye Catchlights -->
+  <circle cx="201" cy="256" r="6.5" fill="#FFFFFF" />
+  <circle cx="299" cy="256" r="6.5" fill="#FFFFFF" />
+  <circle cx="214" cy="276" r="3" fill="#FFFFFF" opacity="0.7" />
+  <circle cx="312" cy="276" r="3" fill="#FFFFFF" opacity="0.7" />
+
+  <!-- Warm Kibo Smile -->
+  <path d="M 235 304 Q 256 325 277 304" stroke="#E0F2FE" stroke-width="9.5" stroke-linecap="round" fill="none" />
+</svg>

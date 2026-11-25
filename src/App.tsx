@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import Lenis from 'lenis';
 import { KiboApp } from './desktop/KiboApp';
+import { KiboSettingsWindow } from './desktop/KiboSettingsWindow';
 import { SoulCanvas } from './components/SoulCanvas';
 import { SOUL_SKINS } from './lib/soulMath';
 import { WebHeader, WindowsLogoIcon } from './components/WebHeader';
@@ -15,6 +16,7 @@ import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
 import { RefundPolicyPage } from './pages/RefundPolicyPage';
 import { ContactGrievancesPage } from './pages/ContactGrievancesPage';
 import { DownloadSuccessPage } from './pages/DownloadSuccessPage';
+import { WhatsNewPage } from './pages/WhatsNewPage';
 
 interface StoryScene {
   id: string;
@@ -64,12 +66,6 @@ const STORY_SCENES: StoryScene[] = [
     soulExpr: 'EXCITED',
   },
 ];
-
-const WindowsLogoIcon = ({ size = 14 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" style={{ flexShrink: 0 }}>
-    <path d="M0 2.263L6.545 1.37v6.236H0V2.263zm0 5.942h6.545v6.257L0 13.568V8.205zm7.364-6.953L16 0v7.606H7.364V1.252zm0 6.953H16v7.618l-8.636-1.229V8.205z"/>
-  </svg>
-);
 
 const NOTCH_FEATURES = [
   {
@@ -134,11 +130,27 @@ const FAQS = [
 ];
 
 export function App() {
+  const isSettingsWindow = (() => {
+    if (typeof window === 'undefined') return false;
+    if ((window as any).__KIBO_WINDOW_MODE__ === 'settings') return true;
+    if ((window as any).__TAURI_INTERNALS__?.metadata?.currentWindow?.label === 'settings') return true;
+    const params = new URLSearchParams(window.location.search);
+    return params.get('mode') === 'settings';
+  })();
+
+  const initialSettingsSection = (() => {
+    if (typeof window === 'undefined') return 'Account';
+    if ((window as any).__KIBO_SETTINGS_SECTION__) return String((window as any).__KIBO_SETTINGS_SECTION__);
+    const params = new URLSearchParams(window.location.search);
+    return params.get('section') || 'Account';
+  })();
+
   const isDesktopRuntime = (() => {
     if (typeof window === 'undefined') return false;
     const params = new URLSearchParams(window.location.search);
     if (
       params.get('mode') === 'desktop' ||
+      params.get('mode') === 'settings' ||
       params.get('view') === 'desktop' ||
       window.location.hash === '#desktop' ||
       window.location.protocol === 'file:'
@@ -147,6 +159,7 @@ export function App() {
     }
     return (
       Boolean((window as any).kiboAPI) ||
+      Boolean((window as any).__TAURI_INTERNALS__) ||
       navigator.userAgent.toLowerCase().includes('electron')
     );
   })();
@@ -163,6 +176,7 @@ export function App() {
     if (p === '/privacy' || h === '#privacy') return 'privacy';
     if (p === '/refunds' || p === '/refund' || h === '#refunds') return 'refunds';
     if (p === '/contact' || p === '/grievances' || h === '#contact') return 'contact';
+    if (p === '/whats-new' || p === '/whatsnew' || p === '/changelog' || p === '/updates' || h === '#whats-new' || h === '#whatsnew') return 'whats-new';
     return 'home';
   });
 
@@ -268,8 +282,9 @@ export function App() {
 
   useEffect(() => {
     if (isDesktopRuntime) {
-      document.documentElement.style.background = 'transparent';
-      document.body.style.background = 'transparent';
+      const bg = isSettingsWindow ? '#121214' : 'transparent';
+      document.documentElement.style.background = bg;
+      document.body.style.background = bg;
       return;
     }
 
@@ -400,8 +415,17 @@ export function App() {
     );
   }, [featureIdx, isDesktopRuntime]);
 
+  if (isSettingsWindow) {
+    return <KiboSettingsWindow initialSection={initialSettingsSection} />;
+  }
+
   if (isDesktopRuntime) {
-    return <KiboApp />;
+    return (
+      <KiboApp
+        windowMode="notch"
+        initialSettingsSection={initialSettingsSection}
+      />
+    );
   }
 
   const activeScene = STORY_SCENES[sceneIdx];
@@ -1059,6 +1083,7 @@ export function App() {
       {currentRoute === 'privacy' && <PrivacyPolicyPage onNavigate={handleNavigate} />}
       {currentRoute === 'refunds' && <RefundPolicyPage onNavigate={handleNavigate} />}
       {currentRoute === 'contact' && <ContactGrievancesPage onNavigate={handleNavigate} />}
+      {currentRoute === 'whats-new' && <WhatsNewPage onNavigate={handleNavigate} />}
 
       {currentRoute === 'home' && (
         <div ref={pageRef}>

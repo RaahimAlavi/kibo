@@ -1,8 +1,86 @@
 {
   "version": "1.0.2",
   "minVersion": "1.0.0",
-  "downloadUrl": "https://www.dropbox.com/scl/fi/cruvg28yv6yt5w8sxt8rn/Kibo-Setup-1.0.2.exe?rlkey=02j9fv2xn6mns69r8wclwmzkr&st=91to1wat&dl=1",
-  "releaseDate": "2026-11-13",
-  "title": "ElevenLabs Studio Voice Engine, Gemma 4 & Drag-and-Drop Update",
-  "notes": "ElevenLabs studio voice integration, zero-jitter gapless HTML5 audio pipeline, direct Google Calendar queries without opening settings, high-quota Gemma 4 multimodal model prioritization (14,400 daily requests), and rock-solid drag-and-drop file detection without notch disappearance."
+  "installerFileName": "Kibo_1.0.2_x64-setup.exe",
+  "installerSize": "2.6 MB",
+  "downloadUrl": "https://kiboai.vercel.app/downloads/Kibo_1.0.2_x64-setup.exe",
+  "whatsNewUrl": "https://kiboai.vercel.app/whats-new",
+  "releaseDate": "2026-11-25",
+  "title": "Native Rust + Tauri v2, Frosted Glass & External Game HUD",
+  "notes": "Native Rust + Tauri v2 runtime, real-time Gaussian frosted glass with Classic Bezel & Floating Island styles, anti-cheat safe Game Stats HUD, hardware Volume HUD, multi-file drag-and-drop batch converter, smarter YouTube & web search routing, and expanding multi-line dictation captions.",
+  "highlights": [
+    {
+      "tag": "Core",
+      "title": "Native Rust + Tauri v2 Runtime",
+      "detail": "Replaced the legacy Electron layer with a fast, low-memory native Windows runtime and instant standalone Settings window."
+    },
+    {
+      "tag": "Design",
+      "title": "Real-Time Frosted Glass & Dual Notch Styles",
+      "detail": "Switch between Classic Bezel and Floating Island with live Gaussian-blurred backdrop glass, custom tint opacity, and crisp GPU concave arches."
+    },
+    {
+      "tag": "Gaming",
+      "title": "Anti-Cheat Safe Game Stats HUD & Focus Shield",
+      "detail": "External read-only FPS, frametime sparkline, GPU, CPU, RAM, and ping HUD with automatic hotkey protection and click-through while gaming."
+    },
+    {
+      "tag": "Productivity",
+      "title": "Multi-File Drag-and-Drop Batch Converter",
+      "detail": "Drop one or multiple files directly onto the top notch to queue and convert them in batch while keeping every original file untouched."
+    },
+    {
+      "tag": "Voice",
+      "title": "Smart Web Search & Expanding Dictation",
+      "detail": "Direct YouTube, Google, Reddit, and platform searches open straight in your browser, and dictation/voice boxes now auto-expand smoothly across multiple lines."
+    }
+  ],
+  "releases": [
+    {
+      "version": "1.0.2",
+      "releaseDate": "2026-11-25",
+      "title": "Native Rust + Tauri v2, Frosted Glass & External Game HUD",
+      "summary": "Full migration to native Rust + Tauri v2 with real-time frosted glass, Classic & Floating notch modes, external Game Stats HUD, hardware Volume HUD, multi-file batch conversion, smart web search routing, and expanding voice captions.",
+      "highlights": [
+        {
+          "tag": "Core",
+          "title": "Native Rust + Tauri v2 Architecture",
+          "detail": "Compact 5 MB installer, instant startup, native Windows Core Audio & SMTC media integration, and zero WebView2 microphone permission popups."
+        },
+        {
+          "tag": "Appearance",
+          "title": "Classic Bezel & Floating Island Frosted Glass",
+          "detail": "Live native Gaussian-blurred glass with razor-sharp GPU-masked concave arches, adjustable tint %, and Smooth / Snappy / Bouncy motion curves."
+        },
+        {
+          "tag": "Gaming",
+          "title": "External Game Stats HUD & Gaming Focus Shield",
+          "detail": "100% read-only FPS, frametime graph, RTX/GPU temp & VRAM, CPU, RAM, and network ping with automatic hotkey pause during gameplay."
+        },
+        {
+          "tag": "Workflow",
+          "title": "Multi-File Drag-and-Drop & Smart Search",
+          "detail": "Drop multiple files onto the notch for batch conversion, get instant browser searches for YouTube & Google, and read full multi-line dictation captions without clipping."
+        }
+      ]
+    },
+    {
+      "version": "1.0.1",
+      "releaseDate": "2026-11-10",
+      "title": "ElevenLabs Studio Voice & Focus Sticky Notes",
+      "summary": "Added ElevenLabs studio voice synthesis, Focus Timer & Stopwatch sticky notes, and live Windows media artwork integration.",
+      "highlights": [
+        {
+          "tag": "Voice",
+          "title": "ElevenLabs Studio Voice Engine",
+          "detail": "Gapless HTML5 voice playback with configurable Gemini and ElevenLabs voices."
+        },
+        {
+          "tag": "Focus",
+          "title": "Interactive Focus Sticky Notes",
+          "detail": "Pomodoro countdown timer, lap stopwatch, and tactile sticky notes docked right inside the notch."
+        }
+      ]
+    }
+  ]
 }

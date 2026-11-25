@@ -1,5 +1,6 @@
 // src/components/WebFooter.tsx
 import React from 'react';
+import { KiboLogoIcon } from './KiboLogoIcon';
 
 interface WebFooterProps {
   onNavigate: (route: string, anchor?: string) => void;
@@ -28,6 +29,7 @@ export const WebFooter: React.FC<WebFooterProps> = ({ onNavigate, onScrollToTop 
           {/* Brand Info */}
           <div style={{ maxWidth: 300 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+              <KiboLogoIcon size={24} />
               <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.02em', color: '#121316' }}>
                 Kibo
               </span>
@@ -66,6 +68,9 @@ export const WebFooter: React.FC<WebFooterProps> = ({ onNavigate, onScrollToTop 
               </a>
               <a href="/requirements" onClick={(e) => handleLink(e, 'requirements')} className="kibo-footer-link">
                 System Requirements
+              </a>
+              <a href="/whats-new" onClick={(e) => handleLink(e, 'whats-new')} className="kibo-footer-link">
+                What's New
               </a>
             </div>
           </div>

@@ -231,10 +231,24 @@ const kiboAPI = {
   },
   getStoredSettings: () => ipcRenderer.invoke('get-stored-settings'),
   saveStoredSettings: (patch) => ipcRenderer.invoke('save-stored-settings', patch),
+  openSettingsWindow: (section) => ipcRenderer.invoke('open-settings-window', section),
+  closeSettingsWindow: () => ipcRenderer.invoke('close-settings-window'),
+  triggerReplayOnboarding: () => ipcRenderer.invoke('trigger-replay-onboarding'),
+  onSettingsSynced: (callback) => {
+    const listener = (_event, patch) => callback(patch);
+    ipcRenderer.on('settings-synced', listener);
+    return () => ipcRenderer.removeListener('settings-synced', listener);
+  },
+  onSettingsNavigate: (callback) => {
+    const listener = (_event, section) => callback(section);
+    ipcRenderer.on('settings-navigate', listener);
+    return () => ipcRenderer.removeListener('settings-navigate', listener);
+  },
   getCurrentWallpaperTheme: () => ipcRenderer.invoke('get-current-wallpaper-theme'),
   convertFile: (payload) => ipcRenderer.invoke('convert-file', payload),
   pickFileForConvert: () => ipcRenderer.invoke('pick-file-for-convert'),
   showItemInFolder: (filePath) => ipcRenderer.invoke('show-item-in-folder', filePath),
+  filterExistingFiles: (filePaths) => ipcRenderer.invoke('filter-existing-files', filePaths),
   exportChromeExtension: (opts) => ipcRenderer.invoke('export-chrome-extension', opts),
   openChromeExtensionsPage: () => ipcRenderer.invoke('open-chrome-extensions-page'),
   startExtensionDrag: () => ipcRenderer.send('start-extension-drag'),

@@ -29,9 +29,11 @@ export const BuyPage: React.FC<BuyPageProps> = ({ onNavigate }) => {
 
     setIsProcessing(true);
     const cleanEmail = email.trim();
-    const checkoutBase = 'https://kiboai.lemonsqueezy.com/checkout/buy/82847c34-2c7d-416f-b407-68371e119df2';
+    const checkoutBase =
+      (import.meta as any).env?.VITE_POLAR_CHECKOUT_URL ||
+      'https://buy.polar.sh/polar_cl_ot6jb65ZhV6ESKed8eLo11WdeKSRX9WZyZU8X17NFtY';
     const finalUrl = cleanEmail
-      ? `${checkoutBase}?checkout[email]=${encodeURIComponent(cleanEmail)}`
+      ? `${checkoutBase}?customer_email=${encodeURIComponent(cleanEmail)}`
       : checkoutBase;
 
     window.location.href = finalUrl;
@@ -192,7 +194,7 @@ export const BuyPage: React.FC<BuyPageProps> = ({ onNavigate }) => {
             >
               <div style={{ fontWeight: 700, marginBottom: 4 }}>Order Gateway Initialized</div>
               <div>
-                Checkout configuration confirmed for <strong>{email}</strong>. In production, this connects straight to your Dodo Payments checkout flow to deliver your license token and download link.
+                Checkout initialized for <strong>{email}</strong>. You will be redirected to Polar to complete your order and receive your Kibo license key.
               </div>
               <div style={{ marginTop: 12 }}>
                 <button
@@ -343,7 +345,7 @@ export const BuyPage: React.FC<BuyPageProps> = ({ onNavigate }) => {
             }}
           >
             <div style={{ fontSize: 12, lineHeight: 1.5, color: '#68707C', textAlign: 'center' }}>
-              Secure checkout powered by Lemon Squeezy. Accepts Credit Cards, Apple Pay, Google Pay, and international payment options.
+              Secure checkout powered by Polar. Accepts Credit Cards, Apple Pay, Google Pay, and international payment options.
             </div>
 
             <div style={{ textAlign: 'center' }}>
