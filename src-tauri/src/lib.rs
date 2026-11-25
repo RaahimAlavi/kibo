@@ -554,10 +554,11 @@ fn set_game_hud_passthrough(enabled: bool) -> bool {
 async fn get_game_stats() -> telemetry::GameTelemetrySnapshot {
     tokio::task::spawn_blocking(|| {
         let dwm = win32::sample_dwm_timing();
-        telemetry::get_game_stats_snapshot(dwm)
+        let dxgi = win32::sample_live_dxgi_fps().map(|s| (s.fps, s.low_1_fps, s.frametime_ms));
+        telemetry::get_game_stats_snapshot(dwm, dxgi)
     })
     .await
-    .unwrap_or_else(|_| telemetry::get_game_stats_snapshot(None))
+    .unwrap_or_else(|_| telemetry::get_game_stats_snapshot(None, None))
 }
 
 #[tauri::command]
@@ -1214,11 +1215,16 @@ fn start_background_watchers(app: AppHandle) {
                     if let Ok(mut g) = GAME_ACTIVE.lock() {
                         *g = current_game.clone();
                     }
+                    let shield_enabled = SHORTCUTS
+                        .lock()
+                        .map(|s| s.gaming_shield)
+                        .unwrap_or(true);
                     let _ = handle.emit(
                         "gaming-shield-state",
                         json!({
                             "active": current_game.is_some(),
                             "gameName": current_game,
+                            "autoDnd": current_game.is_some() && shield_enabled,
                         }),
                     );
                 }

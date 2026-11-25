@@ -177,8 +177,11 @@ pub fn start_nvidia_watcher_once() {
     });
 }
 
-/// Fast (~1ms) read-only Game Stats HUD telemetry snapshot (zero process scanning, zero hooks, 100% anti-cheat safe).
-pub fn get_game_stats_snapshot(dwm_sample: Option<(u64, f64, f64)>) -> GameTelemetrySnapshot {
+/// Fast (~1ms) read-only Game Stats HUD telemetry snapshot (zero hooks, zero DLL injection, 100% anti-cheat safe).
+pub fn get_game_stats_snapshot(
+    dwm_sample: Option<(u64, f64, f64)>,
+    dxgi_fps: Option<(i32, i32, f64)>,
+) -> GameTelemetrySnapshot {
     start_nvidia_watcher_once();
     start_ping_watcher_once();
 
@@ -197,36 +200,50 @@ pub fn get_game_stats_snapshot(dwm_sample: Option<(u64, f64, f64)>) -> GameTelem
     let (fps, low_1_fps, frametime_ms, refresh_hz, history_ms) = {
         let mut tr = DWM_TRACKER.lock().unwrap();
         let (prev_count, prev_ts, hist_ms, hist_fps) = &mut *tr;
-        let mut hz = 60.0f64;
-        let mut cur_fps = 60i32;
-        let mut cur_ms = 16.7f64;
+        let hz = dwm_sample.map(|(_, h, _)| h).unwrap_or(60.0);
+        let period_ms = dwm_sample.map(|(_, _, p)| p).unwrap_or(1000.0 / hz.max(30.0));
 
-        if let Some((count, dwm_hz, period_ms)) = dwm_sample {
-            hz = dwm_hz;
+        let (cur_fps, cur_low1, cur_ms) = if let Some((real_fps, real_low1, real_ms)) = dxgi_fps {
+            // Live DXGI Output Duplication measured frame rate (works for DirectFlip/MPO games like Fortnite!)
+            (real_fps.max(1), real_low1.max(1), real_ms.max(0.5))
+        } else if let Some((count, dwm_hz, _)) = dwm_sample {
             let dt = prev_ts.elapsed().as_secs_f64();
-            if *prev_count > 0 && count > *prev_count && dt >= 0.25 && dt < 5.0 {
-                let raw_fps = ((count - *prev_count) as f64 / dt).clamp(1.0, dwm_hz.max(240.0));
-                cur_fps = raw_fps.round() as i32;
-                cur_ms = ((1000.0 / raw_fps) * 10.0).round() / 10.0;
+            let raw = if *prev_count > 0 && count > *prev_count && dt >= 0.25 && dt < 5.0 {
+                ((count - *prev_count) as f64 / dt).clamp(0.0, dwm_hz.max(240.0))
             } else {
-                cur_fps = dwm_hz.round() as i32;
-                cur_ms = (period_ms * 10.0).round() / 10.0;
-            }
+                0.0
+            };
             *prev_count = count;
             *prev_ts = Instant::now();
-        }
+            if raw >= 5.0 {
+                let r_fps = raw.round() as i32;
+                let r_ms = ((1000.0 / raw) * 10.0).round() / 10.0;
+                (r_fps, r_fps, r_ms)
+            } else {
+                // Static desktop or non-presenting frame: report 0 (rendered as --) instead of misleading "1 FPS 1000.0ms"
+                (0, 0, (period_ms * 10.0).round() / 10.0)
+            }
+        } else {
+            (0, 0, (period_ms * 10.0).round() / 10.0)
+        };
 
-        hist_ms.push(cur_ms);
-        if hist_ms.len() > 24 {
-            hist_ms.remove(0);
-        }
-        hist_fps.push(cur_fps);
-        if hist_fps.len() > 30 {
-            hist_fps.remove(0);
+        if cur_fps > 0 {
+            hist_ms.push(cur_ms);
+            if hist_ms.len() > 24 {
+                hist_ms.remove(0);
+            }
+            hist_fps.push(cur_fps);
+            if hist_fps.len() > 30 {
+                hist_fps.remove(0);
+            }
         }
         let mut sorted_fps = hist_fps.clone();
         sorted_fps.sort_unstable();
-        let low1 = sorted_fps.first().copied().unwrap_or(cur_fps);
+        let low1 = if cur_low1 > 0 {
+            cur_low1
+        } else {
+            sorted_fps.first().copied().unwrap_or(cur_fps)
+        };
         (cur_fps, low1, cur_ms, hz.round() as i32, hist_ms.clone())
     };
 

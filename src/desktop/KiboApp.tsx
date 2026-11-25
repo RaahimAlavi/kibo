@@ -2104,10 +2104,32 @@ export const KiboApp: React.FC<KiboAppProps> = ({
   }, [isSettingsOnlyWindow, refreshGlassBackdrop]);
 
   const [shortcutsPaused, setShortcutsPaused] = useState<boolean>(false);
-  const [gamingShieldState, setGamingShieldState] = useState<{ active: boolean; gameName?: string | null }>({
+  const [gamingShieldEnabled, setGamingShieldEnabled] = useState<boolean>(true);
+  const [gamingShieldState, setGamingShieldState] = useState<{
+    active: boolean;
+    gameName?: string | null;
+    autoDnd?: boolean;
+  }>({
     active: false,
     gameName: null,
+    autoDnd: false,
   });
+
+  const isGameAutoDnd = Boolean(gamingShieldState.active && gamingShieldEnabled);
+  const isDndActive = shortcutsPaused || isGameAutoDnd;
+
+  useEffect(() => {
+    soundFX.setDndMuted(isDndActive);
+  }, [isDndActive]);
+
+  useEffect(() => {
+    if (isGameAutoDnd) {
+      setIsExpanded(false);
+      setShowMediaNotch(false);
+      setActiveNotchNotification(null);
+      setIsTucked(true);
+    }
+  }, [isGameAutoDnd]);
 
   // Phase 3: 100% Safe External Game Stats HUD + Hardware Volume HUD Popup
   const [gameHudConfig, setGameHudConfig] = useState<GameHudConfig>(() => {
@@ -2255,6 +2277,9 @@ export const KiboApp: React.FC<KiboAppProps> = ({
       }
       if (patch.kibo_shortcuts_config && typeof patch.kibo_shortcuts_config === 'object') {
         setShortcutsPaused(Boolean(patch.kibo_shortcuts_config.pausedAll));
+        if (typeof patch.kibo_shortcuts_config.gamingShield === 'boolean') {
+          setGamingShieldEnabled(patch.kibo_shortcuts_config.gamingShield);
+        }
       }
       if (patch.kibo_game_hud_config && typeof patch.kibo_game_hud_config === 'object') {
         setGameHudConfig((prev) => {
@@ -2271,8 +2296,8 @@ export const KiboApp: React.FC<KiboAppProps> = ({
 
     const unregSync = api?.onSettingsSynced ? api.onSettingsSynced(applyPatch) : () => {};
     const unregGameShield = api?.onGamingShieldState
-      ? api.onGamingShieldState((st: { active: boolean; gameName?: string | null }) => {
-          setGamingShieldState(st || { active: false, gameName: null });
+      ? api.onGamingShieldState((st: { active: boolean; gameName?: string | null; autoDnd?: boolean }) => {
+          setGamingShieldState(st || { active: false, gameName: null, autoDnd: false });
         })
       : () => {};
     const unregVolume = api?.onSystemVolumeChanged
@@ -5459,8 +5484,8 @@ export const KiboApp: React.FC<KiboAppProps> = ({
     [addEmbers, apiKey, handleRunFileConversion]
   );
 
-  const showProactiveBanner = !isExpanded && !showCompanionWindow && Boolean(detectedAppId);
-  const showNotchNotification = !isExpanded && !showCompanionWindow && !showProactiveBanner && !showMediaNotch && !isFileDraggingOverNotch && Boolean(activeNotchNotification);
+  const showProactiveBanner = !isDndActive && !isExpanded && !showCompanionWindow && Boolean(detectedAppId);
+  const showNotchNotification = !isDndActive && !isExpanded && !showCompanionWindow && !showProactiveBanner && !showMediaNotch && !isFileDraggingOverNotch && Boolean(activeNotchNotification);
   const isCompactAskBar = !showProactiveBanner && !showNotchNotification && (askNotchPhase === 'speaking' || askNotchPhase === 'thinking');
   const showVolumeHudInNotch =
     !isSettingsOnlyWindow &&
@@ -5506,7 +5531,7 @@ export const KiboApp: React.FC<KiboAppProps> = ({
     : showVolumeHudInNotch
     ? 252
     : showGameHudInNotch
-    ? estimateGameHudNotchWidth(gameHudConfig)
+    ? estimateGameHudNotchWidth(gameHudConfig, isDndActive)
     : notchApiAlert
     ? 294
     : timerAlarmRinging
@@ -9510,6 +9535,7 @@ export const KiboApp: React.FC<KiboAppProps> = ({
               stats={gameStats}
               config={gameHudConfig}
               gameName={gamingShieldState.gameName}
+              dndActive={isDndActive}
               mode="notch"
             />
           )}
@@ -9908,16 +9934,14 @@ export const KiboApp: React.FC<KiboAppProps> = ({
                     className="companion-header-circle"
                     title={
                       shortcutsPaused
-                        ? 'Shortcuts Paused (Do Not Disturb) - Click to resume'
-                        : gamingShieldState.active
-                        ? `Gaming Shield Active (${gamingShieldState.gameName || 'Game'}) - Hotkeys auto-paused`
-                        : 'Pause global shortcuts (Do Not Disturb)'
+                        ? 'Do Not Disturb ON (Manual) - Click to resume'
+                        : isGameAutoDnd
+                        ? `Do Not Disturb Auto-ON (${gamingShieldState.gameName || 'Game'}) - Hotkeys, popups & sounds paused`
+                        : 'Enable Do Not Disturb (pause hotkeys, popups & sounds)'
                     }
                     style={
-                      shortcutsPaused
+                      isDndActive
                         ? { background: 'rgba(245, 158, 11, 0.2)', borderColor: 'rgba(245, 158, 11, 0.45)', color: '#FBBF24' }
-                        : gamingShieldState.active
-                        ? { background: 'rgba(48, 209, 88, 0.18)', borderColor: 'rgba(48, 209, 88, 0.4)', color: '#30D158' }
                         : undefined
                     }
                   >
@@ -14621,6 +14645,7 @@ export const KiboApp: React.FC<KiboAppProps> = ({
           stats={gameStats}
           config={gameHudConfig}
           gameName={gamingShieldState.gameName}
+          dndActive={isDndActive}
           mode="corner"
         />
       )}

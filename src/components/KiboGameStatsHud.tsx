@@ -50,8 +50,8 @@ export interface GameTelemetryData {
   historyMs: number[];
 }
 
-export function estimateGameHudNotchWidth(cfg: GameHudConfig): number {
-  let w = 68; // status dot + padding
+export function estimateGameHudNotchWidth(cfg: GameHudConfig, dndActive = false): number {
+  let w = dndActive ? 98 : 68; // status dot + game tag (+ optional DND badge) + padding
   if (cfg.showFps) w += 126;
   if (cfg.showGpu) w += 110;
   if (cfg.showVram) w += 72;
@@ -59,13 +59,14 @@ export function estimateGameHudNotchWidth(cfg: GameHudConfig): number {
   if (cfg.showRam) w += 74;
   if (cfg.showPing) w += 64;
   if (cfg.showGraph) w += 64;
-  return Math.max(240, Math.min(680, w));
+  return Math.max(240, Math.min(720, w));
 }
 
 interface KiboGameStatsHudProps {
   stats: GameTelemetryData;
   config: GameHudConfig;
   gameName?: string | null;
+  dndActive?: boolean;
   mode: 'notch' | 'corner';
 }
 
@@ -73,6 +74,7 @@ export const KiboGameStatsHud: React.FC<KiboGameStatsHudProps> = ({
   stats,
   config,
   gameName,
+  dndActive = false,
   mode,
 }) => {
   const tempColor =
@@ -169,17 +171,39 @@ export const KiboGameStatsHud: React.FC<KiboGameStatsHudProps> = ({
         >
           {cleanTag}
         </span>
+        {dndActive && (
+          <span
+            style={{
+              fontSize: 8.5,
+              fontWeight: 700,
+              color: '#FBBF24',
+              background: 'rgba(245, 158, 11, 0.16)',
+              border: '1px solid rgba(245, 158, 11, 0.34)',
+              borderRadius: 4,
+              padding: '1px 4px',
+              letterSpacing: '0.04em',
+              lineHeight: 1.2,
+              flexShrink: 0,
+            }}
+          >
+            DND
+          </span>
+        )}
       </div>
 
       {config.showFps && (
         <>
           {sep}
           <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4, flexShrink: 0 }}>
-            <span style={{ ...monoNum, color: '#FFFFFF', fontSize: 12.5 }}>{stats.fps}</span>
-            <span style={labelStyle}>FPS</span>
-            <span style={{ ...monoNum, fontSize: 10, color: 'rgba(244,244,245,0.58)', fontWeight: 600 }}>
-              {stats.frametimeMs.toFixed(1)}ms
+            <span style={{ ...monoNum, color: '#FFFFFF', fontSize: 12.5 }}>
+              {stats.fps > 0 ? stats.fps : '--'}
             </span>
+            <span style={labelStyle}>FPS</span>
+            {stats.fps > 0 && (
+              <span style={{ ...monoNum, fontSize: 10, color: 'rgba(244,244,245,0.58)', fontWeight: 600 }}>
+                {stats.frametimeMs.toFixed(1)}ms
+              </span>
+            )}
           </div>
         </>
       )}

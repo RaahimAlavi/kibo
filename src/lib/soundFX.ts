@@ -3,6 +3,7 @@
 class KiboSoundEngine {
   private ctx: AudioContext | null = null;
   private enabled: boolean = true;
+  private dndMuted: boolean = false;
   private lastHoverTime: number = 0;
   private lastSliderTickValue: number = -1;
   private suspendTimer: ReturnType<typeof setTimeout> | null = null;
@@ -11,6 +12,13 @@ class KiboSoundEngine {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('kibo_sfx_enabled');
       this.enabled = saved !== null ? saved === 'true' : true;
+    }
+  }
+
+  public setDndMuted(muted: boolean): void {
+    this.dndMuted = muted;
+    if (muted && this.ctx && this.ctx.state === 'running') {
+      this.ctx.suspend().catch(() => {});
     }
   }
 
@@ -24,7 +32,7 @@ class KiboSoundEngine {
   }
 
   private getContext(): AudioContext | null {
-    if (!this.enabled || typeof window === 'undefined') return null;
+    if (!this.enabled || this.dndMuted || typeof window === 'undefined') return null;
     if (!this.ctx) {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       if (AudioCtx) this.ctx = new AudioCtx();
